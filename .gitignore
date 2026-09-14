@@ -9,3 +9,4 @@ python/market_data/
 .pytest_cache/
 __init__.py
 */__pycache__
+analytics.log
