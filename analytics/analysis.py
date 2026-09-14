@@ -462,7 +462,6 @@ def plot_volatility_trends(tickers: list, start_date: str, end_date: str, period
 # ============================================================
 # ASSET CLASS VOLATILITY
 # ============================================================
-
 def plot_asset_class_volatility(tickers: list, start_date: str, end_date: str, period_label: str) -> None:
     """
     Compare annualized volatility across individual securities and
@@ -596,7 +595,6 @@ def calculate_summary_statistics(tickers: list, start_date: str, end_date: str) 
 def compute_insights(tickers: list = None, asset_classes: list = None, period: str = "1y", volatility_window: int = 30) -> pd.DataFrame:
     """
     Run the complete portfolio analysis.
-
     The function selects the requested instruments, determines the analysis
     date range, generates all requested plots, calculates summary
     statistics, and returns those statistics as a DataFrame.
@@ -604,35 +602,29 @@ def compute_insights(tickers: list = None, asset_classes: list = None, period: s
     Generated plots:
 
         1. Correlation heatmap.
-
            Example:
                correlation_AAPL-BND-SPY_1Y.png
 
         2. Rolling annualized volatility.
-
            Example:
                rolling_volatility_30d_AAPL-BND-SPY_1Y.png
 
         3. Asset-class volatility comparison.
-
            Example:
                asset_class_volatility_AAPL-BND-SPY_1Y.png
 
     Args:
         tickers: Optional list of specific ticker symbols.
-
             Example:
                 ["AAPL", "BND", "SPY"]
             If provided, this takes priority over asset_classes.
 
         asset_classes: Optional list of asset classes.
-
             Example:
                 ["stocks", "bonds", "etfs"]
             All configured tickers belonging to these classes are analyzed.
 
         period: Analysis period.
-
             Supported values:
                 "1y"
                 "5y"
