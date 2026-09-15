@@ -1,10 +1,16 @@
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
 from datetime import datetime, timedelta
-import config
+
+analytics_dir = Path(__file__).resolve().parent.parent
+if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
+   
+from config import config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

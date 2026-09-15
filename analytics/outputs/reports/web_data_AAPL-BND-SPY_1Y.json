@@ -1,0 +1,118 @@
+{
+    "metadata": {
+        "generated_at": "2026-09-15T07:29:06.702278",
+        "period": "1y",
+        "tickers": [
+            "AAPL",
+            "BND",
+            "SPY"
+        ],
+        "ticker_count": 3
+    },
+    "statistics": [
+        {
+            "Ticker": "AAPL",
+            "Asset Class": "Unknown",
+            "Observations": 262,
+            "Annualized Return (%)": -7.900828376957813,
+            "Annualized Volatility (%)": 28.21764842006183,
+            "Sharpe Ratio": -0.2799959890116351,
+            "Best Daily Return (%)": 4.805242082271577,
+            "Worst Daily Return (%)": -4.547991071428581
+        },
+        {
+            "Ticker": "BND",
+            "Asset Class": "Unknown",
+            "Observations": 262,
+            "Annualized Return (%)": 7.088414443726898,
+            "Annualized Volatility (%)": 6.522677327924437,
+            "Sharpe Ratio": 1.0867338804850069,
+            "Best Daily Return (%)": 1.1244458860417472,
+            "Worst Daily Return (%)": -1.0053475935828837
+        },
+        {
+            "Ticker": "SPY",
+            "Asset Class": "Unknown",
+            "Observations": 262,
+            "Annualized Return (%)": -5.919756880500826,
+            "Annualized Volatility (%)": 19.91167307194334,
+            "Sharpe Ratio": -0.29730082746497555,
+            "Best Daily Return (%)": 3.7313284798952573,
+            "Worst Daily Return (%)": -3.5333774754710223
+        }
+    ],
+    "insights": {
+        "best_return": {
+            "ticker": "BND",
+            "value": 7.088414443726898
+        },
+        "worst_return": {
+            "ticker": "AAPL",
+            "value": -7.900828376957813
+        },
+        "highest_volatility": {
+            "ticker": "AAPL",
+            "value": 28.21764842006183
+        },
+        "lowest_volatility": {
+            "ticker": "BND",
+            "value": 6.522677327924437
+        },
+        "best_sharpe": {
+            "ticker": "BND",
+            "value": 1.0867338804850069
+        },
+        "risk_ranking": [
+            {
+                "rank": 1,
+                "ticker": "AAPL",
+                "volatility": 28.21764842006183
+            },
+            {
+                "rank": 2,
+                "ticker": "SPY",
+                "volatility": 19.91167307194334
+            },
+            {
+                "rank": 3,
+                "ticker": "BND",
+                "volatility": 6.522677327924437
+            }
+        ]
+    },
+    "charts": [
+        {
+            "type": "correlation",
+            "title": "Correlation Matrix",
+            "description": "Historical correlation between asset returns.",
+            "period": "1y",
+            "tickers": [
+                "AAPL",
+                "BND",
+                "SPY"
+            ]
+        },
+        {
+            "type": "volatility",
+            "title": "Rolling Volatility",
+            "description": "Historical rolling volatility by asset.",
+            "period": "1y",
+            "tickers": [
+                "AAPL",
+                "BND",
+                "SPY"
+            ]
+        },
+        {
+            "type": "asset_class_volatility",
+            "title": "Asset Class Volatility",
+            "description": "Historical volatility comparison by asset class.",
+            "period": "1y",
+            "tickers": [
+                "AAPL",
+                "BND",
+                "SPY"
+            ]
+        }
+    ]
+}

@@ -1,19 +1,21 @@
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
-import config
+
+analytics_dir = Path(__file__).resolve().parent.parent
+if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
+    
+from config import config
 
 # Set up logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # File handler
-log_file = config.REPORTS_DIR / "analytics.log"
-file_handler = logging.FileHandler(log_file)
+file_handler = logging.FileHandler(config.LOG_FILE)
 file_handler.setLevel(logging.DEBUG)
 
 # Console handler
@@ -47,7 +49,7 @@ def extract() -> pd.DataFrame:
 
     logger.info("Extracting historical price data (MOCK)")
     
-    symbols = config.INSTRUMENTS_LIST
+    symbols = config.INSTRUMENTS_LIST[:3] if config.INSTRUMENTS_LIST else ["AAPL", "BND", "SPY"]
     if not symbols:
         raise ValueError(
             "No instruments configured. "
