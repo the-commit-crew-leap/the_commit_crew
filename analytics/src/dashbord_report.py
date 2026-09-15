@@ -6,7 +6,7 @@ import pandas as pd
 
 analytics_dir = Path(__file__).resolve().parent.parent
 if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
-   
+
 from config import config
 from analysis import compute_insights, get_tickers_for_analysis
 
