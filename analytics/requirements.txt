@@ -1,8 +1,9 @@
 pandas
+numpy
 yfinance
 matplotlib
 dotenv
 sqlalchemy
 pydantic
-psycopg2-binary
 seaborn
+pytest

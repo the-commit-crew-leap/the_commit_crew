@@ -1,44 +1,20 @@
-import sys
 from pathlib import Path
 import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime, timedelta
-
-analytics_dir = Path(__file__).resolve().parent.parent
-if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
-    
 from config import config
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-# File handler
-file_handler = logging.FileHandler(config.LOG_FILE)
-file_handler.setLevel(logging.DEBUG)
-
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# Formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
 
 # ============================================================
 # EXTRACT
 # ============================================================
-
 def extract() -> pd.DataFrame:
     """
     Generate mock historical daily price data.
-
     Replace this function with yfinance in production.
 
     Returns:
@@ -49,7 +25,12 @@ def extract() -> pd.DataFrame:
 
     logger.info("Extracting historical price data (MOCK)")
     
-    symbols = config.INSTRUMENTS_LIST[:3] if config.INSTRUMENTS_LIST else ["AAPL", "BND", "SPY"]
+    symbols = (
+            config.INSTRUMENTS_LIST[:3]
+            if config.INSTRUMENTS_LIST
+            else ["AAPL", "BND", "SPY"]
+        )
+    
     if not symbols:
         raise ValueError(
             "No instruments configured. "
@@ -61,12 +42,6 @@ def extract() -> pd.DataFrame:
 
     # Trading days only
     dates = pd.bdate_range(start=start_date, end=end_date)
-
-    symbols = (
-        config.INSTRUMENTS_LIST[:3]
-        if config.INSTRUMENTS_LIST 
-        else ["AAPL", "BND", "SPY"]
-    )
 
     starting_prices = {
         "AAPL": 100,
@@ -82,7 +57,6 @@ def extract() -> pd.DataFrame:
     }
 
     rng = np.random.default_rng(42)
-
     rows = []
 
     for symbol in symbols:
@@ -125,24 +99,51 @@ def extract() -> pd.DataFrame:
 # ============================================================
 # TRANSFORM
 # ============================================================
-
 def transform(df: pd.DataFrame) -> pd.DataFrame:
     """
     Clean and enrich extracted price data.
+    
+    This stage is intentionally independent from extract() and
+    load(). It can therefore be tested using an arbitrary
+    DataFrame without touching the network or filesystem.
     """
 
     logger.info(f"Transforming {len(df)} rows")
+    
+    if df.empty:
+        raise ValueError("Cannot transform an empty DataFrame.")
 
     initial_count = len(df)
     df = df.copy()
+    
+    # Required columns
+    required_columns = {
+        "symbol",
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "adj_close",
+    }
 
-    # -------------------------
+    missing_columns = required_columns - set(df.columns)
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
+
+
     # Basic cleaning
-    # -------------------------
-
+    # Remove rows with invalid required values
     df = df.dropna(subset=["symbol", "date", "close", "volume"])
-    df["symbol"] = (df["symbol"].astype(str).str.upper())
-    df["date"] = (pd.to_datetime(df["date"]).dt.normalize())
+    
+    # Normalize symbol names.
+    df["symbol"] = (df["symbol"].astype(str).str.upper().str.strip())
+    
+    # Convert dates and normalize them to midnight.
+    df["date"] = (pd.to_datetime(df["date"],errors="coerce").dt.normalize())
+    
+    # Convert numeric fields.
     numeric_columns = [
         "open",
         "high",
@@ -150,17 +151,19 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
         "close",
         "adj_close"
     ]
-
     for col in numeric_columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["volume"] = (pd.to_numeric(df["volume"], errors="coerce").astype("Int64"))
+    
+    invalid_volume = df["volume"] < 0
+    
+    if invalid_volume.any():
+        logger.warning(f"Removing {invalid_volume.sum()} rows with invalid volume")
+        df = df.loc[~invalid_volume]
 
 
-    # -------------------------
     # Validate prices
-    # -------------------------
-
     invalid_prices = (
         (df["high"] < df["low"]) |
         (df["high"] < df["open"]) |
@@ -175,20 +178,20 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
         df = df.loc[ ~invalid_prices]
 
 
-    # -------------------------
     # Remove duplicates
-    # -------------------------
-
     before = len(df)
-    df = (df.sort_values(["symbol", "date"]).drop_duplicates(subset=["symbol","date"],keep="last"))
+    df = df.drop_duplicates(subset=["symbol", "date"], keep="last")
+    df = df.sort_values(["symbol", "date"])
 
     logger.info(f"Removed {before - len(df)} duplicates")
+    
+    
+    # Make sure cleaning didn't remove everything
+    if df.empty:
+        raise ValueError("No valid rows remain after transformation.")
 
 
-    # -------------------------
     # Enrichment
-    # -------------------------
-
     df["price_change"] = (df["close"] - df["open"])
     df["pct_change"] = ((df["close"] - df["open"]) / df["open"] * 100).round(2)
     df["load_timestamp"] = datetime.now()
@@ -202,17 +205,32 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 # LOAD
 # ============================================================
-
-def load(df: pd.DataFrame) -> dict:
+def load(df: pd.DataFrame, output_path_factory=None,) -> dict:
     """
     Save each ticker into its own CSV.
-
     Ensures one row per:
         symbol + date
+        
+    Args:
+        df:
+            Cleaned market data.
+
+        output_path_factory:
+            Optional function receiving a symbol and returning
+            its CSV path.
+
+            Defaults to config.get_ticker_csv_path.
+
+            Keeping this injectable makes load() easy to test
+            without modifying the real application data.
     """
 
     if df.empty:
+        logger.warning("Nothing to load: DataFrame is empty.")
         return {"saved": 0, "errors": ["Empty dataframe"]}
+    
+    if output_path_factory is None:
+        output_path_factory = config.get_ticker_csv_path
 
     errors = []
     saved = 0
@@ -221,23 +239,26 @@ def load(df: pd.DataFrame) -> dict:
 
         try:
             ticker_df = (df[df["symbol"] == symbol].copy())
-            path = (config.get_ticker_csv_path(symbol))
+            if ticker_df.empty:
+                continue
+            
+            path = Path(output_path_factory(symbol))
 
+            # Load existing data
             if path.exists():
                 existing = pd.read_csv(path, parse_dates=["date"])
-
-                existing["date"] = (pd.to_datetime(existing["date"]).dt.normalize())
+                existing["date"] = (pd.to_datetime(existing["date"], errors="coerce").dt.normalize())
                 combined = pd.concat([existing, ticker_df], ignore_index=True)
             else:
                 combined = ticker_df
 
             # Ensure clean dates
-            combined["date"] = (pd.to_datetime(combined["date"]).dt.normalize())
+            combined["date"] = (pd.to_datetime(combined["date"], errors="coerce").dt.normalize())
             
             # Keep newest version
-            combined = (combined.sort_values(["date","load_timestamp"])
-                        .drop_duplicates(subset=["date"],keep="last")
-                        .sort_values("date"))
+            # Incoming data is last, so it replaces existing data for the same date.
+            combined = combined.drop_duplicates(subset=["date"], keep="last")
+            combined = combined.sort_values("date").reset_index(drop=True)
             combined.to_csv(path, index=False)
 
             logger.info(f"Saved {symbol}: {len(combined)} rows")
@@ -258,26 +279,51 @@ def load(df: pd.DataFrame) -> dict:
 # ============================================================
 # PIPELINE RUNNER
 # ============================================================
-
 def run_etl():
+    """
+    Execute the complete ETL workflow.
+    The individual stages remain independently callable:
+
+        extract()
+        transform(df)
+        load(df)
+
+    This function simply orchestrates them.
+    """
 
     logger.info("Starting ETL pipeline")
+    
+    try: 
+        raw = extract()
+        
+        if raw.empty:
+            raise ValueError("Extraction returned no data")
+        
+        clean = transform(raw)
+        result = load(clean)
 
-    raw = extract()
-    clean = transform(raw)
-    result = load(clean)
+        summary = {
+            "status": ("success" if not result["errors"] else "partial"),
+            "extracted": len(raw),
+            "transformed": len(clean),
+            "saved": result["saved"],
+            "errors": result["errors"],
+        }
 
-    summary = {
-        "status": ("success" if not result["errors"] else "partial"),
-        "extracted": len(raw),
-        "transformed": len(clean),
-        "saved": result["saved"],
-        "errors": result["errors"],
-    }
+        logger.info(f"ETL Summary: {summary}")
 
-    logger.info(f"ETL Summary: {summary}")
-
-    return summary
+        return summary
+    
+    except Exception as e:
+        logger.error("ETL pipeline failed", exc_info=True)
+        
+        return {
+            "status": "failed",
+            "extracted": 0,
+            "transformed": 0,
+            "saved": 0,
+            "errors": [str(e)],
+        }
 
 
 if __name__ == "__main__":
