@@ -1,5 +1,3 @@
-import sys
-from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,24 +5,17 @@ import seaborn as sns
 import logging
 from datetime import datetime, timedelta
 
-analytics_dir = Path(__file__).resolve().parent.parent
-if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
-   
 from config import config
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-# Set up logging
-file_handler = logging.FileHandler(config.LOG_FILE)
-file_handler.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+
+# ============================================================
+# TICKER HELPER
+# ============================================================
+def normalize_ticker(ticker: str) -> str:
+    """Normalize a ticker symbol to the same format used by the ETL."""
+    return str(ticker).strip().upper()
 
 
 # ============================================================
@@ -56,23 +47,12 @@ def save_plot(fig: plt.Figure, filename: str) -> None:
 def get_ticker_label(tickers: list) -> str:
     """
     Convert a list of ticker symbols into a filesystem-friendly label.
-
     The ticker symbols are converted to uppercase and joined with hyphens.
-
-    Args:
-        tickers: List of ticker symbols.
-
-    Returns:
-        A string suitable for use in a filename.
-
-    Example:
-        get_ticker_label(["AAPL", "BND", "SPY"])
-        returns "AAPL-BND-SPY"
     """
     cleaned_tickers = []
 
     for ticker in tickers:
-        ticker = str(ticker).upper().strip()
+        ticker = normalize_ticker(ticker=ticker)
         ticker = ticker.replace("/", "-")
         ticker = ticker.replace(" ", "-")
         cleaned_tickers.append(ticker)
@@ -83,14 +63,8 @@ def get_ticker_label(tickers: list) -> str:
 def get_ticker_title(tickers: list) -> str:
     """
     Convert a list of ticker symbols into a readable plot-title label.
-
-    Args:
-        tickers: List of ticker symbols.
-
-    Returns:
-        A comma-separated string suitable for plot titles.
     """
-    return ", ".join(str(ticker).upper() for ticker in tickers)
+    return ", ".join(normalize_ticker(ticker=ticker) for ticker in tickers)
 
 
 # ============================================================
@@ -123,21 +97,26 @@ def get_tickers_for_analysis(tickers: list = None, asset_classes: list = None) -
         generate a warning and are skipped.
     """
     if tickers:
-        return list(dict.fromkeys(tickers))
+        return list(dict.fromkeys(normalize_ticker(t) for t in tickers if t is not None and str(t).strip()))
 
+    instruments = {str(k).strip().lower(): v for k, v in config.INSTRUMENTS.items()}
+    
     if asset_classes:
         selected = []
 
         for asset_class in asset_classes:
-            if asset_class not in config.INSTRUMENTS:
+            key = str(asset_class).strip().lower()
+
+            if key not in instruments:
                 logger.warning(f"Unknown asset class: {asset_class}")
                 continue
 
-            selected.extend(config.INSTRUMENTS[asset_class])
+            selected.extend(normalize_ticker(t) for t in instruments[key])
 
         return list(dict.fromkeys(selected))
 
-    return list(dict.fromkeys(config.INSTRUMENTS_LIST))
+    
+    return list(dict.fromkeys(normalize_ticker(t) for t in (config.INSTRUMENTS_LIST or [])))
 
 
 # ============================================================
@@ -167,40 +146,41 @@ def load_price_data(symbol: str, start_date: str = None, end_date: str = None) -
             - The CSV file is empty.
             - An error occurs while loading the file.
     """
+    symbol = normalize_ticker(symbol)
     csv_path = config.get_ticker_csv_path(symbol)
+    
+    if not csv_path.exists():
+        logger.warning(f"No CSV found for {symbol}: {csv_path}")
+        return pd.DataFrame()
 
     try:
-        if not csv_path.exists():
-            logger.warning(f"No CSV found for {symbol}: {csv_path}")
-            return pd.DataFrame()
-
         df = pd.read_csv(csv_path, parse_dates=["date"])
-
-        if df.empty:
-            logger.warning(f"CSV is empty for {symbol}")
+    except Exception as e:
+            logger.error(f"Error loading {symbol}: {e}", exc_info=True)
             return pd.DataFrame()
 
-        df["date"] = pd.to_datetime(df["date"]).dt.normalize()
-        df = df.sort_values("date")
-        duplicate_count = df.duplicated(subset=["date"]).sum()
-
-        if duplicate_count > 0:
-            logger.warning(f"{symbol}: found {duplicate_count} duplicate dates; keeping latest row")
-            df = df.drop_duplicates(subset=["date"], keep="last")
-
-        if start_date:
-            df = df[df["date"] >= pd.Timestamp(start_date)]
-
-        if end_date:
-            df = df[df["date"] <= pd.Timestamp(end_date)]
-
-        logger.debug(f"Loaded {len(df)} rows for {symbol}")
-
-        return df.reset_index(drop=True)
-
-    except Exception as e:
-        logger.error(f"Error loading {symbol}: {e}", exc_info=True)
+    if df.empty:
+        logger.warning(f"CSV is empty for {symbol}")
         return pd.DataFrame()
+
+    df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+    duplicate_count = df.duplicated(subset=["date"]).sum()
+
+    if duplicate_count > 0:
+        logger.warning(f"{symbol}: found {duplicate_count} duplicate dates; keeping latest row")
+        df = df.drop_duplicates(subset=["date"], keep="last")
+        
+    df = df.sort_values("date")
+
+    if start_date:
+        df = df[df["date"] >= pd.Timestamp(start_date)]
+
+    if end_date:
+        df = df[df["date"] <= pd.Timestamp(end_date)]
+
+    logger.debug(f"Loaded {len(df)} rows for {symbol}")
+
+    return df.reset_index(drop=True)
 
 
 # ============================================================
@@ -253,21 +233,8 @@ def get_date_range(period: str = "1y") -> tuple:
 def get_returns_for_tickers(tickers: list, start_date: str, end_date: str) -> pd.DataFrame:
     """
     Calculate daily close-to-close returns for multiple instruments.
-
     Adjusted closing price is used when available. Otherwise, regular
     closing price is used.
-
-    Returns are calculated as:
-
-        return[t] = price[t] / price[t-1] - 1
-
-    Returns are stored as decimal values rather than percentages.
-
-    For example:
-
-        0.01  = 1%
-        0.05  = 5%
-        -0.02 = -2%
 
     The function loads seven additional calendar days before start_date.
     This is necessary because the first requested trading day's return
@@ -289,29 +256,46 @@ def get_returns_for_tickers(tickers: list, start_date: str, end_date: str) -> pd
         have usable data.
     """
     returns_data = {}
-
     requested_start = pd.Timestamp(start_date)
     requested_end = pd.Timestamp(end_date)
+
+    if requested_start > requested_end:
+        raise ValueError("start_date must be before or equal to end_date")
 
     data_start = requested_start - pd.Timedelta(days=7)
 
     for symbol in tickers:
+        symbol = normalize_ticker(ticker=symbol)
         price_df = load_price_data(symbol, data_start.strftime("%Y-%m-%d"), end_date)
 
         if price_df.empty:
             logger.warning(f"No price data available for {symbol}")
             continue
 
-        price_column = "adj_close" if "adj_close" in price_df.columns else "close"
-        price_df[price_column] = pd.to_numeric(price_df[price_column], errors="coerce")
-        price_df = price_df.dropna(subset=[price_column])
+        # Prefer adjusted close only when it actually contains data.
+        if "adj_close" in price_df.columns:
+            adjusted = pd.to_numeric(price_df["adj_close"], errors="coerce")
+        else:
+            adjusted = pd.Series(dtype="float64")
+
+        if adjusted.notna().any():
+            price = adjusted
+        else:
+            price = pd.to_numeric(price_df["close"], errors="coerce")
+        
+        price_df = price_df.copy()
+        price_df["price"] = price
+        price_df = price_df.dropna(subset=["price"])
+        price_df = price_df[price_df["price"] > 0]
 
         if price_df.empty:
             logger.warning(f"No valid price data available for {symbol}")
             continue
 
         price_df = price_df.set_index("date").sort_index()
-        returns = price_df[price_column].pct_change()
+        
+        # Do not fill missing observations when calculating returns.
+        returns = price_df["price"].pct_change(fill_method=None)
         returns.name = symbol
         returns_data[symbol] = returns
 
@@ -331,8 +315,6 @@ def get_returns_for_tickers(tickers: list, start_date: str, end_date: str) -> pd
 # ============================================================
 def get_asset_class(ticker: str) -> str:
     """
-    Determine the configured asset class for a ticker.
-
     The function searches config.INSTRUMENTS and returns the first matching
     asset class.
 
@@ -344,6 +326,7 @@ def get_asset_class(ticker: str) -> str:
 
         Returns "Unknown" if the ticker is not configured in any asset class.
     """
+    ticker = normalize_ticker(ticker=ticker)
     for asset_class, class_tickers in config.INSTRUMENTS.items():
         if ticker in class_tickers:
             return asset_class.capitalize()
@@ -357,15 +340,8 @@ def get_asset_class(ticker: str) -> str:
 def plot_correlation_heatmap(tickers: list, start_date: str, end_date: str, period_label: str) -> None:
     """
     Generate and save a correlation heatmap of daily returns.
-
     Pearson correlation is calculated between the daily returns of each
     pair of instruments.
-
-    Interpretation:
-
-        +1.00 = assets move almost perfectly together.
-         0.00 = little linear relationship.
-        -1.00 = assets move almost perfectly in opposite directions.
 
     Args:
         tickers: List of ticker symbols to analyze.
@@ -375,9 +351,6 @@ def plot_correlation_heatmap(tickers: list, start_date: str, end_date: str, peri
 
     Returns:
         None. The resulting PNG is saved to config.CHARTS_DIR.
-
-    Output filename example:
-        correlation_AAPL-BND-SPY_1Y.png
     """
     returns_df = get_returns_for_tickers(tickers, start_date, end_date)
 
@@ -408,13 +381,6 @@ def plot_correlation_heatmap(tickers: list, start_date: str, end_date: str, peri
 def plot_volatility_trends(tickers: list, start_date: str, end_date: str, period_label: str, window: int = 30) -> None:
     """
     Generate and save rolling annualized volatility trends.
-
-    Volatility is calculated using the rolling standard deviation of daily
-    returns and annualized using approximately 252 trading days per year.
-
-    Formula:
-        annualized volatility = daily standard deviation × sqrt(252)
-
     The resulting values are displayed as percentages -> 0.20 annualized volatility = 20%
 
     Args:
@@ -427,10 +393,10 @@ def plot_volatility_trends(tickers: list, start_date: str, end_date: str, period
 
     Returns:
         None. The resulting PNG is saved to config.CHARTS_DIR.
-
-    Output filename example:
-        rolling_volatility_30d_AAPL-BND-SPY_1Y.png
     """
+    if window < 2:
+        raise ValueError("Volatility window must be at least 2 trading days")
+    
     returns_df = get_returns_for_tickers(tickers, start_date, end_date)
 
     if returns_df.empty:
@@ -475,24 +441,11 @@ def plot_asset_class_volatility(tickers: list, start_date: str, end_date: str, p
     Each ticker is represented as an individual point while the box plot
     summarizes the distribution of volatility within each asset class.
 
-    Annualized volatility is calculated as:
-
-        daily return standard deviation × sqrt(252)
-
-    This plot is useful for comparing the risk characteristics of stocks,
-    bonds, ETFs, and other configured groups.
-
     Args:
         tickers: List of ticker symbols to analyze.
         start_date: Inclusive analysis start date.
         end_date: Inclusive analysis end date.
         period_label: Human-readable period label such as "1Y" or "5Y".
-
-    Returns:
-        None. The resulting PNG is saved to config.CHARTS_DIR.
-
-    Output filename example:
-        asset_class_volatility_AAPL-BND-SPY_1Y.png
     """
     returns_df = get_returns_for_tickers(tickers, start_date, end_date)
 
@@ -506,7 +459,6 @@ def plot_asset_class_volatility(tickers: list, start_date: str, end_date: str, p
     for ticker in returns_df.columns:
         if pd.isna(volatility[ticker]):
             continue
-
         data_for_plot.append({"Asset Class": get_asset_class(ticker), "Ticker": ticker, "Annualized Volatility": volatility[ticker]})
 
     plot_df = pd.DataFrame(data_for_plot)
@@ -587,7 +539,17 @@ def calculate_summary_statistics(tickers: list, start_date: str, end_date: str) 
         annualized_return = (1 + returns).prod() ** (252 / len(returns)) - 1
         annualized_volatility = returns.std() * np.sqrt(252)
         sharpe_ratio = annualized_return / annualized_volatility if annualized_volatility > 0 else np.nan
-        rows.append({"Ticker": ticker, "Asset Class": get_asset_class(ticker), "Observations": len(returns), "Annualized Return (%)": annualized_return * 100, "Annualized Volatility (%)": annualized_volatility * 100, "Sharpe Ratio": sharpe_ratio, "Best Daily Return (%)": returns.max() * 100, "Worst Daily Return (%)": returns.min() * 100})
+        
+        rows.append({
+            "Ticker": ticker, 
+            "Asset Class": get_asset_class(ticker), 
+            "Observations": len(returns), 
+            "Annualized Return (%)": annualized_return * 100, 
+            "Annualized Volatility (%)": annualized_volatility * 100, 
+            "Sharpe Ratio": sharpe_ratio, 
+            "Best Daily Return (%)": returns.max() * 100, 
+            "Worst Daily Return (%)": returns.min() * 100
+        })
 
     if not rows:
         return pd.DataFrame()
@@ -606,90 +568,64 @@ def compute_insights(tickers: list = None, asset_classes: list = None, period: s
     statistics, and returns those statistics as a DataFrame.
 
     Generated plots:
-
         1. Correlation heatmap.
-           Example:
-               correlation_AAPL-BND-SPY_1Y.png
-
         2. Rolling annualized volatility.
-           Example:
-               rolling_volatility_30d_AAPL-BND-SPY_1Y.png
-
         3. Asset-class volatility comparison.
-           Example:
-               asset_class_volatility_AAPL-BND-SPY_1Y.png
 
     Args:
         tickers: Optional list of specific ticker symbols.
-            Example:
-                ["AAPL", "BND", "SPY"]
-            If provided, this takes priority over asset_classes.
 
         asset_classes: Optional list of asset classes.
-            Example:
-                ["stocks", "bonds", "etfs"]
-            All configured tickers belonging to these classes are analyzed.
 
         period: Analysis period.
-            Supported values:
-                "1y"
-                "5y"
-                "10y"
-                "all"
 
         volatility_window: Rolling window size for the volatility chart.
-            Default is 30 trading days.
 
     Returns:
         DataFrame containing summary statistics for each analyzed ticker.
         Returns None if the analysis fails.
     """
-    logger.info("=" * 60)
-    logger.info(f"Starting analysis - Period: {period}")
-    logger.info("=" * 60)
+    if volatility_window < 2:
+        raise ValueError("Volatility window must be at least 2")
+    
+    analysis_tickers = get_tickers_for_analysis(tickers, asset_classes)
 
-    try:
-        analysis_tickers = get_tickers_for_analysis(tickers, asset_classes)
+    if not analysis_tickers:
+        logger.error("No tickers selected. Check config.INSTRUMENTS.")
+        return pd.DataFrame()
 
-        if not analysis_tickers:
-            logger.error("No tickers selected. Check config.INSTRUMENTS.")
-            return pd.DataFrame()
+    start_date, end_date = get_date_range(period)
+    period_label = period.upper()
 
-        logger.info(f"Analyzing tickers: {analysis_tickers}")
+    logger.info(f"Analysis date range: {start_date} to {end_date}")
+    logger.info(f"Analyzing tickers: {analysis_tickers}")
+    
+    # plots
+    plot_correlation_heatmap(analysis_tickers, start_date, end_date, period_label)
+    plot_volatility_trends(analysis_tickers, start_date, end_date, period_label, window=volatility_window)
+    plot_asset_class_volatility(analysis_tickers, start_date, end_date, period_label)
 
-        start_date, end_date = get_date_range(period)
-        period_label = period.upper()
+    # summary
+    summary = calculate_summary_statistics(analysis_tickers, start_date, end_date)
 
-        logger.info(f"Analysis date range: {start_date} to {end_date}")
+    if not summary.empty:
+        logger.info("Summary statistics:")
+        logger.info("\n" + summary.to_string(index=False))
+    else:
+        logger.warning("No summary statistics could be calculated.")
 
-        plot_correlation_heatmap(analysis_tickers, start_date, end_date, period_label)
-        plot_volatility_trends(analysis_tickers, start_date, end_date, period_label, window=volatility_window)
-        plot_asset_class_volatility(analysis_tickers, start_date, end_date, period_label)
-
-        summary = calculate_summary_statistics(analysis_tickers, start_date, end_date)
-
-        if not summary.empty:
-            logger.info("Summary statistics:")
-            logger.info("\n" + summary.to_string(index=False))
-        else:
-            logger.warning("No summary statistics could be calculated.")
-
-        logger.info("=" * 60)
-        logger.info(f"Analysis complete. Charts saved to {config.CHARTS_DIR}")
-        logger.info("=" * 60)
-
-        return summary
-
-    except Exception as e:
-        logger.error(f"Analysis failed: {e}", exc_info=True)
-        return None
+    return summary
 
 
 # ============================================================
 # MAIN
 # ============================================================
 if __name__ == "__main__":
-    summary = compute_insights(tickers=["AAPL", "BND", "SPY"], period="1y", volatility_window=30)
+    summary = compute_insights(
+        tickers=["AAPL", "BND", "SPY"], 
+        period="1y", 
+        volatility_window=30
+    )
 
     if summary is not None and not summary.empty:
         print("\nAnalysis Summary:")
