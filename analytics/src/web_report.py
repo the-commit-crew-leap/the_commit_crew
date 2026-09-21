@@ -1,32 +1,18 @@
-import sys
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
-analytics_dir = Path(__file__).resolve().parent.parent
-if str(analytics_dir) not in sys.path: sys.path.insert(0, str(analytics_dir))
-   
 from config import config
-from analysis import compute_insights, get_tickers_for_analysis
-
+from src.analysis import compute_insights, get_tickers_for_analysis
 
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, config.LOG_LEVEL.upper(), logging.INFO))
-
-# Set up logging
-file_handler = logging.FileHandler(config.LOG_FILE)
-file_handler.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
 
+# ============================================================
+# FORMATTING
+# ============================================================
 def generate_web_insights(summary_stats: pd.DataFrame) -> dict:
     """
     Generate structured statistical insights for use by a web application.
@@ -67,10 +53,7 @@ def generate_web_insights(summary_stats: pd.DataFrame) -> dict:
         'Sharpe Ratio'
     ]:
         if column in stats.columns:
-            stats[column] = pd.to_numeric(
-                stats[column],
-                errors='coerce'
-            )
+            stats[column] = pd.to_numeric(stats[column], errors='coerce')
 
     if 'Annualized Return (%)' in stats.columns:
         valid = stats.dropna(subset=['Annualized Return (%)'])
@@ -106,12 +89,11 @@ def generate_web_insights(summary_stats: pd.DataFrame) -> dict:
                 'value': float(valid.loc[lowest_idx, 'Annualized Volatility (%)'])
             }
 
-            ranking = valid[
-                ['Ticker', 'Annualized Volatility (%)']
-            ].sort_values(
-                'Annualized Volatility (%)',
-                ascending=False
-            )
+            ranking = valid[['Ticker', 'Annualized Volatility (%)']
+                            ].sort_values(
+                                'Annualized Volatility (%)',
+                                ascending=False
+                            )
 
             insights['risk_ranking'] = [
                 {
@@ -139,6 +121,9 @@ def generate_web_insights(summary_stats: pd.DataFrame) -> dict:
     return insights
 
 
+# ============================================================
+# WEB REPORT CREATION
+# ============================================================
 def create_web_data(summary_stats: pd.DataFrame, tickers: list, period: str) -> dict:
     """
     Create the complete structured data payload for the future web page.
@@ -211,6 +196,9 @@ def create_web_data(summary_stats: pd.DataFrame, tickers: list, period: str) -> 
     }
 
 
+# ============================================================
+# WEB REPORT SAVE
+# ============================================================
 def save_web_data(web_data: dict, tickers: list, period: str) -> Path:
     """
     Save structured web dashboard data as a JSON file.
@@ -285,10 +273,7 @@ def generate_web_report(
     logger.info("=" * 80)
 
     try:
-        analysis_tickers = get_tickers_for_analysis(
-            tickers=tickers,
-            asset_classes=asset_classes
-        )
+        analysis_tickers = get_tickers_for_analysis(tickers=tickers, asset_classes=asset_classes)
 
         if not analysis_tickers:
             logger.error("No tickers selected")
@@ -300,9 +285,7 @@ def generate_web_report(
                 'error': 'No tickers selected'
             }
 
-        logger.info(
-            f"Generating web data for: {', '.join(analysis_tickers)}"
-        )
+        logger.info(f"Generating web data for: {', '.join(analysis_tickers)}")
 
         summary_stats = compute_insights(
             tickers=analysis_tickers,
@@ -334,10 +317,7 @@ def generate_web_report(
         }
 
     except Exception as e:
-        logger.error(
-            f"Web data generation failed: {str(e)}",
-            exc_info=True
-        )
+        logger.error(f"Web data generation failed: {str(e)}", exc_info=True)
 
         return {
             'status': 'failed',
