@@ -240,7 +240,8 @@ def generate_web_report(
     asset_classes: list = None,
     period: str = '1y',
     volatility_window: int = 30,
-    save_file: bool = True
+    save_file: bool = True,
+    generate_plots: bool = False
 ) -> dict:
     """
     Run analysis and generate structured data for a web application.
@@ -290,7 +291,8 @@ def generate_web_report(
         summary_stats = compute_insights(
             tickers=analysis_tickers,
             period=period,
-            volatility_window=volatility_window
+            volatility_window=volatility_window,
+            generate_plots=generate_plots
         )
 
         web_data = create_web_data(

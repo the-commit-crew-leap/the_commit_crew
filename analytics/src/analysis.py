@@ -558,9 +558,27 @@ def calculate_summary_statistics(tickers: list, start_date: str, end_date: str) 
 
 
 # ============================================================
+# PLOTS SUMMARY
+# ============================================================
+def generate_analysis_plots(
+    tickers: list,
+    start_date: str,
+    end_date: str,
+    period_label: str,
+    volatility_window: int = 30
+) -> None:
+
+    plot_correlation_heatmap(tickers, start_date, end_date, period_label)
+
+    plot_volatility_trends(tickers, start_date, end_date, period_label, window=volatility_window)
+
+    plot_asset_class_volatility(tickers, start_date, end_date, period_label)
+
+
+# ============================================================
 # MAIN ANALYSIS FUNCTION
 # ============================================================
-def compute_insights(tickers: list = None, asset_classes: list = None, period: str = "1y", volatility_window: int = 30) -> pd.DataFrame:
+def compute_insights(tickers: list = None, asset_classes: list = None, period: str = "1y", volatility_window: int = 30, generate_plots: bool = False) -> pd.DataFrame:
     """
     Run the complete portfolio analysis.
     The function selects the requested instruments, determines the analysis
@@ -601,10 +619,9 @@ def compute_insights(tickers: list = None, asset_classes: list = None, period: s
     logger.info(f"Analyzing tickers: {analysis_tickers}")
     
     # plots
-    plot_correlation_heatmap(analysis_tickers, start_date, end_date, period_label)
-    plot_volatility_trends(analysis_tickers, start_date, end_date, period_label, window=volatility_window)
-    plot_asset_class_volatility(analysis_tickers, start_date, end_date, period_label)
-
+    if generate_plots:
+        generate_analysis_plots(analysis_tickers, start_date, end_date, period_label, volatility_window)
+        
     # summary
     summary = calculate_summary_statistics(analysis_tickers, start_date, end_date)
 

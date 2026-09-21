@@ -20,15 +20,15 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 # Instruments to fetch from Yahoo Finance
 INSTRUMENTS = {
     'stocks': [
-        # 'AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN',
+        'AAPL', # 'MSFT', 'GOOGL', 'TSLA', 'AMZN',
         # 'NVDA', 'META', 'NFLX', 'SPDY', 'JPM',
     ],
     'bonds': [
-        # 'BND', 'AGG', 'LQD', 'HYG', 'SCHZ',
+        'BND', # 'AGG', 'LQD', 'HYG', 'SCHZ',
         # 'VCIT', 'MUB', 'IGOV', 'ANGL', 'PFF',
     ],
     'etfs': [
-        # 'SPY', 'QQQ', 'IWM', 'EEM', 'GLD',
+        'SPY', # 'QQQ', 'IWM', 'EEM', 'GLD',
         # 'USO', 'TLT', 'AGG', 'VTI', 'VXUS',
     ]
 }
