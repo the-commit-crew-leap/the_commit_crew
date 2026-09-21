@@ -7,3 +7,5 @@ sqlalchemy
 pydantic
 seaborn
 pytest
+fastapi
+uvicorn
