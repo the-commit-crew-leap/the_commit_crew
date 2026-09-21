@@ -205,7 +205,7 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
 # ============================================================
 # LOAD
 # ============================================================
-def load(df: pd.DataFrame, output_path_factory=None,) -> dict:
+def load(df: pd.DataFrame, output_path_factory=None) -> dict:
     """
     Save each ticker into its own CSV.
     Ensures one row per:
