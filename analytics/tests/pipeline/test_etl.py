@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from src.etl import extract, transform, load, run_etl
+from analytics.src.pipeline.etl_pipeline import extract, transform, load, run_etl
 
 
 # ============================================================

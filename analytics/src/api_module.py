@@ -1,16 +1,24 @@
 from typing import List, Optional
+import logging
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 import uvicorn
 
+from analytics.src.analysis.analysis_helper import AnalysisHelper
+from analytics.src.analysis.data_loader import DataLoader
+from analytics.src.analysis.analysis_engine import AnalysisEngine
+from analytics.src.reports.web_report import WebReport
 from config import config
-from src.analysis import get_date_range, get_ticker_label, get_tickers_for_analysis
-from src.analysis import plot_correlation_heatmap, plot_asset_class_volatility, plot_volatility_trends
-from src.web_report import generate_web_report
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="Portfolio Analytics API")
+helper = AnalysisHelper()
+loader = DataLoader()
+analysis_engine = AnalysisEngine(data_loader=loader, helper=helper)
+web_report = WebReport(helper=helper, analysis_engine=analysis_engine)
 
 
 # HEALTH
@@ -35,7 +43,7 @@ def get_insights(
     Example:
         /insights?tickers=AAPL&tickers=SPY&period=1y
     """
-    result = generate_web_report(
+    result = web_report.generate_web_report(
         tickers=tickers,
         asset_classes=asset_classes,
         period=period,
@@ -64,7 +72,7 @@ def run_analysis(
     This endpoint generates the PNG files but does not save the JSON
     web-report file.
     """
-    result = generate_web_report(
+    result = web_report.generate_web_report(
         tickers=tickers,
         asset_classes=asset_classes,
         period=period,
@@ -89,16 +97,16 @@ def get_correlation_chart(
     """
     Generate and return the correlation heatmap.
     """
-    selected_tickers = get_tickers_for_analysis(tickers=tickers, asset_classes=asset_classes)
+    selected_tickers = helper.get_tickers_for_analysis(tickers=tickers, asset_classes=asset_classes)
 
     if not selected_tickers:
         raise HTTPException(status_code=400, detail="No tickers selected")
 
-    start_date, end_date = get_date_range(period)
-    ticker_label = get_ticker_label(selected_tickers)
+    start_date, end_date = helper.get_date_range(period)
+    ticker_label = helper.get_ticker_label(selected_tickers)
     filename = (f"correlation_{ticker_label}_{period.upper()}.png")
 
-    plot_correlation_heatmap(selected_tickers, start_date, end_date, period.upper())
+    analysis_engine.plot_correlation_heatmap(selected_tickers, start_date, end_date, period.upper())
 
     path = config.CHARTS_DIR / filename
     if not path.exists():
@@ -121,16 +129,16 @@ def get_volatility_chart(
     if volatility_window < 2:
         raise HTTPException(status_code=400, detail="Volatility window must be at least 2")
 
-    selected_tickers = get_tickers_for_analysis(tickers=tickers,asset_classes=asset_classes)
+    selected_tickers = helper.get_tickers_for_analysis(tickers=tickers,asset_classes=asset_classes)
 
     if not selected_tickers:
         raise HTTPException(status_code=400, detail="No tickers selected")
 
-    start_date, end_date = get_date_range(period)
-    ticker_label = get_ticker_label(selected_tickers)
+    start_date, end_date = helper.get_date_range(period)
+    ticker_label = helper.get_ticker_label(selected_tickers)
     filename = (f"rolling_volatility_{volatility_window}d_{ticker_label}_{period.upper()}.png")
 
-    plot_volatility_trends(selected_tickers, start_date, end_date, period.upper(), window=volatility_window)
+    analysis_engine.plot_volatility_trends(selected_tickers, start_date, end_date, period.upper(), window=volatility_window)
 
     path = config.CHARTS_DIR / filename
     if not path.exists():
@@ -148,16 +156,16 @@ def get_asset_class_volatility_chart(
     """
     Generate and return the asset-class volatility chart.
     """
-    selected_tickers = get_tickers_for_analysis(tickers=tickers, asset_classes=asset_classes)
+    selected_tickers = helper.get_tickers_for_analysis(tickers=tickers, asset_classes=asset_classes)
 
     if not selected_tickers:
         raise HTTPException(status_code=400, detail="No tickers selected")
 
-    start_date, end_date = get_date_range(period)
-    ticker_label = get_ticker_label(selected_tickers)
+    start_date, end_date = helper.get_date_range(period)
+    ticker_label = helper.get_ticker_label(selected_tickers)
     filename = (f"asset_class_volatility_{ticker_label}_{period.upper()}.png")
     
-    plot_asset_class_volatility(selected_tickers, start_date, end_date,period.upper())
+    analysis_engine.plot_asset_class_volatility(selected_tickers, start_date, end_date,period.upper())
 
     path = config.CHARTS_DIR / filename
     if not path.exists():

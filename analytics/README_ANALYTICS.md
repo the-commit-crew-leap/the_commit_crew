@@ -17,10 +17,10 @@ pip install -r requirements.txt
 
 ```bash
 # Run ETL
-python -m src.etl
+python -m src.pipeline.etl_pipeline
 
 # Run analysis
-python -m src.analysis
+python -m src.analysis.analysis_engine
 
 # Run main
 python -m src.main run

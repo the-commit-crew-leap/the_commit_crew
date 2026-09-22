@@ -1,7 +1,7 @@
 ======================================================================
 PORTFOLIO ANALYSIS DASHBOARD
 ======================================================================
-Generated: 2026-09-15 12:02:21
+Generated: 2026-09-22 12:39:12
 Period: 1Y
 Tickers: AAPL, BND, SPY
 
@@ -9,29 +9,29 @@ Tickers: AAPL, BND, SPY
 SUMMARY
 ----------------------------------------------------------------------
 
-AAPL (Unknown)
-  Annualized Return: -7.90%
+AAPL (Stocks)
+  Annualized Return: -7.71%
   Annualized Volatility: 28.22%
-  Sharpe Ratio: -0.28
+  Sharpe Ratio: -0.27
 
-BND (Unknown)
-  Annualized Return: 7.09%
-  Annualized Volatility: 6.52%
-  Sharpe Ratio: 1.09
+BND (Bonds)
+  Annualized Return: 6.74%
+  Annualized Volatility: 6.53%
+  Sharpe Ratio: 1.03
 
-SPY (Unknown)
-  Annualized Return: -5.92%
+SPY (Etfs)
+  Annualized Return: -5.62%
   Annualized Volatility: 19.91%
-  Sharpe Ratio: -0.30
+  Sharpe Ratio: -0.28
 
 ----------------------------------------------------------------------
 KEY INSIGHTS
 ----------------------------------------------------------------------
 
-Best historical return: BND (7.09%)
-Lowest historical return: AAPL (-7.90%)
+Best historical return: BND (6.74%)
+Lowest historical return: AAPL (-7.71%)
 
 Highest historical volatility: AAPL (28.22%)
-Lowest historical volatility: BND (6.52%)
+Lowest historical volatility: BND (6.53%)
 
-Best historical Sharpe ratio: BND (1.09)
+Best historical Sharpe ratio: BND (1.03)
