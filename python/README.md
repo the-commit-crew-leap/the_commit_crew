@@ -107,3 +107,27 @@ deactivate
 ## Data Retention
 
 CSV files are written to `market_data/` and persist across runs.
+
+## Generate instruments seed (Optional)
+
+### Converts ticker_metadata.csv into SQL INSERT statements for the instruments table:
+
+```bash
+python generate_instruments_seed.py
+```
+This generates instruments-data.sql with all 30 tickers. </br>
+When to run: After updating ticker metadata or adding/removing tickers.
+
+## Generate price history seed (Daily)
+
+### Converts price_history.csv into SQL INSERT statements for the price_history table:
+
+```bash
+python generate_price_history_seed.py
+```
+This generates price_history-data.sql with the last 10 years of daily pricing data (~75k rows). </br>
+When to run: After fetching new market data. (daily manual batch job)
+
+## Commit generated seeds
+After running either seed generator, commit the output files to git. </br>
+When Jenkins restarts the database, it will automatically load the committed seeds.
