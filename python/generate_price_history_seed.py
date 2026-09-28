@@ -72,4 +72,4 @@ if __name__ == "__main__":
     
     # Generate with recent 30 days of data (to keep seed file reasonable size)
     # Change limit_days=None to include all historical data
-    generate_price_history_sql(str(csv_file), str(sql_file), limit_days=None)
+    generate_price_history_sql(str(csv_file), str(sql_file), limit_days=30)
