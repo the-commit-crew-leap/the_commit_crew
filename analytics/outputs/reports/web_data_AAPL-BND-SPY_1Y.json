@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "generated_at": "2026-09-22T12:40:06.338211",
+        "generated_at": "2026-09-28T14:28:55.604776",
         "period": "1y",
         "tickers": [
             "AAPL",
@@ -13,30 +13,30 @@
         {
             "Ticker": "AAPL",
             "Asset Class": "Stocks",
-            "Observations": 262,
-            "Annualized Return (%)": -7.714846755896209,
-            "Annualized Volatility (%)": 28.21852095523138,
-            "Sharpe Ratio": -0.2733965670325456,
+            "Observations": 261,
+            "Annualized Return (%)": -7.929866526431817,
+            "Annualized Volatility (%)": 28.271856149716832,
+            "Sharpe Ratio": -0.2804862363630568,
             "Best Daily Return (%)": 4.805242082271577,
             "Worst Daily Return (%)": -4.547991071428581
         },
         {
             "Ticker": "BND",
             "Asset Class": "Bonds",
-            "Observations": 262,
-            "Annualized Return (%)": 6.739087629558194,
-            "Annualized Volatility (%)": 6.532555916173028,
-            "Sharpe Ratio": 1.0316157589824593,
+            "Observations": 261,
+            "Annualized Return (%)": 7.116517396288202,
+            "Annualized Volatility (%)": 6.535150452944394,
+            "Sharpe Ratio": 1.0889599937338665,
             "Best Daily Return (%)": 1.1244458860417472,
             "Worst Daily Return (%)": -1.0053475935828837
         },
         {
             "Ticker": "SPY",
             "Asset Class": "Etfs",
-            "Observations": 262,
-            "Annualized Return (%)": -5.618794917521819,
-            "Annualized Volatility (%)": 19.914608839740204,
-            "Sharpe Ratio": -0.28214437766456874,
+            "Observations": 261,
+            "Annualized Return (%)": -5.9417503846929005,
+            "Annualized Volatility (%)": 19.949921472485148,
+            "Sharpe Ratio": -0.2978332718195277,
             "Best Daily Return (%)": 3.7313284798952573,
             "Worst Daily Return (%)": -3.5333774754710223
         }
@@ -44,39 +44,39 @@
     "insights": {
         "best_return": {
             "ticker": "BND",
-            "value": 6.739087629558194
+            "value": 7.116517396288202
         },
         "worst_return": {
             "ticker": "AAPL",
-            "value": -7.714846755896209
+            "value": -7.929866526431817
         },
         "highest_volatility": {
             "ticker": "AAPL",
-            "value": 28.21852095523138
+            "value": 28.271856149716832
         },
         "lowest_volatility": {
             "ticker": "BND",
-            "value": 6.532555916173028
+            "value": 6.535150452944394
         },
         "best_sharpe": {
             "ticker": "BND",
-            "value": 1.0316157589824593
+            "value": 1.0889599937338665
         },
         "risk_ranking": [
             {
                 "rank": 1,
                 "ticker": "AAPL",
-                "volatility": 28.21852095523138
+                "volatility": 28.271856149716832
             },
             {
                 "rank": 2,
                 "ticker": "SPY",
-                "volatility": 19.914608839740204
+                "volatility": 19.949921472485148
             },
             {
                 "rank": 3,
                 "ticker": "BND",
-                "volatility": 6.532555916173028
+                "volatility": 6.535150452944394
             }
         ]
     },
