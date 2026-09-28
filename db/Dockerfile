@@ -13,7 +13,7 @@ COPY python/requirements.txt /tmp/
 COPY python/src/fetch_market_data.py /tmp/
 
 # Install Python dependencies and generate market data
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+RUN pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt && \
     cd /tmp && python3 fetch_market_data.py
 
 # Copy entire db directory with schema, seeds, and indexes
