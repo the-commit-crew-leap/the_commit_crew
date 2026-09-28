@@ -12,7 +12,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'mvn -B clean package -f app/pom.xml'
+                sh 'mvn -B clean package'
             }
         }
         stage('Build Image') {
@@ -34,11 +34,11 @@ pipeline {
                             set -e
                             
                             echo "Cleaning up previous database state..."
-                            docker-compose --env-file "\${ENV_FILE_PATH}" down -v || true
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" down -v || true
                             sleep 2
 
                             # Check if DB container already exists and is running
-                            RUNNING=\$(docker-compose --env-file "\${ENV_FILE_PATH}" ps db 2>/dev/null | grep -q "Up" && echo "true" || echo "false")
+                            RUNNING=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps db 2>/dev/null | grep -q "Up" && echo "true" || echo "false")
                             
                             POSTGRES_DB=\$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
                             POSTGRES_PASSWORD=\$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
@@ -46,7 +46,7 @@ pipeline {
                             
                             if [ "\$RUNNING" = "false" ]; then
                                 echo "Database container not running, initializing from scratch..."
-                                docker-compose --env-file "\${ENV_FILE_PATH}" down db --remove-orphans || true
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" down db --remove-orphans || true
                                 
                                 # Remove all postgres/db containers across all projects
                                 docker ps -a --filter "ancestor=postgres" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
@@ -57,15 +57,15 @@ pipeline {
                                 # Wait for OS to release the port
                                 sleep 3
                                 
-                                docker-compose --env-file "\${ENV_FILE_PATH}" build --no-cache db
-                                docker-compose --env-file "\${ENV_FILE_PATH}" up -d db
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" build --no-cache db
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d db
                                 
                                 sleep 2
-                                docker-compose --env-file "\${ENV_FILE_PATH}" ps db
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps db
                                 
                                 echo "Waiting for PostgreSQL to be ready..."
                                 for i in {1..30}; do
-                                    if docker-compose --env-file "\${ENV_FILE_PATH}" exec -T db pg_isready -U postgres > /dev/null 2>&1; then
+                                    if docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T db pg_isready -U postgres > /dev/null 2>&1; then
                                         echo "PostgreSQL is ready!"
                                         break
                                     fi
@@ -74,23 +74,23 @@ pipeline {
                                 done
                                 
                                 echo "Initializing database schema and data..."
-                                docker-compose --env-file "\${ENV_FILE_PATH}" exec -T \
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f init-db.sql && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
                                 
                                 echo "Database initialization completed"
                             else
                                 echo "Database already running, checking if data exists..."
-                                docker-compose --env-file "\${ENV_FILE_PATH}" ps db
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps db
                                 
                                 # Check if instruments table has data (as a proxy for overall population)
-                                DATA_COUNT=\$(docker-compose --env-file "\${ENV_FILE_PATH}" exec -T \
+                                DATA_COUNT=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db psql -U postgres -d "\${POSTGRES_DB}" -t -c "SELECT COUNT(*) FROM instruments;" 2>/dev/null || echo "0")
                                 
                                 if [ "\$DATA_COUNT" -eq 0 ]; then
                                     echo "Database exists but is unpopulated, loading seed data..."
-                                    docker-compose --env-file "\${ENV_FILE_PATH}" exec -T \
+                                    docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                         -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                         db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
                                     echo "Seed data loaded successfully"
@@ -104,7 +104,7 @@ pipeline {
             }
             post {
                 failure {
-                    sh 'docker-compose logs db 2>/dev/null || true'
+                    sh 'docker-compose -p the_commit_crew logs db 2>/dev/null || true'
                 }
             }
         }
@@ -137,7 +137,7 @@ pipeline {
                             POSTGRES_PASSWORD=\$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
 
                             # Set ON_ERROR_STOP to exit on first error
-                            docker-compose --env-file "\${ENV_FILE_PATH}" exec -T \
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                 -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                 db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
                             
@@ -148,14 +148,17 @@ pipeline {
             }
             post {
                 failure {
-                    sh 'docker-compose logs db 2>/dev/null || true'
+                    sh 'docker-compose -p the_commit_crew logs db 2>/dev/null || true'
                 }
             }
         }
         stage('Smoke Test') {
             steps {
                 sh '''
-                    CONTAINER_ID=$(docker run -d -p 8081:8081 the-commit-crew:${BUILD_NUMBER})
+                    CONTAINER_ID=$(docker run -d \
+                        -p 8081:8081 \
+                        --network=the-commit-crew_default \
+                        the-commit-crew:${BUILD_NUMBER})
                     
                     echo "Waiting for Spring Boot to start..."
                     for i in {1..30}; do
@@ -181,9 +184,26 @@ pipeline {
             }
         }
         stage('Test') {
-            steps { sh 'mvn -B test -f app/pom.xml' }
+            steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
-
+        stage('Integration Tests') {
+            when {
+                not {
+                    anyOf {
+                        branch 'main'
+                        branch 'origin/main'
+                    }
+                }
+            }
+            steps {
+                withCredentials([file(credentialsId: 'env-dev-file', variable: 'ENV_FILE_PATH')]) {
+                    sh '''
+                        chmod +x integration-test.sh
+                        ./integration-test.sh the-commit-crew:${BUILD_NUMBER} dev "${ENV_FILE_PATH}" the_commit_crew-db-1
+                    '''
+                }
+            }
+        }
     }
 }

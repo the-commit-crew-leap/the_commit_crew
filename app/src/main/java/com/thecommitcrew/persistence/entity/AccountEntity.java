@@ -53,6 +53,10 @@ public class AccountEntity {
         return id;
     }
     
+    // temporary, delete after changing id to uuid
+    public void setId(Long id) {
+        this.id = id;
+    }
     public String getAccountId() {
         return accountId;
     }

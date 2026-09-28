@@ -83,12 +83,11 @@ public class OrderService {
         );
         order.setStatus(status);
 
-        Order savedOrder = orderMapper.save(order);
-        if (savedOrder.getStatus() == OrderStatus.NEW) {
-            executeLoadedOrder(savedOrder);
+        orderMapper.save(order);
+        if (order.getStatus() == OrderStatus.NEW) {
+            executeLoadedOrder(order);
         }
-
-        return savedOrder;
+        return order;
     }
 
     @Transactional
@@ -178,7 +177,10 @@ public class OrderService {
         Account updatedAccount = order.getSide() == OrderSide.BUY
             ? account.debit(tradeAmount)
             : account.credit(tradeAmount);
-        accountRepository.save(accountMapper.toEntity(updatedAccount));
+        com.thecommitcrew.persistence.entity.AccountEntity accountEntity = accountRepository.findById(order.getAccountId())
+            .orElseThrow(() -> new AccountNotFoundException("Account not found: " + order.getAccountId()));
+        accountEntity.setCashBalance(updatedAccount.getCashBalance().getAmount());
+        accountRepository.save(accountEntity);
 
         Position basePosition = existingPosition.orElseGet(() -> new Position(
             order.getAccountId(),
@@ -209,7 +211,7 @@ public class OrderService {
     }
 
     private Account getAccount(Long accountId) {
-        return accountRepository.findByAccountId(String.valueOf(accountId))
+        return accountRepository.findById(accountId)
             .map(accountMapper::toDomain)
             .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountId));
     }

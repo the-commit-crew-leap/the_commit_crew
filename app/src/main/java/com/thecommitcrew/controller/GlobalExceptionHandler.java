@@ -1,5 +1,7 @@
 package com.thecommitcrew.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +18,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     
     // 404 Not Found
     @ExceptionHandler(AccountNotFoundException.class)
@@ -87,6 +90,7 @@ public class GlobalExceptionHandler {
     // 500 Internal Server Error (Fallback)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGenericException(Exception e) {
+        logger.error("Unhandled exception:", e);
         ErrorResponseDTO error = new ErrorResponseDTO("INTERNAL_SERVER_ERROR", "An unexpected error occurred");
         return ResponseEntity.status(500).body(error);
     }

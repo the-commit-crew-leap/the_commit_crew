@@ -76,6 +76,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.thecommitcrew.auth.AuthApplication</mainClass>
+                    <classifier>exec</classifier>
                 </configuration>
             </plugin>
         </plugins>

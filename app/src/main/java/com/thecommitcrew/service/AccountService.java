@@ -28,7 +28,7 @@ public class AccountService {
     }
 
     public Account getAccount(Long accountId) {
-        return accountRepository.findByAccountId(String.valueOf(accountId))
+        return accountRepository.findById(accountId)
             .map(accountMapper::toDomain)
             .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountId));
     }

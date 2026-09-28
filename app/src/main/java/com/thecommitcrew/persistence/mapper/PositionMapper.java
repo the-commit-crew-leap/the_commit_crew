@@ -11,5 +11,5 @@ import com.thecommitcrew.domain.model.Position;
 public interface PositionMapper {
     Optional<Position> findByAccountIdAndSymbol(Long accountId, String symbol);
     List<Position> findByAccountId(Long accountId);
-    Position save(Position position);
+    void save(Position position);
 }

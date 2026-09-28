@@ -1,5 +1,9 @@
 package com.thecommitcrew.auth.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,9 +18,13 @@ import com.thecommitcrew.auth.JwtAuthenticationFilter;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthEntryPointJwt authEntryPointJwt;
+    
+    @Value("${auth.enabled:true}")
+    private boolean authEnabled;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
@@ -27,16 +35,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
+        logger.info("SecurityConfig: authEnabled = {}", authEnabled);
+        var authConfig = http
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        if (authEnabled) {
+            authConfig
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPointJwt))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        } else {
+            authConfig.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        }
 
-        return http.build();
+        return authConfig.build();
     }
 }

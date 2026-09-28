@@ -184,6 +184,12 @@
             <version>0.12.3</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- Auth module for JWT token provider -->
+        <dependency>
+            <groupId>com.thecommitcrew</groupId>
+            <artifactId>the-commit-crew-auth</artifactId>
+            <version>0.1.0</version>
+        </dependency>
 
         <dependency>
             <groupId>me.paulschwarz</groupId>

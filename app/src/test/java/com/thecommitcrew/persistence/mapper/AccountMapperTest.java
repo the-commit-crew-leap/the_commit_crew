@@ -50,6 +50,7 @@ public class AccountMapperTest {
                 TEST_VERSION,
                 now
             );
+            entity.setId(TEST_ACCOUNT_ID);
 
             Account result = mapper.toDomain(entity);
 
@@ -81,6 +82,7 @@ public class AccountMapperTest {
                 TEST_VERSION,
                 LocalDateTime.now()
             );
+            entity.setId(1L);
 
             Account result = mapper.toDomain(entity);
 
@@ -100,6 +102,7 @@ public class AccountMapperTest {
                     TEST_VERSION,
                     LocalDateTime.now()
                 );
+                entity.setId(1L);
 
                 Account result = mapper.toDomain(entity);
 
@@ -118,6 +121,7 @@ public class AccountMapperTest {
                 TEST_VERSION,
                 LocalDateTime.now()
             );
+            entity.setId(1L);
 
             Account result = mapper.toDomain(entity);
 
@@ -216,6 +220,7 @@ public class AccountMapperTest {
                 TEST_VERSION,
                 now
             );
+            original.setId(1L);
 
             Account domain = mapper.toDomain(original);
             AccountEntity result = mapper.toEntity(domain);

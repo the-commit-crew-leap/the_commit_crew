@@ -4,4 +4,23 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.thecommitcrew.persistence.mapper.OrderMapper">
 
+    <select id="findById" resultType="com.thecommitcrew.domain.model.Order">
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey
+        FROM orders
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByAccountId" resultType="com.thecommitcrew.domain.model.Order">
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey
+        FROM orders
+        WHERE account_id = #{accountId}
+    </select>
+
+    <insert id="save">
+        INSERT INTO orders (id, account_id, symbol, side, quantity, price, status, idempotencyKey, created_on)
+        VALUES (#{id}, #{accountId}, #{symbol}, #{side}, #{quantity}, #{price}, #{status}, #{idempotencyKey}, #{createdOn})
+        ON CONFLICT (idempotencyKey) DO UPDATE SET
+            status = #{status}
+    </insert>
+
 </mapper>

@@ -60,6 +60,7 @@ prod:
 docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres -d the-commit-crew-prod -c "\dt"
 ```
 You should see the list of tables for each database.
+```
 
 ## Coding Conventions
 

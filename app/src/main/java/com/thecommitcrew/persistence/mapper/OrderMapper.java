@@ -12,7 +12,7 @@ import com.thecommitcrew.domain.model.Order;
 @Mapper
 public interface OrderMapper {
     Optional<Order> findById(UUID orderId);
-    Order save(Order order);
+    void save(Order order);
     List<Order> findByAccountId(Long accountId);
     List<Order> findByAccountIdAndStatus(Long accountId, OrderStatus status);
 }

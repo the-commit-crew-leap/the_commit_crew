@@ -1,7 +1,7 @@
 INSERT INTO positions (account_id, symbol, quantity, average_cost) VALUES
-    ('ACC-1001', 'AAPL', 50, 150.25),
-    ('ACC-1001', 'US10Y', 10, 98.50),
-    ('ACC-1002', 'MSFT', 20, 310.75),
-    ('ACC-1003', 'GOOGL', 15, 2750.00),
-    ('ACC-1003', 'VFIAX', 100, 420.10)
+    (1, 'AAPL', 50, 150.25),
+    (1, 'US10Y', 10, 98.50),
+    (2, 'MSFT', 20, 310.75),
+    (3, 'GOOGL', 15, 2750.00),
+    (3, 'VFIAX', 100, 420.10)
 ON CONFLICT (account_id, symbol) DO NOTHING;

@@ -4,4 +4,24 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.thecommitcrew.persistence.mapper.PositionMapper">
 
+    <select id="findByAccountIdAndSymbol" resultType="com.thecommitcrew.domain.model.Position">
+        SELECT account_id as accountId, symbol, quantity, average_cost as averageCost
+        FROM positions
+        WHERE account_id = #{accountId} AND symbol = #{symbol}
+    </select>
+
+    <select id="findByAccountId" resultType="com.thecommitcrew.domain.model.Position">
+        SELECT account_id as accountId, symbol, quantity, average_cost as averageCost
+        FROM positions
+        WHERE account_id = #{accountId}
+    </select>
+
+    <insert id="save">
+        INSERT INTO positions (account_id, symbol, quantity, average_cost)
+        VALUES (#{accountId}, #{symbol}, #{quantity}, #{averageCost})
+        ON CONFLICT (account_id, symbol) DO UPDATE SET
+            quantity = #{quantity},
+            average_cost = #{averageCost}
+    </insert>
+
 </mapper>
