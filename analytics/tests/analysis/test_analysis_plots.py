@@ -3,22 +3,28 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src import analysis
+from config import config
+from src.analysis.analysis_helper import AnalysisHelper
+from src.analysis.analysis_engine import AnalysisEngine
+from src.analysis.data_loader import DataLoader
 
 
-# ============================================================
+data_loader = DataLoader()
+helper = AnalysisHelper()
+engine = AnalysisEngine(data_loader=data_loader, helper=helper)
+
+
 # SAVE PLOT
-# ============================================================
 def test_save_plot(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        analysis.config,
+        config,
         "CHARTS_DIR",
         tmp_path
     )
 
     fig = plt.figure()
 
-    analysis.save_plot(fig, "test_plot.png")
+    helper.save_plot(fig, "test_plot.png")
 
     assert (tmp_path / "test_plot.png").exists()
     assert (tmp_path / "test_plot.png").stat().st_size > 0
@@ -32,12 +38,12 @@ def test_save_plot(monkeypatch, tmp_path):
 # ============================================================
 def test_plot_correlation_heatmap_no_data(monkeypatch):
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: pd.DataFrame()
     )
 
-    analysis.plot_correlation_heatmap(
+    engine.plot_correlation_heatmap(
         ["AAPL"],
         "2026-01-01",
         "2026-01-03",
@@ -54,12 +60,12 @@ def test_plot_correlation_heatmap_requires_two_tickers(monkeypatch):
     )
 
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: returns
     )
 
-    analysis.plot_correlation_heatmap(
+    engine.plot_correlation_heatmap(
         ["AAPL"],
         "2026-01-01",
         "2026-01-03",
@@ -77,7 +83,7 @@ def test_plot_correlation_heatmap(monkeypatch):
     )
 
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: returns
     )
@@ -90,12 +96,12 @@ def test_plot_correlation_heatmap(monkeypatch):
         plt.close(fig)
 
     monkeypatch.setattr(
-        analysis,
+        helper,
         "save_plot",
         fake_save_plot
     )
 
-    analysis.plot_correlation_heatmap(
+    engine.plot_correlation_heatmap(
         ["AAPL", "SPY"],
         "2026-01-01",
         "2026-01-03",
@@ -111,7 +117,7 @@ def test_plot_correlation_heatmap(monkeypatch):
 # ============================================================
 def test_plot_volatility_trends_invalid_window():
     with pytest.raises(ValueError, match="Volatility window must be at least 2"):
-        analysis.plot_volatility_trends(
+        engine.plot_volatility_trends(
             ["AAPL"],
             "2026-01-01",
             "2026-01-03",
@@ -122,12 +128,12 @@ def test_plot_volatility_trends_invalid_window():
 
 def test_plot_volatility_trends_no_data(monkeypatch):
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: pd.DataFrame()
     )
 
-    analysis.plot_volatility_trends(
+    engine.plot_volatility_trends(
         ["AAPL"],
         "2026-01-01",
         "2026-01-03",
@@ -144,12 +150,12 @@ def test_plot_volatility_trends_not_enough_data(monkeypatch):
     )
 
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: returns
     )
 
-    analysis.plot_volatility_trends(
+    engine.plot_volatility_trends(
         ["AAPL"],
         "2026-01-01",
         "2026-01-03",
@@ -168,7 +174,7 @@ def test_plot_volatility_trends(monkeypatch):
     )
 
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: returns
     )
@@ -181,12 +187,12 @@ def test_plot_volatility_trends(monkeypatch):
         plt.close(fig)
 
     monkeypatch.setattr(
-        analysis,
+        helper,
         "save_plot",
         fake_save_plot
     )
 
-    analysis.plot_volatility_trends(
+    engine.plot_volatility_trends(
         ["AAPL", "SPY"],
         "2026-01-01",
         "2026-03-01",
@@ -203,12 +209,12 @@ def test_plot_volatility_trends(monkeypatch):
 # ============================================================
 def test_plot_asset_class_volatility_no_data(monkeypatch):
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: pd.DataFrame()
     )
 
-    analysis.plot_asset_class_volatility(
+    engine.plot_asset_class_volatility(
         ["AAPL"],
         "2026-01-01",
         "2026-01-03",
@@ -227,13 +233,13 @@ def test_plot_asset_class_volatility(monkeypatch):
     )
 
     monkeypatch.setattr(
-        analysis,
+        engine,
         "get_returns_for_tickers",
         lambda *args: returns
     )
 
     monkeypatch.setattr(
-        analysis,
+        helper,
         "get_asset_class",
         lambda ticker: {
             "AAPL": "Stocks",
@@ -250,12 +256,12 @@ def test_plot_asset_class_volatility(monkeypatch):
         plt.close(fig)
 
     monkeypatch.setattr(
-        analysis,
+        helper,
         "save_plot",
         fake_save_plot
     )
 
-    analysis.plot_asset_class_volatility(
+    engine.plot_asset_class_volatility(
         ["AAPL", "BND", "SPY"],
         "2026-01-01",
         "2026-01-03",

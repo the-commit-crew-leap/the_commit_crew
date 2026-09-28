@@ -3,7 +3,17 @@ import json
 import pandas as pd
 import pytest
 
-from src import web_report
+from config import config
+from src.reports.web_report import WebReport
+from src.analysis.analysis_engine import AnalysisEngine
+from src.analysis.analysis_helper import AnalysisHelper
+from src.analysis.data_loader import DataLoader
+
+
+helper = AnalysisHelper()
+data_loader = DataLoader()
+engine = AnalysisEngine(data_loader=data_loader, helper=helper)
+web_report = WebReport(helper=helper, analysis_engine=engine)
 
 
 # ============================================================
@@ -279,7 +289,7 @@ def test_create_web_data_chart_metadata():
 # ============================================================
 def test_save_web_data(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        web_report.config,
+        config,
         "REPORTS_DIR",
         tmp_path,
     )
@@ -315,7 +325,7 @@ def test_save_web_data_creates_reports_directory(monkeypatch, tmp_path):
     reports_dir = tmp_path / "reports"
 
     monkeypatch.setattr(
-        web_report.config,
+        config,
         "REPORTS_DIR",
         reports_dir,
     )
@@ -338,13 +348,13 @@ def test_save_web_data_creates_reports_directory(monkeypatch, tmp_path):
 # ============================================================
 def test_generate_web_report_success_without_saving(monkeypatch, full_stats):
     monkeypatch.setattr(
-        web_report,
+        helper,
         "get_tickers_for_analysis",
         lambda **kwargs: ["AAPL", "SPY"],
     )
 
     monkeypatch.setattr(
-        web_report,
+        engine,
         "compute_insights",
         lambda **kwargs: full_stats,
     )
@@ -365,7 +375,7 @@ def test_generate_web_report_success_without_saving(monkeypatch, full_stats):
 
 def test_generate_web_report_no_tickers(monkeypatch):
     monkeypatch.setattr(
-        web_report,
+        helper,
         "get_tickers_for_analysis",
         lambda **kwargs: [],
     )
@@ -382,19 +392,19 @@ def test_generate_web_report_no_tickers(monkeypatch):
 
 def test_generate_web_report_saves_file(monkeypatch, tmp_path, full_stats):
     monkeypatch.setattr(
-        web_report,
+        helper,
         "get_tickers_for_analysis",
         lambda **kwargs: ["AAPL", "SPY"],
     )
 
     monkeypatch.setattr(
-        web_report,
+        engine,
         "compute_insights",
         lambda **kwargs: full_stats,
     )
 
     monkeypatch.setattr(
-        web_report.config,
+        config,
         "REPORTS_DIR",
         tmp_path,
     )
@@ -429,13 +439,13 @@ def test_generate_web_report_passes_arguments(monkeypatch, full_stats):
         return full_stats
 
     monkeypatch.setattr(
-        web_report,
+        helper,
         "get_tickers_for_analysis",
         fake_get_tickers_for_analysis,
     )
 
     monkeypatch.setattr(
-        web_report,
+        engine,
         "compute_insights",
         fake_compute_insights,
     )
@@ -461,7 +471,7 @@ def test_generate_web_report_handles_exception(monkeypatch):
         raise RuntimeError("analysis failed")
 
     monkeypatch.setattr(
-        web_report,
+        helper,
         "get_tickers_for_analysis",
         raise_error,
     )

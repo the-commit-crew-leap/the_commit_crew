@@ -1,12 +1,20 @@
 import pandas as pd
 import pytest
 
-from src import dashboard_report
+from config import config
+from src.reports.dashboard_report import DashBoardReport
+from src.analysis.analysis_engine import AnalysisEngine
+from src.analysis.analysis_helper import AnalysisHelper
+from src.analysis.data_loader import DataLoader
 
 
-# ============================================================
+helper = AnalysisHelper()
+data_loader = DataLoader()
+engine = AnalysisEngine(data_loader=data_loader, helper=helper)
+dashboard_report = DashBoardReport(helper=helper, analysis_engine=engine)
+
+
 # FIXTURES
-# ============================================================
 @pytest.fixture
 def full_stats():
     return pd.DataFrame({
@@ -26,9 +34,7 @@ def partial_stats():
     })
 
 
-# ============================================================
 # FORMAT DASHBOARD
-# ============================================================
 def test_format_dashboard_empty_stats():
     result = dashboard_report.format_dashboard(
         stats=pd.DataFrame(),
@@ -212,12 +218,10 @@ def test_format_dashboard_without_sharpe_column():
     assert "Best historical Sharpe ratio:" not in result
 
 
-# ============================================================
 # RUN DASHBOARD
-# ============================================================
 def test_run_dashboard_no_tickers(monkeypatch):
     monkeypatch.setattr(
-        dashboard_report,
+        helper,
         "get_tickers_for_analysis",
         lambda *args, **kwargs: []
     )
@@ -229,13 +233,13 @@ def test_run_dashboard_no_tickers(monkeypatch):
 
 def test_run_dashboard_without_saving(monkeypatch, capsys, full_stats):
     monkeypatch.setattr(
-        dashboard_report,
+        helper,
         "get_tickers_for_analysis",
         lambda *args, **kwargs: ["AAPL", "SPY"]
     )
 
     monkeypatch.setattr(
-        dashboard_report,
+        engine,
         "compute_insights",
         lambda *args, **kwargs: full_stats
     )
@@ -259,19 +263,19 @@ def test_run_dashboard_without_saving(monkeypatch, capsys, full_stats):
 
 def test_run_dashboard_saves_file(monkeypatch, tmp_path, full_stats):
     monkeypatch.setattr(
-        dashboard_report,
+        helper,
         "get_tickers_for_analysis",
         lambda *args, **kwargs: ["AAPL", "SPY"]
     )
 
     monkeypatch.setattr(
-        dashboard_report,
+        engine,
         "compute_insights",
         lambda *args, **kwargs: full_stats
     )
 
     monkeypatch.setattr(
-        dashboard_report.config,
+        config,
         "REPORTS_DIR",
         tmp_path
     )
@@ -296,7 +300,7 @@ def test_run_dashboard_saves_file(monkeypatch, tmp_path, full_stats):
 
 def test_run_dashboard_passes_arguments_to_compute_insights(monkeypatch, full_stats):
     monkeypatch.setattr(
-        dashboard_report,
+        helper,
         "get_tickers_for_analysis",
         lambda *args, **kwargs: ["AAPL"]
     )
@@ -311,7 +315,7 @@ def test_run_dashboard_passes_arguments_to_compute_insights(monkeypatch, full_st
         return full_stats
 
     monkeypatch.setattr(
-        dashboard_report,
+        engine,
         "compute_insights",
         fake_compute_insights
     )

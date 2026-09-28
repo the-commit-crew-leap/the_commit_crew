@@ -284,8 +284,7 @@ class WebReport:
             summary_stats = self.analysis_engine.compute_insights(
                 tickers=analysis_tickers,
                 period=period,
-                volatility_window=volatility_window,
-                generate_plots=generate_plots
+                volatility_window=volatility_window
             )
 
             web_data = self.create_web_data(
