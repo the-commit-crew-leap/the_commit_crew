@@ -24,15 +24,21 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def group_price_history(prices: pd.DataFrame) -> pd.DataFrame:
-    """Return price history ordered by ticker and date.
+    """Return price history ordered by symbol and price_date.
 
     Args:
         prices: Raw or normalized price history records.
 
     Returns:
-        A copy of the input records ordered by ticker then date.
+        A copy of the input records ordered by symbol then price_date.
     """
-    return prices.sort_values(["ticker", "date"]).reset_index(drop=True)
+    # Handle both old column names (from fetch) and new names (after rename)
+    if 'symbol' in prices.columns and 'price_date' in prices.columns:
+        sort_cols = ['symbol', 'price_date']
+    else:
+        sort_cols = ['ticker', 'date']
+    
+    return prices.sort_values(sort_cols).reset_index(drop=True)
 
 
 def fetch_price_history(tickers: list[str]) -> pd.DataFrame:
@@ -194,6 +200,16 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     prices = fetch_price_history(all_tickers)
+    
+    prices.rename(columns={
+        'ticker': 'symbol',
+        'date': 'price_date',
+        'open': 'open_price',
+        'high': 'high_price',
+        'low': 'low_price',
+        'close': 'close_price'
+    }, inplace=True)
+    
     save_price_history(prices)
     
     metadata = fetch_ticker_metadata(all_tickers)
