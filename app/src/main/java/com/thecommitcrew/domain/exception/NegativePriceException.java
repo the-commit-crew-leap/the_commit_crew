@@ -1,7 +1,11 @@
 package com.thecommitcrew.domain.exception;
 
-public class NegativePriceException extends Exception {
-   public NegativePriceException(String message) {
-       super(message);
-   }
+/**
+ * Thrown when a price is negative
+ */
+public class NegativePriceException extends RuntimeException {
+
+    public NegativePriceException(String message) {
+        super(message);
+    }
 }

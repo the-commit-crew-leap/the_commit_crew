@@ -24,119 +24,189 @@ import org.junit.jupiter.api.Nested;
 public class PlaceOrderRequestValidationTest {
     
     private Validator validator;
-    private PlaceOrderRequest request;
     
     @BeforeEach
     void setUp() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
-        request = new PlaceOrderRequest();
     }
     
     @Test
-    @DisplayName("Test valid PlaceOrderRequest")
-    void testValidRequest() {
-        request.setSymbol("AAPL");
-        request.setSide(OrderSide.BUY);
-        request.setQuantity(100);
-        request.setPrice(new BigDecimal("150.00"));
+    void testValidPlaceOrderRequest() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            1L,
+            "AAPL",
+            OrderSide.BUY,
+            100L,
+            new BigDecimal("150.00"),
+            "KEY-12345"
+        );
         
-        Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }
 
     @Nested
-    @DisplayName("Invalid quantity tests")
-    class testInvalidQuantity {
-
-        @Test
-        @DisplayName("Test zero quantity")
-        void testQuantityCannotBeZero() {
-            request.setSymbol("AAPL");
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(0);
-            request.setPrice(new BigDecimal("150.00"));
-            
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-        
-        @Test
-        @DisplayName("Test negative quantity")
-        void testQuantityMustBePositive() {
-            request.setSymbol("AAPL");
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(-5);
-            request.setPrice(new BigDecimal("150.00"));
-            
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-    }
-
-    @Nested
-    @DisplayName("Test null fields")
-    class testNullFields {
-
-        @Test
-        @DisplayName("Test null price")
-        void testPriceCannotBeNull() {
-            request.setSymbol("AAPL");
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(100);
-            request.setPrice(null);
-            
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-        
-        @Test
-        @DisplayName("Test negative price")
-        void testPriceMustBePositive() {
-            request.setSymbol("AAPL");
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(100);
-            request.setPrice(new BigDecimal("-10.00"));
-            
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
+    @DisplayName("Symbol tests")
+    class testingSymbol {
 
         @Test
         @DisplayName("Test null symbol")
         void testSymbolCannotBeNull() {
-            request.setSymbol(null);
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(100);
-            request.setPrice(new BigDecimal("150.00"));
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                null,
+                OrderSide.BUY,
+                100L,
+                new BigDecimal("150.00"),
+                "KEY-12345"
+            );
             
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
         }
 
         @Test
         @DisplayName("Test empty symbol")
         void testSymbolCannotBeBlank() {
-            request.setSymbol("   ");
-            request.setSide(OrderSide.BUY);
-            request.setQuantity(100);
-            request.setPrice(new BigDecimal("150.00"));
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "   ",
+                OrderSide.BUY,
+                100L,
+                new BigDecimal("150.00"),
+                "KEY-12345"
+            );
             
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+        }
+    }
+
+    @Test
+    @DisplayName("Test null side")
+    void testSideCannotBeNull() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            1L,
+            "AAPL",
+            null,
+            100L,
+            new BigDecimal("150.00"),
+            "KEY-12345"
+        );
+        
+        Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+        assertFalse(violations.isEmpty());
+    }
+
+    @Nested
+    @DisplayName("Quantity tests")
+    class testingQuantity {
+
+        @Test
+        @DisplayName("Test zero quantity")
+        void testQuantityCannotBeZero() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                0L,
+                new BigDecimal("150.00"),
+                "KEY-12345"
+            );
+            
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+        }
+        
+        @Test
+        @DisplayName("Test negative quantity")
+        void testQuantityMustBePositive() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                -5L,
+                new BigDecimal("150.00"),
+                "KEY-12345"
+            );
+            
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("Price tests")
+    class testingPrice {
+
+        @Test
+        @DisplayName("Test null price")
+        void testPriceCannotBeNull() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                100L,
+                null,
+                "KEY-12345"
+            );
+            
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+        }
+        
+        @Test
+        @DisplayName("Test zero price")
+        void testPriceMustBePositive() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                100L,
+                new BigDecimal("0.00"),
+                "KEY-12345"
+            );
+            
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("Idempotency key tests")
+    class testingIdempotencyKey {
+
+        @Test
+        @DisplayName("Test blank idempotency key")
+        void testIdempotencyKeyCannotBeBlank() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                100L,
+                new BigDecimal("150.00"),
+                "   "
+            );
+            
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
         }
 
         @Test
-        @DisplayName("Test null side")
-        void testSideCannotBeNull() {
-            request.setSymbol("AAPL");
-            request.setSide(null);
-            request.setQuantity(100);
-            request.setPrice(new BigDecimal("150.00"));
+        @DisplayName("Test valid idempotency key")
+        void testValidIdempotencyKey() {
+            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+                1L,
+                "AAPL",
+                OrderSide.BUY,
+                100L,
+                new BigDecimal("150.00"),
+                "UNIQUE-KEY-123"
+            );
             
-            Set<ConstraintViolation<PlaceOrderRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
+            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
+            assertTrue(violations.isEmpty());
         }
     }
-    
 }

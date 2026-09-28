@@ -15,14 +15,14 @@ public class Account {
     private final String holderName;
     private final Money cashBalance;
     private final AccountStatus status;
-    private final Long version;
+    private final int version;
     private final LocalDateTime lastUpdated;
     
     private final AccountStatusValidator statusValidator;
 
     // Constructor
     public Account(Long accountId, String holderName, Money cashBalance, 
-                   AccountStatus status, Long version, LocalDateTime lastUpdated,
+                   AccountStatus status, int version, LocalDateTime lastUpdated,
                    AccountStatusValidator statusValidator) {
         this.accountId = validateNotNull(accountId, "Account ID cannot be null");
         this.holderName = validateNotBlank(holderName, "Holder name cannot be blank");
@@ -60,7 +60,7 @@ public class Account {
     public String getHolderName() { return holderName; }
     public Money getCashBalance() { return cashBalance; }
     public AccountStatus getStatus() { return status; }
-    public Long getVersion() { return version; }
+    public int getVersion() { return version; }
     public boolean isActive() { return status == AccountStatus.ACTIVE; }
     public LocalDateTime getLastUpdated() { return lastUpdated; }
 

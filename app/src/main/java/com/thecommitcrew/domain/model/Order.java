@@ -18,15 +18,15 @@ public class Order {
     private final String idempotencyKey;
 
     public Order(UUID id, Long accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
-        this.id = id;
-        this.accountId = accountId;
-        this.symbol = symbol;
-        this.side = side;
-        this.quantity = quantity;
-        this.price = price;
-        this.status = status;
-        this.createdOn = createdOn;
-        this.idempotencyKey = idempotencyKey;
+        this.id = validateNotNull(id, "Order ID cannot be null");
+        this.accountId = validateNotNull(accountId, "Account ID cannot be null");
+        this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
+        this.side = validateNotNull(side, "Order side cannot be null");
+        this.quantity = validatePositive(quantity, "Quantity must be positive");
+        this.price = validatePriceNotNull(price, "Price cannot be null");
+        this.status = validateNotNull(status, "Order status cannot be null");
+        this.createdOn = validateNotNull(createdOn, "Created on cannot be null");
+        this.idempotencyKey = validateNotBlank(idempotencyKey, "Idempotency key cannot be blank");
     }
 
     public UUID getId() {
@@ -67,6 +67,29 @@ public class Order {
 
     public String getIdempotencyKey() {
         return idempotencyKey;
+    }
+
+    private static <T> T validateNotNull(T value, String message) {
+        if (value == null) throw new IllegalArgumentException(message);
+        return value;
+    }
+
+    private static String validateNotBlank(String value, String message) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(message);
+        return value;
+    }
+
+    private static long validatePositive(long value, String message) {
+        if (value <= 0) throw new IllegalArgumentException(message);
+        return value;
+    }
+
+    private static BigDecimal validatePriceNotNull(BigDecimal value, String message) {
+        if (value == null) throw new IllegalArgumentException(message);
+        if (value.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be positive");
+        }
+        return value;
     }
 
 }

@@ -18,9 +18,7 @@ public class AccountTest {
     
     private static final Long TEST_ACCOUNT_ID = 1L;
     private static final String TEST_HOLDER_NAME = "John Doe";
-    private static final String TEST_CURRENCY = "USD";
-    private static final String TEST_CURRENCY_EUR = "EUR";  
-    private static final Long TEST_VERSION = 1L;
+    private static final int TEST_VERSION = 1;
 
     private static final BigDecimal INITIAL_BALANCE = new BigDecimal("10000.00");
     private static final BigDecimal SMALL_AMOUNT = new BigDecimal("100.00");
@@ -30,11 +28,7 @@ public class AccountTest {
     private static final BigDecimal MEDIUM_AMOUNT = new BigDecimal("500.00");
 
     private Money createMoney(BigDecimal amount) {
-        return new Money(amount, TEST_CURRENCY);
-    }
-
-    private Money createEuroMoney(BigDecimal amount) {
-        return new Money(amount, TEST_CURRENCY_EUR);
+        return new Money(amount);
     }
 
     @BeforeEach
@@ -98,7 +92,7 @@ public class AccountTest {
         Account closedAccount = account.updateStatus(AccountStatus.CLOSED);
         assertFalse(closedAccount.isActive());
     }
- 
+
     @Test
     public void testVersionIncrement_IncrementsOnEveryOperation() {
         assertEquals(1L, account.getVersion());
@@ -109,24 +103,15 @@ public class AccountTest {
         Account creditAccount = updatedAccount.credit(createMoney(new BigDecimal("50.00")));
         assertEquals(3L, creditAccount.getVersion());
     }
-    
-    @Test
-    public void testDebit_ThrowsExceptionWhenCurrencyMismatch() {
-        Money eurAmount = createEuroMoney(DEBIT_AMOUNT);
-        
-        assertThrows(IllegalArgumentException.class, () -> {
-            account.debit(eurAmount);
-        });
-    }
 
     @Test
     public void testEquals_IdentifiesAccountsByIdOnly() {
-        assertEquals(account, new Account(TEST_ACCOUNT_ID, "Different Name", 
-            createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION, 
+        assertEquals(account, new Account(TEST_ACCOUNT_ID, "Different Name",
+            createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
         
-        assertNotEquals(account, new Account(2L, "Different Name", 
-            createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION, 
+        assertNotEquals(account, new Account(2L, "Different Name",
+            createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
     }
 

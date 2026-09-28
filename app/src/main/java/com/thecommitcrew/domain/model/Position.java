@@ -12,10 +12,14 @@ public class Position {
     private final BigDecimal averageCost;
 
     public Position(Long accountId, String symbol, long quantity, BigDecimal averageCost) {
-        this.accountId = accountId;
-        this.symbol = symbol;
-        this.quantity = quantity;
-        this.averageCost = averageCost;
+        this.accountId = validateNotNull(accountId, "Account ID cannot be null");
+        this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
+        this.quantity = validateNonNegative(quantity, "Quantity cannot be negative");
+        this.averageCost = validateNotNull(averageCost, "Average cost cannot be null");
+        
+        if (averageCost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Average cost cannot be negative");
+        }
     }
 
     public Long getAccountId() {
@@ -32,5 +36,20 @@ public class Position {
 
     public BigDecimal getAverageCost() {
         return averageCost;
+    }
+
+    private static <T> T validateNotNull(T value, String message) {
+        if (value == null) throw new IllegalArgumentException(message);
+        return value;
+    }
+
+    private static String validateNotBlank(String value, String message) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(message);
+        return value;
+    }
+
+    private static long validateNonNegative(long value, String message) {
+        if (value < 0) throw new IllegalArgumentException(message);
+        return value;
     }
 }

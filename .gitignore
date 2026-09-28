@@ -2,3 +2,7 @@ target/
 .env.dev
 .env.prod
 .vscode
+**/.venv/
+python/market_data/
+**/__pycache__/
+.pytest_cache/

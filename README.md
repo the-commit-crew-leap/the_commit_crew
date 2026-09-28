@@ -60,6 +60,7 @@ prod:
 docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres -d the-commit-crew-prod -c "\dt"
 ```
 You should see the list of tables for each database.
+```
 
 ## Coding Conventions
 
@@ -81,15 +82,9 @@ You should see the list of tables for each database.
 
 
 ## Jenkins Pipeline available at
-[10.9.75.153:8080](http://10.9.75.153:8080)
+[10.9.75.153:8080](http://10.9.75.153:8080) (develop & feature/)<br />
+[10.9.70.90:8080](http://10.9.70.90:8080/job/the-commit-crew-main/) (main)
 
 ## Jira backlog:
 
 [The Commit Crew](https://thecommitcrew.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
-
-## TEMP
-
-docker-compose -p commitcrew-prod --env-file .env.prod up -d --build
-docker-compose --env-file .env.prod up -d db
-docker-compose --env-file .env.prod exec -T db pg_isready -U postgres
-docker-compose --env-file .env.prod logs db -f

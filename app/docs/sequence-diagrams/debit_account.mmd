@@ -1,0 +1,4 @@
+Account.debit(Money)
+  → AccountStatusValidator.validateCanDebit()
+  → Money.subtract()
+  → Account (immutable return with new balance)

@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: The Commit Crew Order Processing Service
+  description: >
+    Submits orders for validation and execution against a client's portfolio.
+  version: 1.0.0
+  license:
+    name: Internal use only
+    url: https://example.com/license
+
+servers:
+  - url: /api/v1
+  - url: /api/v2
+
+paths:
+  /orders:
+    post:
+      summary: Submit an order for processing
+      operationId: submitOrder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+            example:
+              accountId: 1
+              symbol: AAPL
+              side: BUY
+              quantity: 100
+              price: 150.00
+              idempotencyKey: uuid-string-123
+      responses:
+        '201':
+          description: Order accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+              example:
+                orderId: 550e8400-e29b-41d4-a716-446655440000
+                accountId: 1
+                symbol: AAPL
+                side: BUY
+                quantity: 100
+                price: 150.00
+                status: NEW
+                createdOn: 2026-09-21T10:30:00
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Order rejected by business rule (insufficient funds, invalid account status, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+  /orders/{id}:
+    delete:
+      summary: Cancel a working order
+      operationId: cancelOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Order cancelled successfully
+        '400':
+          description: Bad request - order cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /accounts/{id}:
+    get:
+      summary: Retrieve account details
+      operationId: getAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Account details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+              example:
+                accountId: 1
+                status: ACTIVE
+                cashBalance:
+                  amount: 10000.00
+                  currency: USD
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{id}/balance:
+    get:
+      summary: Retrieve account cash balance
+      operationId: getAccountBalance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Cash balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+              example:
+                accountId: 1
+                cashBalance:
+                  amount: 10000.00
+                  currency: USD
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{id}/positions:
+    get:
+      summary: Retrieve account holdings
+      operationId: getAccountPositions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Holdings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PositionResponse'
+              example:
+                - symbol: AAPL
+                  quantity: 100
+                  averageCost: 150.00
+                  currentPrice: 155.50
+                  marketValue: 15550.00
+                  unrealizedPnL: 550.00
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{id}/orders:
+    get:
+      summary: Retrieve account order history
+      operationId: getAccountOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Order history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+              example:
+                - orderId: 550e8400-e29b-41d4-a716-446655440000
+                  accountId: 1
+                  symbol: AAPL
+                  side: BUY
+                  quantity: 100
+                  price: 150.00
+                  status: FILLED
+                  createdOn: 2026-09-21T10:30:00
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication - to be implemented
+  schemas:
+    OrderRequest:
+      type: object
+      required: [accountId, symbol, side, quantity, price, idempotencyKey]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        symbol:
+          type: string
+          example: AAPL
+        side:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        price:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        idempotencyKey:
+          type: string
+
+    OrderResponse:
+      type: object
+      required: [orderId, accountId, symbol, side, quantity, price, status, createdOn]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        accountId:
+          type: integer
+          format: int64
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [NEW, FILLED, REJECTED, CANCELLED]
+        createdOn:
+          type: string
+          format: date-time
+
+    AccountResponse:
+      type: object
+      required: [accountId, status, cashBalance]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, CLOSED]
+        cashBalance:
+          $ref: '#/components/schemas/Money'
+
+    BalanceResponse:
+      type: object
+      required: [accountId, cashBalance]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        cashBalance:
+          $ref: '#/components/schemas/Money'
+
+    PositionResponse:
+      type: object
+      required: [symbol, quantity, averageCost]
+      properties:
+        symbol:
+          type: string
+        quantity:
+          type: number
+          format: double
+        averageCost:
+          type: number
+          format: double
+        currentPrice:
+          type: number
+          format: double
+          nullable: true
+        marketValue:
+          type: number
+          format: double
+          nullable: true
+        unrealizedPnL:
+          type: number
+          format: double
+          nullable: true
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [errorCode, message]
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string

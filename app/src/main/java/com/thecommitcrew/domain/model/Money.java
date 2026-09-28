@@ -4,7 +4,7 @@ import java.util.Objects;
 
 public class Money {
     private final BigDecimal amount;
-    private final String currency;
+    private final String currency = "USD";
 
     /**
      * Constructs a new Money instance with the specified amount and currency.
@@ -13,15 +13,11 @@ public class Money {
      * @param currency the currency code, cannot be null or blank
      * @throws IllegalArgumentException if the amount is negative or the currency is null/blank
      */
-    public Money(BigDecimal amount, String currency) {
+    public Money(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Amount must be non-negative");
         }
-        if (currency == null || currency.isBlank()) {
-            throw new IllegalArgumentException("Currency cannot be null or blank");
-        }
         this.amount = amount;
-        this.currency = currency;
     }
 
     /**
@@ -33,7 +29,7 @@ public class Money {
      */
     public Money add(Money other) {
         validateSameCurrency(other);
-        return new Money(this.amount.add(other.amount), this.currency);
+        return new Money(this.amount.add(other.amount));
     }
 
     /**
@@ -48,7 +44,7 @@ public class Money {
         if (other.amount.compareTo(this.amount) > 0) {
             throw new IllegalArgumentException("Insufficient funds");
         }
-        return new Money(this.amount.subtract(other.amount), this.currency);
+        return new Money(this.amount.subtract(other.amount));
     }
 
     /**
