@@ -21,8 +21,8 @@ COPY db/ /docker-entrypoint-initdb.d/
 
 # Copy generated market data CSV files
 RUN mkdir -p /docker-entrypoint-initdb.d/data && \
-    cp /tmp/market_data/price_history.csv /docker-entrypoint-initdb.d/data/ && \
-    cp /tmp/market_data/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
+    cp /market_data/price_history.csv /docker-entrypoint-initdb.d/data/ && \
+    cp /market_data/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
 
 # Single init script that runs everything in proper order
 RUN echo '#!/bin/bash\nset -e\n\n# Wait for PGDATA to be ready\nwhile [ ! -d "$PGDATA" ]; do sleep 0.1; done\n\n# Add IP restriction\necho "host all all 10.9.0.0/16 scram-sha-256" >> "$PGDATA/pg_hba.conf"\n' > /docker-entrypoint-initdb.d/00-init.sh \
