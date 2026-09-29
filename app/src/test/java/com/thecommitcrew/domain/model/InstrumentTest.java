@@ -15,8 +15,12 @@ import com.thecommitcrew.domain.validator.InstrumentSymbolValidator;
 import com.thecommitcrew.persistence.entity.InstrumentEntity;
 import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
