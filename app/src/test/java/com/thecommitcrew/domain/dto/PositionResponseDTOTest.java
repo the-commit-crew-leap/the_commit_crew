@@ -18,6 +18,7 @@ public class PositionResponseDTOTest {
         BigDecimal currentPrice = new BigDecimal("155.50");
         BigDecimal marketValue = new BigDecimal("15550.00");
         BigDecimal unrealizedPnL = new BigDecimal("550.00");
+        BigDecimal unrealizedPnLPercent = new BigDecimal("3.67");
         
         PositionResponseDTO response = new PositionResponseDTO(
             symbol,
@@ -25,12 +26,14 @@ public class PositionResponseDTOTest {
             averageCost,
             currentPrice,
             marketValue,
-            unrealizedPnL
+            unrealizedPnL,
+            unrealizedPnLPercent
         );
         
         assertNotNull(response);
         assertEquals(symbol, response.symbol());
         assertEquals(quantity, response.quantity());
+        assertEquals(unrealizedPnLPercent, response.unrealizedPnLPercent());
     }
     
     @Test
@@ -41,6 +44,7 @@ public class PositionResponseDTOTest {
         BigDecimal currentPrice = new BigDecimal("310.00");
         BigDecimal marketValue = new BigDecimal("15500.00");
         BigDecimal unrealizedPnL = new BigDecimal("500.00");
+        BigDecimal unrealizedPnLPercent = new BigDecimal("1.67");
         
         PositionResponseDTO response = new PositionResponseDTO(
             symbol,
@@ -48,7 +52,8 @@ public class PositionResponseDTOTest {
             averageCost,
             currentPrice,
             marketValue,
-            unrealizedPnL
+            unrealizedPnL,
+            unrealizedPnLPercent
         );
         
         assertEquals(symbol, response.symbol());
@@ -57,6 +62,7 @@ public class PositionResponseDTOTest {
         assertEquals(currentPrice, response.currentPrice());
         assertEquals(marketValue, response.marketValue());
         assertEquals(unrealizedPnL, response.unrealizedPnL());
+        assertEquals(unrealizedPnLPercent, response.unrealizedPnLPercent());
     }
     
     @Test
@@ -71,6 +77,7 @@ public class PositionResponseDTOTest {
             averageCost,
             null,
             null,
+            null,
             null
         );
         
@@ -80,5 +87,6 @@ public class PositionResponseDTOTest {
         assertNull(response.currentPrice());
         assertNull(response.marketValue());
         assertNull(response.unrealizedPnL());
+        assertNull(response.unrealizedPnLPercent());
     }
 }

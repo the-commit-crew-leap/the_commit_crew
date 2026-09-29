@@ -11,7 +11,10 @@ import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.AccountService;
+import com.thecommitcrew.service.PositionService;
+import com.thecommitcrew.service.PriceService;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -23,9 +26,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/accounts") 
 public class AccountController {
     private final AccountService accountService;
+    private final PriceService priceService;
+    private final PositionService positionService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService) {
         this.accountService = accountService;
+        this.priceService = priceService;
+        this.positionService = positionService;
     }
 
     @GetMapping("/{id}")
@@ -50,14 +57,22 @@ public class AccountController {
     public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") Long accountId) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
-            .map(pos -> new PositionResponseDTO(
-                pos.getSymbol(),
-                pos.getQuantity(),
-                pos.getAverageCost(),
-                null,
-                null,
-                null
-            ))
+            .map(pos -> {
+                BigDecimal currentPrice = priceService.getCurrentPrice(pos.getSymbol());
+                BigDecimal marketValue = positionService.marketValue(pos, currentPrice);
+                BigDecimal unrealizedPnL = positionService.unrealizedProfitLoss(pos, currentPrice);
+                BigDecimal unrealizedPnLPercent = positionService.unrealizedPnLPercent(pos, currentPrice);
+                
+                return new PositionResponseDTO(
+                    pos.getSymbol(),
+                    pos.getQuantity(),
+                    pos.getAverageCost(),
+                    currentPrice,
+                    marketValue,
+                    unrealizedPnL,
+                    unrealizedPnLPercent
+                );
+            })
             .toList();
         return ResponseEntity.ok(response);
     }
