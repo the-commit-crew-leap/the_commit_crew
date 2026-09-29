@@ -22,6 +22,21 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: analytics/Dockerfile
+    working_dir: /app/analytics
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+    volumes:
+      - ./analytics:/app/analytics
+      - ./outputs:/app/outputs
+    depends_on:
+      - db
+    restart: unless-stopped
+
   db:
     build: 
       context: ./db
