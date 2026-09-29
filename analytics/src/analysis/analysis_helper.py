@@ -135,7 +135,7 @@ class AnalysisHelper:
 
 
     # PLOT HELPERS
-    def save_plot(self, fig: plt.Figure, filename: str) -> None:
+    def save_plot(self, fig, filename: str) -> None:
         """
         Save a Matplotlib figure to the configured charts directory.
         The charts directory is created automatically if it does not already
@@ -152,6 +152,23 @@ class AnalysisHelper:
         plt.close(fig)
 
         logger.info(f"Saved plot: {path}")
+
+    
+    def save_plotly_chart(self, fig, filename: str) -> None:
+        """
+        Save a Plotly figure to the configured charts directory as interactive HTML.
+        The charts directory is created automatically if it does not already exist.
+
+        Args:
+            fig: Plotly Figure object to save.
+            filename: Name of the output HTML file.
+        """
+        path = config.CHARTS_DIR / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        fig.write_html(path)
+
+        logger.info(f"Saved interactive chart: {path}")
 
 
     def get_ticker_label(self, tickers: list) -> str:

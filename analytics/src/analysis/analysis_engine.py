@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.graph_objects as go
+import plotly.express as px
 import logging
 
 from src.analysis.analysis_helper import AnalysisHelper
@@ -101,7 +101,7 @@ class AnalysisEngine:
     # CORRELATION ANALYSIS
     def plot_correlation_heatmap(self, tickers: list, start_date: str, end_date: str, period_label: str) -> None:
         """
-        Generate and save a correlation heatmap of daily returns.
+        Generate and save an interactive correlation heatmap of daily returns.
         Pearson correlation is calculated between the daily returns of each
         pair of instruments.
 
@@ -112,7 +112,7 @@ class AnalysisEngine:
             period_label: Human-readable period label such as "1Y" or "5Y".
 
         Returns:
-            None. The resulting PNG is saved to config.CHARTS_DIR.
+            None. The resulting HTML is saved to config.CHARTS_DIR.
         """
         returns_df = self.get_returns_for_tickers(tickers, start_date, end_date)
 
@@ -128,19 +128,36 @@ class AnalysisEngine:
         ticker_label = self.helper.get_ticker_label(returns_df.columns.tolist())
         ticker_title = self.helper.get_ticker_title(returns_df.columns.tolist())
 
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(correlation, annot=True, fmt=".2f", cmap="coolwarm", center=0, vmin=-1, vmax=1, square=True, cbar_kws={"label": "Correlation"}, ax=ax)
+        fig = go.Figure(data=go.Heatmap(
+            z=correlation.values,
+            x=correlation.columns,
+            y=correlation.index,
+            colorscale="RdBu",
+            zmid=0,
+            zmin=-1,
+            zmax=1,
+            text=np.round(correlation.values, 2),
+            texttemplate="%{text:.2f}",
+            textfont={"size": 10},
+            colorbar={"title": "Correlation"}
+        ))
 
-        ax.set_title(f"Correlation Matrix of Daily Returns — {ticker_title} — {period_label}", fontsize=16, fontweight="bold")
-        fig.tight_layout()
-        filename = f"correlation/correlation_{ticker_label}_{period_label}.png"
-        self.helper.save_plot(fig, filename)
+        fig.update_layout(
+            title=f"Correlation Matrix of Daily Returns — {ticker_title} — {period_label}",
+            xaxis_title="Ticker",
+            yaxis_title="Ticker",
+            width=1000,
+            height=800
+        )
+
+        filename = f"correlation/correlation_{ticker_label}_{period_label}.html"
+        self.helper.save_plotly_chart(fig, filename)
 
 
     # ROLLING VOLATILITY
     def plot_volatility_trends(self, tickers: list, start_date: str, end_date: str, period_label: str, window: int = 30) -> None:
         """
-        Generate and save rolling annualized volatility trends.
+        Generate and save interactive rolling annualized volatility trends.
         The resulting values are displayed as percentages -> 0.20 annualized volatility = 20%
 
         Args:
@@ -152,7 +169,7 @@ class AnalysisEngine:
                 volatility calculation. Default is 30 trading days.
 
         Returns:
-            None. The resulting PNG is saved to config.CHARTS_DIR.
+            None. The resulting HTML is saved to config.CHARTS_DIR.
         """
         if window < 2:
             raise ValueError("Volatility window must be at least 2 trading days")
@@ -166,36 +183,45 @@ class AnalysisEngine:
         ticker_label = self.helper.get_ticker_label(returns_df.columns.tolist())
         ticker_title = self.helper.get_ticker_title(returns_df.columns.tolist())
 
-        fig, ax = plt.subplots(figsize=(14, 7))
+        fig = go.Figure()
         plotted = 0
 
         for symbol in returns_df.columns:
             rolling_volatility = returns_df[symbol].rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
 
             if rolling_volatility.notna().any():
-                ax.plot(rolling_volatility.index, rolling_volatility, linewidth=1.8, label=symbol, alpha=0.85)
+                fig.add_trace(go.Scatter(
+                    x=rolling_volatility.index,
+                    y=rolling_volatility.values,
+                    mode="lines",
+                    name=symbol,
+                    line=dict(width=2)
+                ))
                 plotted += 1
 
         if plotted == 0:
-            plt.close(fig)
             logger.warning(f"Not enough data to calculate {window}-day rolling volatility")
             return
 
-        ax.set_title(f"{window}-Day Rolling Annualized Volatility — {ticker_title} — {period_label}", fontsize=14, fontweight="bold")
-        ax.set_xlabel("Date", fontsize=12)
-        ax.set_ylabel("Annualized Volatility (%)", fontsize=12)
-        ax.grid(True, alpha=0.3)
-        ax.legend(loc="best", fontsize=9)
-        fig.tight_layout()
-        filename = f"rolling_volatility/rolling_volatility_{window}d_{ticker_label}_{period_label}.png"
-        self.helper.save_plot(fig, filename)
+        fig.update_layout(
+            title=f"{window}-Day Rolling Annualized Volatility — {ticker_title} — {period_label}",
+            xaxis_title="Date",
+            yaxis_title="Annualized Volatility (%)",
+            hovermode="x unified",
+            width=1400,
+            height=700,
+            template="plotly_white"
+        )
+
+        filename = f"rolling_volatility/rolling_volatility_{window}d_{ticker_label}_{period_label}.html"
+        self.helper.save_plotly_chart(fig, filename)
 
 
     # ASSET CLASS VOLATILITY
     def plot_asset_class_volatility(self, tickers: list, start_date: str, end_date: str, period_label: str) -> None:
         """
         Compare annualized volatility across individual securities and
-        configured asset classes.
+        configured asset classes using an interactive box plot with overlay.
         Each ticker is represented as an individual point while the box plot
         summarizes the distribution of volatility within each asset class.
 
@@ -228,17 +254,42 @@ class AnalysisEngine:
         ticker_label = self.helper.get_ticker_label(plot_df["Ticker"].tolist())
         ticker_title = self.helper.get_ticker_title(plot_df["Ticker"].tolist())
 
-        fig, ax = plt.subplots(figsize=(12, 7))
-        sns.boxplot(data=plot_df, x="Asset Class", y="Annualized Volatility", color="lightblue", width=0.5, showfliers=False, ax=ax)
-        sns.stripplot(data=plot_df, x="Asset Class", y="Annualized Volatility", hue="Ticker", size=8, jitter=True, ax=ax)
-        ax.set_title(f"Annualized Volatility by Asset Class — {ticker_title} — {period_label}", fontsize=14, fontweight="bold")
-        ax.set_xlabel("Asset Class", fontsize=12)
-        ax.set_ylabel("Annualized Volatility (%)", fontsize=12)
-        ax.grid(True, alpha=0.3, axis="y")
-        ax.legend(title="Ticker", bbox_to_anchor=(1.02, 1), loc="upper left")
-        fig.tight_layout()
-        filename = f"asset_class_volatility/asset_class_volatility_{ticker_label}_{period_label}.png"
-        self.helper.save_plot(fig, filename)
+        fig = go.Figure()
+
+        # Add box plot
+        for asset_class in plot_df["Asset Class"].unique():
+            class_data = plot_df[plot_df["Asset Class"] == asset_class]
+            fig.add_trace(go.Box(
+                x=[asset_class] * len(class_data),
+                y=class_data["Annualized Volatility"],
+                name=asset_class,
+                boxmean="sd",
+                showlegend=False
+            ))
+
+        # Add scatter points for individual tickers
+        fig.add_trace(go.Scatter(
+            x=plot_df["Asset Class"],
+            y=plot_df["Annualized Volatility"],
+            mode="markers",
+            marker=dict(size=10, opacity=0.7),
+            text=plot_df["Ticker"],
+            name="Tickers",
+            hovertemplate="<b>%{text}</b><br>Volatility: %{y:.2f}%<extra></extra>"
+        ))
+
+        fig.update_layout(
+            title=f"Annualized Volatility by Asset Class — {ticker_title} — {period_label}",
+            xaxis_title="Asset Class",
+            yaxis_title="Annualized Volatility (%)",
+            width=1200,
+            height=700,
+            template="plotly_white",
+            hovermode="closest"
+        )
+
+        filename = f"asset_class_volatility/asset_class_volatility_{ticker_label}_{period_label}.html"
+        self.helper.save_plotly_chart(fig, filename)
 
 
     # STATISTICS SUMMARY

@@ -2,11 +2,13 @@ pandas
 numpy
 yfinance
 matplotlib
-dotenv
+python-dotenv
 sqlalchemy
 pydantic
 seaborn
 pytest
+pytest-cov
 fastapi
 uvicorn
 apscheduler
+plotly
