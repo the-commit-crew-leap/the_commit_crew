@@ -23,6 +23,12 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthEntryPointJwt authEntryPointJwt;
     
+    /**
+     * Toggle to enable/disable JWT authentication.
+     * When true: All endpoints except /api/auth/** and /actuator/health require a valid JWT token.
+     * When false: All endpoints are publicly accessible (for development/testing).
+     * Controlled via application.properties: auth.enabled=true|false
+     */
     @Value("${auth.enabled:true}")
     private boolean authEnabled;
 
