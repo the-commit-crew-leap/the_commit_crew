@@ -107,3 +107,21 @@ deactivate
 ## Data Retention
 
 CSV files are written to `market_data/` and persist across runs.
+
+## Instruments and Price History Data
+
+Data is now loaded automatically during Docker build using PostgreSQL COPY:
+
+1. **Docker build generates CSVs** during image build (no manual step needed)
+2. **PostgreSQL COPY loads data** directly from CSV files in seconds
+3. **No manual seed SQL scripts** required
+
+### Data Pipeline
+
+- `fetch_market_data.py` generates `price_history.csv` and `ticker_metadata.csv`
+- Dockerfile copies CSVs to `/docker-entrypoint-initdb.d/data/`
+- PostgreSQL entrypoint executes COPY commands in `seeds/price_history-data.sql`
+
+### To update data
+
+Simply re-run Jenkins to rebuild the Docker image with fresh data.

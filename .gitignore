@@ -6,3 +6,4 @@ target/
 python/market_data/
 **/__pycache__/
 .pytest_cache/
+python/venv

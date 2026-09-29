@@ -35,6 +35,19 @@ pipeline {
                             
                             echo "Cleaning up previous database state..."
                             docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" down -v || true
+
+                            # Remove dangling images, containers, and volumes
+                            docker system prune -f --volumes || true
+
+                            # Kill any containers still using the network
+                            docker ps -a --filter "network=the-commit-crew_default" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                            sleep 1
+                            docker network rm the-commit-crew_default 2>/dev/null || true
+
+                            # Extra safety: manually remove any lingering db containers/volumes
+                            docker ps -a --filter "name=the_commit_crew" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                            docker volume ls --filter "name=the_commit_crew" --format "{{.Name}}" | xargs -r docker volume rm 2>/dev/null || true
+
                             sleep 2
 
                             # Check if DB container already exists and is running
@@ -73,7 +86,10 @@ pipeline {
                                     sleep 2
                                 done
                                 
-                                echo "Initializing database schema and data..."
+                                echo "Waiting for database entrypoint initialization to fully complete..."
+                                sleep 10
+
+                                echo "Verifying database initialization..."
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f init-db.sql && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"

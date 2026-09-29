@@ -4,6 +4,7 @@
 
 -- Step 1: Create tables with constraints
 \i /docker-entrypoint-initdb.d/schema/instruments.sql
+\i /docker-entrypoint-initdb.d/schema/price_history.sql
 \i /docker-entrypoint-initdb.d/schema/accounts.sql
 \i /docker-entrypoint-initdb.d/schema/positions.sql
 \i /docker-entrypoint-initdb.d/schema/orders.sql
