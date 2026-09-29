@@ -44,7 +44,7 @@ python -m src.main run --period all
 python -m pytest -v tests
 
 # Run specific test
-python -m pytest -v tests/test_etl.py
+python -m pytest -v tests/pipeline/test_etl.py
 
 # Run tests coverage
 # Needs pytest-cov installed
