@@ -9,3 +9,4 @@ seaborn
 pytest
 fastapi
 uvicorn
+apscheduler

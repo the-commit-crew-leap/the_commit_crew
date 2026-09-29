@@ -66,7 +66,7 @@ def get_ticker_csv_path(symbol: str) -> Path:
 # Scheduling Configuration
 SCHEDULE_INTERVAL = 24  # hours
 ENABLE_SCHEDULER = True
-SCHEDULE_TIME = "16:00"  # "HH:MM" format — team member handles actual market close logic in extract()
+SCHEDULE_TIME = "17:00"  # "HH:MM" format — team member handles actual market close logic in extract()
 
 # Data Configuration
 HISTORICAL_YEARS = 10
