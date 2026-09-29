@@ -35,6 +35,14 @@ pipeline {
                             
                             echo "Cleaning up previous database state..."
                             docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" down -v || true
+
+                            # Remove dangling images, containers, and volumes
+                            docker system prune -af --volumes || true
+
+                            # Extra safety: manually remove any lingering db containers/volumes
+                            docker ps -a --filter "name=the_commit_crew" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                            docker volume ls --filter "name=the_commit_crew" --format "{{.Name}}" | xargs -r docker volume rm 2>/dev/null || true
+
                             sleep 2
 
                             # Check if DB container already exists and is running

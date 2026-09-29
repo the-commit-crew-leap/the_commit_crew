@@ -210,6 +210,9 @@ def main() -> None:
         'close': 'close_price'
     }, inplace=True)
     
+    # Reorder columns to match COPY command expectations
+    prices = prices[['symbol', 'price_date', 'open_price', 'high_price', 'low_price', 'close_price', 'volume']]
+    
     save_price_history(prices)
     
     metadata = fetch_ticker_metadata(all_tickers)
