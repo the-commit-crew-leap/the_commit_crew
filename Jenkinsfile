@@ -37,7 +37,12 @@ pipeline {
                             docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" down -v || true
 
                             # Remove dangling images, containers, and volumes
-                            docker system prune -af --volumes || true
+                            docker system prune -f --volumes || true
+
+                            # Kill any containers still using the network
+                            docker ps -a --filter "network=the-commit-crew_default" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                            sleep 1
+                            docker network rm the-commit-crew_default 2>/dev/null || true
 
                             # Extra safety: manually remove any lingering db containers/volumes
                             docker ps -a --filter "name=the_commit_crew" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
