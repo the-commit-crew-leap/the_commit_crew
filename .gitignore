@@ -10,3 +10,4 @@ python/market_data/
 __init__.py
 */__pycache__
 analytics.log
+analytics/outputs/
