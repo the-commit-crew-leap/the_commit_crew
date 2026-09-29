@@ -34,6 +34,9 @@ python -m src.main run --asset-classes stocks bonds --period 5y
 # Different periods
 python -m src.main run --period 5y
 python -m src.main run --period all
+
+# Run scheduler (runs ETL automatically on schedule)
+python src/run_scheduler.py
 ```
 
 
@@ -45,6 +48,9 @@ python -m pytest -v tests
 
 # Run specific test
 python -m pytest -v tests/pipeline/test_etl.py
+
+# Run scheduler tests
+python -m pytest -v tests/scheduler/test_scheduler.py
 
 # Run tests coverage
 # Needs pytest-cov installed
@@ -83,4 +89,14 @@ curl "http://localhost:8000/charts/volatility?tickers=AAPL&tickers=SPY&period=1y
 - `GET /charts/asset-class-volatility` -> returns the asset-class volatility chart
 ```bash
 curl "http://localhost:8000/charts/asset-class-volatility?tickers=AAPL&tickers=SPY&tickers=BND&period=1y"
+```
+
+
+### 4. Docker
+
+Dockerfile in `analytics` folder and `scheduler` service added to `docker-compose` file. Now ETL pipeline runs daily at configured time (17:00).
+
+```bash
+# Scheduler logs
+docker-compose logs -f scheduler
 ```
