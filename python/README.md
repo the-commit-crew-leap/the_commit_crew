@@ -108,26 +108,20 @@ deactivate
 
 CSV files are written to `market_data/` and persist across runs.
 
-## Generate instruments seed (Optional)
+## Instruments and Price History Data
 
-### Converts ticker_metadata.csv into SQL INSERT statements for the instruments table:
+Data is now loaded automatically during Docker build using PostgreSQL COPY:
 
-```bash
-python generate_instruments_seed.py
-```
-This generates instruments-data.sql with all 30 tickers. </br>
-When to run: After updating ticker metadata or adding/removing tickers.
+1. **Docker build generates CSVs** during image build (no manual step needed)
+2. **PostgreSQL COPY loads data** directly from CSV files in seconds
+3. **No manual seed SQL scripts** required
 
-## Generate price history seed (Daily)
+### Data Pipeline
 
-### Converts price_history.csv into SQL INSERT statements for the price_history table:
+- `fetch_market_data.py` generates `price_history.csv` and `ticker_metadata.csv`
+- Dockerfile copies CSVs to `/docker-entrypoint-initdb.d/data/`
+- PostgreSQL entrypoint executes COPY commands in `seeds/price_history-data.sql`
 
-```bash
-python generate_price_history_seed.py
-```
-This generates price_history-data.sql with the last 10 years of daily pricing data (~75k rows). </br>
-When to run: After fetching new market data. (daily manual batch job)
+### To update data
 
-## Commit generated seeds
-After running either seed generator, commit the output files to git. </br>
-When Jenkins restarts the database, it will automatically load the committed seeds.
+Simply re-run Jenkins to rebuild the Docker image with fresh data.
