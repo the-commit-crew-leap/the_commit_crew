@@ -33,9 +33,7 @@ def test_save_plot(monkeypatch, tmp_path):
     assert not plt.fignum_exists(fig.number)
 
 
-# ============================================================
 # CORRELATION HEATMAP
-# ============================================================
 def test_plot_correlation_heatmap_no_data(monkeypatch):
     monkeypatch.setattr(
         engine,
@@ -108,13 +106,11 @@ def test_plot_correlation_heatmap(monkeypatch):
         "1Y"
     )
 
-    assert saved["filename"] == "correlation_AAPL-SPY_1Y.png"
+    assert saved["filename"] == "correlation/correlation_AAPL-SPY_1Y.png"
     assert saved["figure"] is not None
 
 
-# ============================================================
 # ROLLING VOLATILITY
-# ============================================================
 def test_plot_volatility_trends_invalid_window():
     with pytest.raises(ValueError, match="Volatility window must be at least 2"):
         engine.plot_volatility_trends(
@@ -200,13 +196,11 @@ def test_plot_volatility_trends(monkeypatch):
         window=5
     )
 
-    assert saved["filename"] == "rolling_volatility_5d_AAPL-SPY_1Y.png"
+    assert saved["filename"] == "rolling_volatility/rolling_volatility_5d_AAPL-SPY_1Y.png"
     assert saved["figure"] is not None
 
 
-# ============================================================
 # ASSET CLASS VOLATILITY
-# ============================================================
 def test_plot_asset_class_volatility_no_data(monkeypatch):
     monkeypatch.setattr(
         engine,
@@ -269,6 +263,6 @@ def test_plot_asset_class_volatility(monkeypatch):
     )
 
     assert saved["filename"] == (
-        "asset_class_volatility_AAPL-BND-SPY_1Y.png"
+        "asset_class_volatility/asset_class_volatility_AAPL-BND-SPY_1Y.png"
     )
     assert saved["figure"] is not None

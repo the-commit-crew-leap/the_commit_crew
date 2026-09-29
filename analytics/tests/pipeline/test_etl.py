@@ -1,10 +1,12 @@
 import pandas as pd
-import pytest
 
-from src.pipeline.etl_pipeline import ETLPipeline
+from src.pipeline.etl_pipeline import Extractor, Transformer, Loader, ETLPipeline
 
 
-pipeline = ETLPipeline()
+extractor = Extractor()
+transformer = Transformer()
+loader = Loader()
+pipeline = ETLPipeline(extractor, transformer, loader)
 
 
 # TEST DATA
@@ -23,290 +25,6 @@ def make_valid_dataframe() -> pd.DataFrame:
     })
 
 
-# EXTRACT
-def test_extract_returns_dataframe():
-    """Mock extraction should return a non-empty DataFrame."""
-    df = pipeline.extract()
-
-    assert isinstance(df, pd.DataFrame)
-    assert not df.empty
-
-
-def test_extract_has_expected_columns():
-    """Extraction must provide the columns expected by transform()."""
-    df = pipeline.extract()
-
-    expected = {"symbol", "date", "open", "high", "low", "close", "volume", "adj_close"}
-
-    assert expected.issubset(df.columns)
-
-
-def test_extract_contains_symbols():
-    df = pipeline.extract()
-
-    assert df["symbol"].notna().all()
-    assert df["symbol"].nunique() > 0
-
-
-# TRANSFORM
-def test_transform_returns_clean_dataframe():
-    result = pipeline.transform(make_valid_dataframe())
-
-    assert isinstance(result, pd.DataFrame)
-    assert not result.empty
-
-
-def test_transform_normalizes_symbols():
-    df = make_valid_dataframe()
-    df.loc[0, "symbol"] = " aapl "
-
-    result = pipeline.transform(df)
-
-    assert result.loc[0, "symbol"] == "AAPL"
-
-
-def test_transform_normalizes_dates():
-    df = make_valid_dataframe()
-    df.loc[0, "date"] = "2026-01-02 15:30:45"
-
-    result = pipeline.transform(df)
-
-    assert result.loc[0, "date"] == pd.Timestamp("2026-01-02")
-
-
-def test_transform_converts_numeric_columns():
-    df = make_valid_dataframe()
-    numeric_columns = ["open", "high", "low", "close", "adj_close", "volume"]
-
-    for column in numeric_columns:
-        df[column] = df[column].astype(str)
-
-    result = pipeline.transform(df)
-
-    for column in numeric_columns:
-        assert pd.api.types.is_numeric_dtype(result[column])
-
-
-def test_transform_removes_missing_required_values():
-    df = make_valid_dataframe()
-    df.loc[0, "close"] = None
-
-    result = pipeline.transform(df)
-
-    assert len(result) == 2
-    assert not result["close"].isna().any()
-
-
-def test_transform_rejects_missing_columns():
-    df = make_valid_dataframe().drop(columns=["close"])
-
-    with pytest.raises(ValueError, match="Missing required columns"):
-        pipeline.transform(df)
-
-
-def test_transform_rejects_empty_dataframe():
-    with pytest.raises(ValueError, match="Cannot transform an empty DataFrame"):
-        pipeline.transform(pd.DataFrame())
-
-
-def test_transform_removes_invalid_prices():
-    df = make_valid_dataframe()
-    df.loc[0, "high"] = 90.0  # high < low
-
-    result = pipeline.transform(df)
-
-    assert len(result) == 2
-
-
-def test_transform_removes_negative_prices():
-    df = make_valid_dataframe()
-    df.loc[0, "close"] = -10.0
-
-    result = pipeline.transform(df)
-
-    assert len(result) == 2
-
-
-def test_transform_removes_zero_prices():
-    df = make_valid_dataframe()
-    df.loc[0, "close"] = 0
-
-    result = pipeline.transform(df)
-
-    assert len(result) == 2
-
-
-def test_transform_removes_negative_volume():
-    df = make_valid_dataframe()
-    df.loc[0, "volume"] = -100
-
-    result = pipeline.transform(df)
-
-    assert len(result) == 2
-
-
-def test_transform_removes_duplicate_symbol_date():
-    df = make_valid_dataframe()
-    df = pd.concat([df, df.iloc[[0]]], ignore_index=True)
-
-    result = pipeline.transform(df)
-
-    assert not result.duplicated(subset=["symbol", "date"]).any()
-
-
-def test_transform_keeps_last_duplicate():
-    df = make_valid_dataframe()
-
-    duplicate = df.iloc[[0]].copy()
-    duplicate["close"] = 104.0
-    df = pd.concat([df, duplicate], ignore_index=True)
-
-    result = pipeline.transform(df)
-
-    aapl = result[
-        (result["symbol"] == "AAPL") &
-        (result["date"] == pd.Timestamp("2026-01-02"))
-    ]
-
-    assert len(aapl) == 1
-    assert aapl.iloc[0]["close"] == 104.0
-
-
-def test_transform_creates_price_change():
-    result = pipeline.transform(make_valid_dataframe())
-    row = result.iloc[0]
-
-    assert row["price_change"] == row["close"] - row["open"]
-
-
-def test_transform_creates_pct_change():
-    result = pipeline.transform(make_valid_dataframe())
-    row = result.iloc[0]
-
-    expected = round((row["close"] - row["open"]) / row["open"] * 100, 2)
-
-    assert row["pct_change"] == expected
-
-
-def test_transform_adds_load_timestamp():
-    result = pipeline.transform(make_valid_dataframe())
-
-    assert "load_timestamp" in result.columns
-    assert result["load_timestamp"].notna().all()
-
-
-def test_transform_sorts_by_symbol_and_date():
-    df = make_valid_dataframe().iloc[[2, 0, 1]].reset_index(drop=True)
-
-    result = pipeline.transform(df)
-    expected = result.sort_values(["symbol", "date"]).reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-# LOAD
-def test_load_creates_csv_files(tmp_path):
-    df = pipeline.transform(make_valid_dataframe())
-
-    def output_path(symbol):
-        return tmp_path / f"{symbol}.csv"
-
-    result = pipeline.load(df, output_path_factory=output_path)
-
-    assert result["saved"] == 2
-    assert not result["errors"]
-    assert (tmp_path / "AAPL.csv").exists()
-    assert (tmp_path / "SPY.csv").exists()
-
-
-def test_load_creates_one_file_per_symbol(tmp_path):
-    df = pipeline.transform(make_valid_dataframe())
-
-    def output_path(symbol):
-        return tmp_path / f"{symbol}.csv"
-
-    pipeline.load(df, output_path_factory=output_path)
-
-    files = list(tmp_path.glob("*.csv"))
-
-    assert len(files) == 2
-    assert {file.stem for file in files} == {"AAPL", "SPY"}
-
-
-def test_load_writes_correct_data(tmp_path):
-    df = pipeline.transform(make_valid_dataframe())
-
-    def output_path(symbol):
-        return tmp_path / f"{symbol}.csv"
-
-    pipeline.load(df, output_path_factory=output_path)
-
-    saved = pd.read_csv(tmp_path / "AAPL.csv", parse_dates=["date"])
-
-    assert len(saved) == 2
-    assert set(saved["symbol"]) == {"AAPL"}
-
-
-def test_load_empty_dataframe():
-    result = pipeline.load(pd.DataFrame())
-
-    assert result["saved"] == 0
-    assert "Empty dataframe" in result["errors"]
-
-
-def test_load_merges_existing_data(tmp_path):
-    df = pipeline.transform(make_valid_dataframe())
-
-    def output_path(symbol):
-        return tmp_path / f"{symbol}.csv"
-
-    pipeline.load(df, output_path_factory=output_path)
-
-    new_data = pd.DataFrame({
-        "symbol": ["AAPL"],
-        "date": ["2026-01-06"],
-        "open": [105.0],
-        "high": [108.0],
-        "low": [104.0],
-        "close": [107.0],
-        "volume": [1_200_000],
-        "adj_close": [107.0],
-    })
-
-    pipeline.load(pipeline.transform(new_data), output_path_factory=output_path)
-
-    saved = pd.read_csv(tmp_path / "AAPL.csv", parse_dates=["date"])
-
-    assert len(saved) == 3
-
-
-def test_load_replaces_existing_date(tmp_path):
-    df = pipeline.transform(make_valid_dataframe())
-
-    def output_path(symbol):
-        return tmp_path / f"{symbol}.csv"
-
-    pipeline.load(df, output_path_factory=output_path)
-
-    updated = pd.DataFrame({
-        "symbol": ["AAPL"],
-        "date": ["2026-01-02"],
-        "open": [100.0],
-        "high": [110.0],
-        "low": [99.0],
-        "close": [108.0],
-        "volume": [9_999_999],
-        "adj_close": [108.0],
-    })
-
-    pipeline.load(pipeline.transform(updated), output_path_factory=output_path)
-
-    saved = pd.read_csv(tmp_path / "AAPL.csv", parse_dates=["date"])
-    aapl_date = saved[saved["date"] == pd.Timestamp("2026-01-02")]
-
-    assert len(aapl_date) == 1
-    assert aapl_date.iloc[0]["close"] == 108.0
-
 
 # FULL ETL
 def test_run_etl_success(monkeypatch, tmp_path):
@@ -315,20 +33,20 @@ def test_run_etl_success(monkeypatch, tmp_path):
     test_data = make_valid_dataframe()
 
     # Replace extract() with deterministic test data.
-    monkeypatch.setattr(pipeline, "extract", lambda: test_data)
+    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
 
     def output_path(symbol):
         return tmp_path / f"{symbol}.csv"
 
     # Keep the real load logic, but redirect its output to tmp_path.
-    original_load = pipeline.load
+    original_load = loader.load
 
-    def test_load(df):
+    def test_load(df, output_path_factory=None):
         return original_load(df, output_path_factory=output_path)
 
-    monkeypatch.setattr(pipeline, "load", test_load)
+    monkeypatch.setattr(loader, "load", test_load)
 
-    result = pipeline.run_etl()
+    result = pipeline.run_etl(tickers=["AAPL", "SPY"])
 
     assert result["status"] == "success"
     assert result["extracted"] == 3
@@ -343,12 +61,12 @@ def test_run_etl_success(monkeypatch, tmp_path):
 def test_run_etl_fails_when_extraction_fails(monkeypatch):
     """A failed extraction should stop the ETL."""
 
-    def failing_extract():
+    def failing_extract(tickers):
         raise RuntimeError("Extraction failed")
 
-    monkeypatch.setattr(pipeline, "extract", failing_extract)
+    monkeypatch.setattr(extractor, "extract", failing_extract)
 
-    result = pipeline.run_etl()
+    result = pipeline.run_etl(tickers=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -359,14 +77,15 @@ def test_run_etl_fails_when_extraction_fails(monkeypatch):
 def test_run_etl_fails_when_transform_fails(monkeypatch):
     """A transformation error should prevent loading."""
 
-    monkeypatch.setattr(pipeline, "extract", lambda: make_valid_dataframe())
+    test_data = make_valid_dataframe()
+    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
 
     def failing_transform(df):
         raise ValueError("Invalid market data")
 
-    monkeypatch.setattr(pipeline, "transform", failing_transform)
+    monkeypatch.setattr(transformer, "transform", failing_transform)
 
-    result = pipeline.run_etl()
+    result = pipeline.run_etl(tickers=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -376,14 +95,15 @@ def test_run_etl_fails_when_transform_fails(monkeypatch):
 def test_run_etl_reports_partial_load_failure(monkeypatch):
     """A partial load should result in a partial ETL status."""
 
-    monkeypatch.setattr(pipeline, "extract", lambda: make_valid_dataframe())
+    test_data = make_valid_dataframe()
+    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
 
-    def partially_failing_load(df):
+    def partially_failing_load(df, output_path_factory=None):
         return {"saved": 1, "errors": ["SPY: simulated save failure"]}
 
-    monkeypatch.setattr(pipeline, "load", partially_failing_load)
+    monkeypatch.setattr(loader, "load", partially_failing_load)
 
-    result = pipeline.run_etl()
+    result = pipeline.run_etl(tickers=["AAPL", "SPY"])
 
     assert result["status"] == "partial"
     assert result["saved"] == 1

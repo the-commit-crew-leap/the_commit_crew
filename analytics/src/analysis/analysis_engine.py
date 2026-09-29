@@ -133,7 +133,7 @@ class AnalysisEngine:
 
         ax.set_title(f"Correlation Matrix of Daily Returns — {ticker_title} — {period_label}", fontsize=16, fontweight="bold")
         fig.tight_layout()
-        filename = f"correlation_{ticker_label}_{period_label}.png"
+        filename = f"correlation/correlation_{ticker_label}_{period_label}.png"
         self.helper.save_plot(fig, filename)
 
 
@@ -187,7 +187,7 @@ class AnalysisEngine:
         ax.grid(True, alpha=0.3)
         ax.legend(loc="best", fontsize=9)
         fig.tight_layout()
-        filename = f"rolling_volatility_{window}d_{ticker_label}_{period_label}.png"
+        filename = f"rolling_volatility/rolling_volatility_{window}d_{ticker_label}_{period_label}.png"
         self.helper.save_plot(fig, filename)
 
 
@@ -237,7 +237,7 @@ class AnalysisEngine:
         ax.grid(True, alpha=0.3, axis="y")
         ax.legend(title="Ticker", bbox_to_anchor=(1.02, 1), loc="upper left")
         fig.tight_layout()
-        filename = f"asset_class_volatility_{ticker_label}_{period_label}.png"
+        filename = f"asset_class_volatility/asset_class_volatility_{ticker_label}_{period_label}.png"
         self.helper.save_plot(fig, filename)
 
 

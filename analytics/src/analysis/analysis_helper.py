@@ -145,9 +145,8 @@ class AnalysisHelper:
             fig: Matplotlib Figure object to save.
             filename: Name of the output PNG file.
         """
-        config.CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-
         path = config.CHARTS_DIR / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         fig.savefig(path, dpi=300, bbox_inches="tight")
         plt.close(fig)
