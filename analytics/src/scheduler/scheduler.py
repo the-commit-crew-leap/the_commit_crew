@@ -4,7 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from config import config
-from src.pipeline.etl_pipeline import ETLPipeline, Extractor, Transformer, Loader
+from src.pipeline.etl_pipeline import ETLPipeline, Extractor, Transformer, Loader, DatabaseLoader
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +24,17 @@ class ETLScheduler:
             extractor = Extractor()
             transformer = Transformer()
             loader = Loader()
-            self.pipeline = ETLPipeline(extractor, transformer, loader)
+            db_loader = DatabaseLoader()
+            self.pipeline = ETLPipeline(extractor, transformer, loader, db_loader)
         return self.pipeline
     
     
     def _run_etl_job(self):
-        """Execute the ETL pipeline as a scheduled job."""
+        """Execute the ETL pipeline as a scheduled job, including database sync."""
         try:
             logger.info("Starting scheduled ETL run at %s", datetime.now())
             pipeline = self._create_pipeline()
-            result = pipeline.run_etl(tickers=config.INSTRUMENTS_LIST)
+            result = pipeline.run_etl(tickers=config.INSTRUMENTS_LIST, sync_to_db=True)
             
             status = result.get("status", "unknown")
             extracted = result.get("extracted", 0)
@@ -41,7 +42,7 @@ class ETLScheduler:
             errors = result.get("errors", [])
             
             logger.info(
-                "ETL job complete: status=%s, extracted=%d, saved=%d, errors=%s",
+                "ETL job complete: status=%s, extracted=%d, saved=%d, db_synced=True, errors=%s",
                 status, extracted, saved, errors
             )
             

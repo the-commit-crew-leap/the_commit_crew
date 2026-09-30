@@ -1,5 +1,3 @@
-import pytest
-from datetime import datetime
 from unittest.mock import patch, MagicMock
 from src.scheduler.scheduler import ETLScheduler
 
@@ -46,7 +44,7 @@ def test_scheduler_respects_disabled_config(monkeypatch):
         mock_add.assert_not_called()
 
 
-def test_etl_job_handles_errors(monkeypatch):
+def test_etl_job_handles_errors():
     """ETL job should handle pipeline errors gracefully."""
     scheduler = ETLScheduler()
     
