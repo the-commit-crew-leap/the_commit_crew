@@ -61,6 +61,20 @@ docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres 
 ```
 You should see the list of tables for each database.
 
+## Using auth:
+
+After running the app, run this command to get a JWT token:
+```bash 
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser"}'
+```
+Copy the token and navigate to swagger:
+
+[Swagger UI](http://localhost:8081/swagger-ui/index.html#/)
+
+Click the green Authorize button and paste your JWT token.
+
 ## Coding Conventions
 
 ### Naming 
