@@ -50,7 +50,15 @@ public class SecurityConfig {
             authConfig
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPointJwt))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        .requestMatchers(
+                            "/api/auth/**",
+                            "/actuator/health",
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/v3/api-docs",
+                            "/v3/api-docs/**",
+                            "/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

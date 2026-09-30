@@ -52,10 +52,10 @@ services:
     depends_on:
       - zookeeper
 
-zookeeper:
-  image: confluentinc/cp-zookeeper:7.5.0
-  environment:
-    ZOOKEEPER_CLIENT_PORT: 2181
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
 
 networks:
   default:
