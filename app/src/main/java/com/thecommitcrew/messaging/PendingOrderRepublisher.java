@@ -27,27 +27,21 @@ public class PendingOrderRepublisher {
     private final OrderMapper orderMapper;
     private final OrderEventPublisher publisher;
     private final Duration republishAfter;
-    private final long republishIntervalMillis;
 
     public PendingOrderRepublisher(OrderMapper orderMapper, OrderEventPublisher publisher,
-                                   @Value("${trading.orders.republish-after}") Duration republishAfter,
-                                   @Value("${trading.orders.republish-interval}") Duration republishInterval) {
+                                @Value("${trading.orders.republish-after}") Duration republishAfter) {
         this.orderMapper = orderMapper;
         this.publisher = publisher;
         this.republishAfter = republishAfter;
-        this.republishIntervalMillis = republishInterval.toMillis();
     }
 
-    @Scheduled(fixedRateString = "#{@pendingOrderRepublisher.getRepublishIntervalMillis()}")
+    @Scheduled(fixedDelayString = "${trading.orders.republish-interval}",
+            initialDelayString = "${trading.orders.republish-interval}")
     public void republishStaleOrders() {
         List<OrderEvent> stale = orderMapper.findPendingOlderThan(republishAfter.toSeconds(), BATCH_SIZE);
         if (!stale.isEmpty()) {
             log.info("Republishing {} order(s) still NEW after {}", stale.size(), republishAfter);
             stale.forEach(publisher::publish);
         }
-    }
-
-    public long getRepublishIntervalMillis() {
-        return republishIntervalMillis;
     }
 }
