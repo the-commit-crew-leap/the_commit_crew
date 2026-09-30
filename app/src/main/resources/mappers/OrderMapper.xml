@@ -23,4 +23,11 @@
             status = #{status}
     </insert>
 
+    <select id="findPendingOlderThan" resultType="com.thecommitcrew.messaging.OrderEvent">
+        SELECT id as orderId, account_id as accountId, symbol, side, quantity, price, created_on as createdOn
+        FROM orders
+        WHERE status = 'NEW' AND created_on &lt; (NOW() - (#{seconds}::int || ' seconds')::INTERVAL)
+        LIMIT #{limit}
+    </select>
+
 </mapper>

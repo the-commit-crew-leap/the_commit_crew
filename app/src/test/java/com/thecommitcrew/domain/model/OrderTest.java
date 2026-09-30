@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
+import com.thecommitcrew.domain.exception.NegativePriceException;
 
 public class OrderTest {
 
@@ -131,7 +132,7 @@ public class OrderTest {
         @Test
         @DisplayName("Should throw when price is zero")
         void shouldThrowWhenPriceIsZero() {
-            assertThrows(IllegalArgumentException.class, () -> new Order(
+            assertThrows(NegativePriceException.class, () -> new Order(
                 validId, validAccountId, validSymbol, validSide,
                 validQuantity, BigDecimal.ZERO, validStatus, validCreatedOn, validIdempotencyKey
             ));
@@ -140,7 +141,7 @@ public class OrderTest {
         @Test
         @DisplayName("Should throw when price is negative")
         void shouldThrowWhenPriceIsNegative() {
-            assertThrows(IllegalArgumentException.class, () -> new Order(
+            assertThrows(NegativePriceException.class, () -> new Order(
                 validId, validAccountId, validSymbol, validSide,
                 validQuantity, new BigDecimal("-50.00"), validStatus, validCreatedOn, validIdempotencyKey
             ));

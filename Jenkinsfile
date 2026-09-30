@@ -177,13 +177,13 @@ pipeline {
                         the-commit-crew:${BUILD_NUMBER})
                     
                     echo "Waiting for Spring Boot to start..."
-                    for i in {1..30}; do
+                    for i in {1..60}; do
                         if curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
                             echo "Health check passed"
                             docker rm -f $CONTAINER_ID
                             exit 0
                         fi
-                        echo "Attempt $i/30: Waiting for application to be ready..."
+                        echo "Attempt $i/60: Waiting for application to be ready..."
                         sleep 1
                     done
                     
