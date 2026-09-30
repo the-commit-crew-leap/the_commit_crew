@@ -4,6 +4,7 @@ from config import config
 from src.pipeline.extractor import Extractor
 from src.pipeline.transformer import Transformer
 from src.pipeline.loader import Loader
+from src.pipeline.database_loader import DatabaseLoader
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -12,13 +13,14 @@ logger = logging.getLogger(__name__)
 class ETLPipeline:
     """Orchestrate price data extraction, transformation, and loading."""
     
-    def __init__(self, extractor: Extractor, transformer: Transformer, loader: Loader):
+    def __init__(self, extractor: Extractor, transformer: Transformer, loader: Loader, db_loader: DatabaseLoader):
         self.extractor = extractor
         self.transformer = transformer
         self.loader = loader
+        self.db_loader = db_loader
 
 
-    def run_etl(self, tickers: list[str] = None):
+    def run_etl(self, tickers: list[str] = None, sync_to_db: bool = True):
         """
         Execute the complete ETL workflow.
         
@@ -41,6 +43,11 @@ class ETLPipeline:
             
             clean = self.transformer.transform(raw)
             result = self.loader.load(clean)
+            
+            if sync_to_db:
+                self.db_loader.load_price_history_from_csv(str(config.PRICE_HISTORY_FILE))
+                self.db_loader.load_instruments_from_csv(str(config.TICKER_METADATA_FILE))
+
             
             summary = {
                 "status": ("success" if not result["errors"] else "partial"),
@@ -70,9 +77,10 @@ if __name__ == "__main__":
     extractor = Extractor()
     transformer = Transformer()
     loader = Loader()
+    db_loader = DatabaseLoader()
     
     # Price data pipeline
-    etl_pipeline = ETLPipeline(extractor, transformer, loader)
+    etl_pipeline = ETLPipeline(extractor, transformer, loader, db_loader)
     price_result = etl_pipeline.run_etl()
     print("Price ETL:", price_result)
 

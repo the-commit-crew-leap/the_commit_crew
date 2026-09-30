@@ -12,3 +12,4 @@ fastapi
 uvicorn
 apscheduler
 plotly
+psycopg2-binary

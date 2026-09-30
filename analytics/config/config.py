@@ -74,3 +74,26 @@ HISTORICAL_YEARS = 10
 # Logging Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FILE = REPORTS_DIR / "analytics.log"
+
+# Database Configuration
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "commit_crew")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
+
+# Database connection parameters dict
+DB_CONNECTION_PARAMS = {
+    "host": POSTGRES_HOST,
+    "port": int(POSTGRES_PORT),
+    "database": POSTGRES_DB,
+    "user": POSTGRES_USER,
+    "password": POSTGRES_PASSWORD,
+}
+
+# For database population
+ASSET_CLASS_MAP = {
+    "equity": "EQUITY",
+    "etf": "FUND",
+    "bond": "BOND"
+}

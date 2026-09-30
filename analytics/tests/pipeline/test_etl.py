@@ -1,12 +1,13 @@
 import pandas as pd
 
-from src.pipeline.etl_pipeline import Extractor, Transformer, Loader, ETLPipeline
+from src.pipeline.etl_pipeline import Extractor, Transformer, Loader, DatabaseLoader, ETLPipeline
 
 
 extractor = Extractor()
 transformer = Transformer()
 loader = Loader()
-pipeline = ETLPipeline(extractor, transformer, loader)
+db_loader = DatabaseLoader()
+pipeline = ETLPipeline(extractor, transformer, loader, db_loader)
 
 
 # TEST DATA
