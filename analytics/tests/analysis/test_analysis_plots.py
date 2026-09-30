@@ -88,15 +88,14 @@ def test_plot_correlation_heatmap(monkeypatch):
 
     saved = {}
 
-    def fake_save_plot(fig, filename):
+    def fake_save_plotly_chart(fig, filename):
         saved["filename"] = filename
         saved["figure"] = fig
-        plt.close(fig)
 
     monkeypatch.setattr(
         helper,
-        "save_plot",
-        fake_save_plot
+        "save_plotly_chart",
+        fake_save_plotly_chart
     )
 
     engine.plot_correlation_heatmap(
@@ -106,7 +105,7 @@ def test_plot_correlation_heatmap(monkeypatch):
         "1Y"
     )
 
-    assert saved["filename"] == "correlation/correlation_AAPL-SPY_1Y.png"
+    assert saved["filename"] == "correlation/correlation_AAPL-SPY_1Y.html"
     assert saved["figure"] is not None
 
 
@@ -177,15 +176,14 @@ def test_plot_volatility_trends(monkeypatch):
 
     saved = {}
 
-    def fake_save_plot(fig, filename):
+    def fake_save_plotly_chart(fig, filename):
         saved["filename"] = filename
         saved["figure"] = fig
-        plt.close(fig)
 
     monkeypatch.setattr(
         helper,
-        "save_plot",
-        fake_save_plot
+        "save_plotly_chart",
+        fake_save_plotly_chart
     )
 
     engine.plot_volatility_trends(
@@ -196,7 +194,7 @@ def test_plot_volatility_trends(monkeypatch):
         window=5
     )
 
-    assert saved["filename"] == "rolling_volatility/rolling_volatility_5d_AAPL-SPY_1Y.png"
+    assert saved["filename"] == "rolling_volatility/rolling_volatility_5d_AAPL-SPY_1Y.html"
     assert saved["figure"] is not None
 
 
@@ -244,15 +242,14 @@ def test_plot_asset_class_volatility(monkeypatch):
 
     saved = {}
 
-    def fake_save_plot(fig, filename):
+    def fake_save_plotly_chart(fig, filename):
         saved["filename"] = filename
         saved["figure"] = fig
-        plt.close(fig)
 
     monkeypatch.setattr(
         helper,
-        "save_plot",
-        fake_save_plot
+        "save_plotly_chart",
+        fake_save_plotly_chart
     )
 
     engine.plot_asset_class_volatility(
@@ -263,6 +260,6 @@ def test_plot_asset_class_volatility(monkeypatch):
     )
 
     assert saved["filename"] == (
-        "asset_class_volatility/asset_class_volatility_AAPL-BND-SPY_1Y.png"
+        "asset_class_volatility/asset_class_volatility_AAPL-BND-SPY_1Y.html"
     )
     assert saved["figure"] is not None
