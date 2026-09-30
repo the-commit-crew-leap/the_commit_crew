@@ -132,8 +132,6 @@ echo "PASS: positions endpoint returns position"
 echo "== Stage: Test Position Price and PnL Fields =="
 if echo "$POSITIONS_RESPONSE" | grep -q '"currentPrice"'; then
   echo "PASS: currentPrice field present"
-  CURRENT_PRICE=$(echo "$POSITIONS_RESPONSE" | grep -o '"currentPrice":"[^"]*"' | head -1 | cut -d'"' -f4)
-  echo "Current price: $CURRENT_PRICE"
 else
   echo "FAIL: currentPrice field missing"
   exit 1
