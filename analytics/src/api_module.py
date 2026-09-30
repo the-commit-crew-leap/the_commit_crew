@@ -5,10 +5,10 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 import uvicorn
 
-from analytics.src.analysis.analysis_helper import AnalysisHelper
-from analytics.src.analysis.data_loader import DataLoader
-from analytics.src.analysis.analysis_engine import AnalysisEngine
-from analytics.src.reports.web_report import WebReport
+from src.analysis.analysis_helper import AnalysisHelper
+from src.analysis.data_loader import DataLoader
+from src.analysis.analysis_engine import AnalysisEngine
+from src.reports.web_report import WebReport
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -172,7 +172,6 @@ def get_asset_class_volatility_chart(
         raise HTTPException(status_code=500, detail="Asset-class volatility chart was not generated")
 
     return FileResponse(path=path, media_type="image/png", filename=filename)
-
 
 if __name__ == "__main__":
     uvicorn.run("src.api_module:app", host="127.0.0.1", port=8000, reload=True)
