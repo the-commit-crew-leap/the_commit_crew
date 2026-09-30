@@ -182,6 +182,7 @@ paths:
                   currentPrice: 155.50
                   marketValue: 15550.00
                   unrealizedPnL: 550.00
+                  unrealizedPnLPercent: 3.67
         '404':
           description: Account not found
           content:
@@ -334,6 +335,10 @@ components:
           format: double
           nullable: true
         unrealizedPnL:
+          type: number
+          format: double
+          nullable: true
+        unrealizedPnLPercent:
           type: number
           format: double
           nullable: true

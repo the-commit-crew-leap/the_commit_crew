@@ -90,6 +90,13 @@ echo "HTTP code: $HTTP_CODE"
 echo "$RESPONSE" | grep -q '"status":"ACTIVE"' || { echo "FAIL: account not found"; exit 1; }
 echo "PASS: account retrieved from database"
 
+echo "== Stage: Test Get Account Balance =="
+BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/balance")
+echo "Balance response: $BALANCE_RESPONSE"
+echo "$BALANCE_RESPONSE" | grep -q '"accountId":1' || { echo "FAIL: balance endpoint failed"; exit 1; }
+echo "$BALANCE_RESPONSE" | grep -q '"cashBalance"' || { echo "FAIL: cashBalance not in response"; exit 1; }
+echo "PASS: account balance retrieved"
+
 echo "== Stage: Test Place Order - Validation =="
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
@@ -103,14 +110,62 @@ echo "PASS: bean validation caught invalid request (400)"
 echo "== Stage: Test Place Order - Success =="
 ORDER_RESPONSE=$(curl -s -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d "{\"accountId\":1,\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":1,\"price\":100.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
+  -d "{\"accountId\":1,\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
 echo "Order response: $ORDER_RESPONSE"
 
 echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
 echo "PASS: order placed and persisted"
 
+echo "== Stage: Test Get Account Orders =="
+ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/orders")
+echo "Orders response (with data): $ORDERS_RESPONSE"
+echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order not in response"; exit 1; }
+echo "PASS: orders endpoint returns placed order"
+
+echo "== Stage: Test Get Account Positions =="
+POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/positions")
+echo "Positions response (with data): $POSITIONS_RESPONSE"
+echo "$POSITIONS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: position not in response"; exit 1; }
+echo "$POSITIONS_RESPONSE" | grep -q '"averageCost"' || { echo "FAIL: averageCost not in response"; exit 1; }
+echo "PASS: positions endpoint returns position"
+
+echo "== Stage: Test Position Price and PnL Fields =="
+if echo "$POSITIONS_RESPONSE" | grep -q '"currentPrice"'; then
+  echo "PASS: currentPrice field present"
+  CURRENT_PRICE=$(echo "$POSITIONS_RESPONSE" | grep -o '"currentPrice":"[^"]*"' | head -1 | cut -d'"' -f4)
+  echo "Current price: $CURRENT_PRICE"
+else
+  echo "FAIL: currentPrice field missing"
+  exit 1
+fi
+
+if echo "$POSITIONS_RESPONSE" | grep -q '"marketValue"'; then
+  echo "PASS: marketValue field present"
+else
+  echo "FAIL: marketValue field missing"
+  exit 1
+fi
+
+if echo "$POSITIONS_RESPONSE" | grep -q '"unrealizedPnL"'; then
+  echo "PASS: unrealizedPnL field present"
+else
+  echo "FAIL: unrealizedPnL field missing"
+  exit 1
+fi
+
+if echo "$POSITIONS_RESPONSE" | grep -q '"unrealizedPnLPercent"'; then
+  echo "PASS: unrealizedPnLPercent field present"
+else
+  echo "FAIL: unrealizedPnLPercent field missing"
+  exit 1
+fi
+
 echo "== Stage: Verify Data in Postgres =="
 docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \
-  "SELECT account_id, symbol, quantity FROM orders WHERE account_id=1 AND symbol='AAPL';"
+  "SELECT account_id, symbol, quantity, average_cost FROM positions WHERE account_id=1 AND symbol='AAPL';"
+
+echo "== Stage: Verify Price History Data in Postgres =="
+docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \
+  "SELECT symbol, price_date, close_price FROM price_history WHERE symbol='AAPL' ORDER BY price_date DESC LIMIT 1;"
 
 echo "== ALL STAGES PASSED =="
