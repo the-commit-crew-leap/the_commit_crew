@@ -64,6 +64,17 @@ public class PositionService {
         return profitLoss;
     }
 
+    public BigDecimal unrealizedPnLPercent(Position position, BigDecimal currentPrice) throws NegativePriceException {
+        BigDecimal costBasis = calculateCostBasis(position);
+        
+        if (costBasis.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        BigDecimal unrealizedPnL = unrealizedProfitLoss(position, currentPrice);
+        return unrealizedPnL.divide(costBasis, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+    }
+
     public BigDecimal calculateCostBasis(Position position) {
         return new BigDecimal(position.getQuantity()).multiply(position.getAverageCost());
     }

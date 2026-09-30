@@ -94,6 +94,49 @@ public class PositionServiceTest {
     }
 
     @Nested
+    @DisplayName("Unrealized PnL percent calculations")
+    class UPLPercentOperations {
+        
+        @Test
+        @DisplayName("Calculates PnL percent correctly with profit")
+        void unrealizedPnLPercentCalculatesCorrectlyWithProfit() throws NegativePriceException {
+            // Position: 10 shares at $100 avg cost
+            // Current price: $150
+            // Cost basis: $1000, Market value: $1500, Profit: $500
+            // Percent: (500 / 1000) * 100 = 50.0000%
+            BigDecimal result = positionService.unrealizedPnLPercent(position, currentPrice);
+            assertEquals(new BigDecimal("50.0000"), result);
+        }
+
+        @Test
+        @DisplayName("Calculates PnL percent correctly with loss")
+        void unrealizedPnLPercentCalculatesCorrectlyWithLoss() throws NegativePriceException {
+            // Current price: $50
+            // Cost basis: $1000, Market value: $500, Loss: -$500
+            // Percent: (-500 / 1000) * 100 = -50.0000%
+            BigDecimal result = positionService.unrealizedPnLPercent(position, loweredCurrentPrice);
+            assertEquals(new BigDecimal("-50.0000"), result);
+        }
+
+        @Test
+        @DisplayName("Returns zero percent when cost basis is zero")
+        void unrealizedPnLPercentReturnsZeroWhenZeroCostBasis() throws NegativePriceException {
+            // Zero average cost position
+            Position zeroAvgCostPosition = new Position(1L, "TSLA", quantity, BigDecimal.ZERO);
+            BigDecimal result = positionService.unrealizedPnLPercent(zeroAvgCostPosition, currentPrice);
+            assertEquals(BigDecimal.ZERO, result);
+        }
+
+        @Test
+        @DisplayName("Throws exception for negative price")
+        void unrealizedPnLPercentThrowsExceptionForNegativePrice() {
+            assertThrows(NegativePriceException.class, () -> {
+                positionService.unrealizedPnLPercent(position, negativeCurrentPrice);
+            });
+        }
+    }
+
+    @Nested
     @DisplayName("Apply order operations")
     class ApplyOrderOperations {
         @Test
