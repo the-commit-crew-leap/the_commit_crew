@@ -74,7 +74,7 @@ services:
       context: .
       dockerfile: execution-engine/Dockerfile
     ports:
-      - "0.0.0.0:8083:8080"
+      - "0.0.0.0:8084:8082"
     depends_on:
       kafka:
         condition: service_healthy
