@@ -101,3 +101,8 @@ Click the green Authorize button and paste your JWT token.
 ## Jira backlog:
 
 [The Commit Crew](https://thecommitcrew.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
+
+## Sonar:
+```bash
+mvn sonar:sonar "-Dsonar.host.url=http://localhost:8082" "-Dsonar.token=<your-sonar-token>" "-Dsonar.qualitygate.wait=true"
+```
