@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -23,62 +25,113 @@ import com.thecommitcrew.persistence.repository.InstrumentRepository;
 @SuppressWarnings("null")
 class InstrumentServiceTest {
 
-    private static final String TEST_SYMBOL = "AAPL";
-
     @Mock
     private InstrumentRepository instrumentRepository;
 
     private InstrumentService instrumentService;
-    private InstrumentEntity instrumentEntity;
+
+    private InstrumentEntity tradableInstrument;
+    private InstrumentEntity untradableInstrument;
 
     @BeforeEach
     void setUp() {
         instrumentService = new InstrumentService(instrumentRepository);
-        instrumentEntity = new InstrumentEntity(
-            TEST_SYMBOL,
-            "Apple Inc.",
-            AssetClass.EQUITY,
-            "USD",
-            true
-        );
+
+        tradableInstrument = new InstrumentEntity();
+        tradableInstrument.setSymbol("AAPL");
+        tradableInstrument.setName("Apple Inc.");
+        tradableInstrument.setAssetClass(AssetClass.EQUITY);
+        tradableInstrument.setCurrency("USD");
+        tradableInstrument.setTradable(true);
+
+        untradableInstrument = new InstrumentEntity();
+        untradableInstrument.setSymbol("OLD");
+        untradableInstrument.setName("Old Company");
+        untradableInstrument.setAssetClass(AssetClass.EQUITY);
+        untradableInstrument.setCurrency("USD");
+        untradableInstrument.setTradable(false);
     }
 
-    @Test
-    void getInstruments_returnsMappedInstrumentList() {
-        when(instrumentRepository.findAll()).thenReturn(List.of(instrumentEntity));
+    @Nested
+    @DisplayName("getInstruments")
+    class GetInstruments {
+        @Test
+        @DisplayName("Returns all instruments when tradable filter is null")
+        void returnsAllInstrumentsWhenFilterIsNull() {
+            when(instrumentRepository.findAll())
+                .thenReturn(List.of(tradableInstrument, untradableInstrument));
 
-        List<InstrumentResponseDTO> result = instrumentService.getInstruments();
+            List<InstrumentResponseDTO> result = instrumentService.getInstruments(null);
 
-        assertEquals(1, result.size());
-        assertEquals(TEST_SYMBOL, result.get(0).symbol());
-        assertEquals("Apple Inc.", result.get(0).name());
-        assertEquals(AssetClass.EQUITY, result.get(0).assetClass());
-        assertEquals("USD", result.get(0).currency());
-        assertEquals(true, result.get(0).tradable());
+            assertEquals(2, result.size());
+            assertEquals("AAPL", result.get(0).symbol());
+            assertEquals("OLD", result.get(1).symbol());
+        }
+
+        @Test
+        @DisplayName("Returns only tradable instruments when filtered by tradable=true")
+        void returnsTradableInstrumentsWhenFilteredByTrue() {
+            when(instrumentRepository.findByTradable(true))
+                .thenReturn(List.of(tradableInstrument));
+
+            List<InstrumentResponseDTO> result = instrumentService.getInstruments(true);
+
+            assertEquals(1, result.size());
+            assertEquals("AAPL", result.get(0).symbol());
+            assertEquals(true, result.get(0).tradable());
+        }
+
+        @Test
+        @DisplayName("Returns only untradable instruments when filtered by tradable=false")
+        void returnsUntradableInstrumentsWhenFilteredByFalse() {
+            when(instrumentRepository.findByTradable(false))
+                .thenReturn(List.of(untradableInstrument));
+
+            List<InstrumentResponseDTO> result = instrumentService.getInstruments(false);
+
+            assertEquals(1, result.size());
+            assertEquals("OLD", result.get(0).symbol());
+            assertEquals(false, result.get(0).tradable());
+        }
+
+        @Test
+        @DisplayName("Returns empty list when no instruments match filter")
+        void returnsEmptyListWhenNoInstrumentsMatch() {
+            when(instrumentRepository.findByTradable(true))
+                .thenReturn(List.of());
+
+            List<InstrumentResponseDTO> result = instrumentService.getInstruments(true);
+
+            assertEquals(0, result.size());
+        }
     }
 
-    @Test
-    void getInstrument_returnsMappedInstrumentWhenFound() {
-        when(instrumentRepository.findBySymbol(TEST_SYMBOL)).thenReturn(Optional.of(instrumentEntity));
+    @Nested
+    @DisplayName("getInstrument")
+    class GetInstrument {
+        @Test
+        @DisplayName("Returns mapped instrument when found")
+        void returnsMappedInstrumentWhenFound() {
+            when(instrumentRepository.findBySymbol("AAPL"))
+                .thenReturn(Optional.of(tradableInstrument));
 
-        InstrumentResponseDTO result = instrumentService.getInstrument(TEST_SYMBOL);
+            InstrumentResponseDTO result = instrumentService.getInstrument("AAPL");
 
-        assertEquals(TEST_SYMBOL, result.symbol());
-        assertEquals("Apple Inc.", result.name());
-        assertEquals(AssetClass.EQUITY, result.assetClass());
-        assertEquals("USD", result.currency());
-        assertEquals(true, result.tradable());
-    }
+            assertEquals("AAPL", result.symbol());
+            assertEquals("Apple Inc.", result.name());
+            assertEquals(AssetClass.EQUITY, result.assetClass());
+            assertEquals("USD", result.currency());
+            assertEquals(true, result.tradable());
+        }
 
-    @Test
-    void getInstrument_throwsWhenInstrumentNotFound() {
-        when(instrumentRepository.findBySymbol(TEST_SYMBOL)).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("Throws exception when instrument not found")
+        void throwsExceptionWhenInstrumentNotFound() {
+            when(instrumentRepository.findBySymbol("INVALID"))
+                .thenReturn(Optional.empty());
 
-        InstrumentNotFoundException exception = assertThrows(
-            InstrumentNotFoundException.class,
-            () -> instrumentService.getInstrument(TEST_SYMBOL)
-        );
-
-        assertEquals("Instrument not found for symbol: " + TEST_SYMBOL, exception.getMessage());
+            assertThrows(InstrumentNotFoundException.class, 
+                () -> instrumentService.getInstrument("INVALID"));
+        }
     }
 }

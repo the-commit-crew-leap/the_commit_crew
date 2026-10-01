@@ -48,16 +48,24 @@ class InstrumentControllerTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
-    private InstrumentResponseDTO instrument;
+    private InstrumentResponseDTO tradableInstrument;
+    private InstrumentResponseDTO untradableInstrument;
 
     @BeforeEach
     void setUp() {
-        instrument = new InstrumentResponseDTO(
+        tradableInstrument = new InstrumentResponseDTO(
             TEST_SYMBOL,
             "Apple Inc.",
             AssetClass.EQUITY,
             "USD",
             true
+        );
+        untradableInstrument = new InstrumentResponseDTO(
+            "OLD_SYMBOL",
+            "Old Company",
+            AssetClass.EQUITY,
+            "USD",
+            false
         );
     }
 
@@ -70,27 +78,51 @@ class InstrumentControllerTest {
         }
 
         @Test
-        @DisplayName("Returns instruments successfully")
-        void returnsInstrumentsSuccessfully() throws Exception {
-            when(instrumentService.getInstruments()).thenReturn(List.of(instrument));
+        @DisplayName("Returns all instruments when no filter applied")
+        void returnsAllInstruments() throws Exception {
+            when(instrumentService.getInstruments(null))
+                .thenReturn(List.of(tradableInstrument, untradableInstrument));
 
             mockMvc.perform(get("/instruments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value(TEST_SYMBOL))
-                .andExpect(jsonPath("$[0].name").value("Apple Inc."))
-                .andExpect(jsonPath("$[0].assetClass").value("EQUITY"))
-                .andExpect(jsonPath("$[0].currency").value("USD"))
-                .andExpect(jsonPath("$[0].tradable").value(true));
+                .andExpect(jsonPath("$[0].tradable").value(true))
+                .andExpect(jsonPath("$[1].symbol").value("OLD_SYMBOL"))
+                .andExpect(jsonPath("$[1].tradable").value(false));
         }
 
         @Test
         @DisplayName("Returns empty list when no instruments exist")
         void returnsEmptyListWhenNoInstrumentsExist() throws Exception {
-            when(instrumentService.getInstruments()).thenReturn(List.of());
+            when(instrumentService.getInstruments(null)).thenReturn(List.of());
 
             mockMvc.perform(get("/instruments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.empty()));
+        }
+
+        @Test
+        @DisplayName("Returns only tradable instruments when tradable=true")
+        void returnsTradableInstrumentsWhenFilteredByTradable() throws Exception {
+            when(instrumentService.getInstruments(true))
+                .thenReturn(List.of(tradableInstrument));
+
+            mockMvc.perform(get("/instruments?tradable=true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].symbol").value(TEST_SYMBOL))
+                .andExpect(jsonPath("$[0].tradable").value(true));
+        }
+
+        @Test
+        @DisplayName("Returns only untradable instruments when tradable=false")
+        void returnsUntradableInstrumentsWhenFilteredByNotTradable() throws Exception {
+            when(instrumentService.getInstruments(false))
+                .thenReturn(List.of(untradableInstrument));
+
+            mockMvc.perform(get("/instruments?tradable=false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].symbol").value("OLD_SYMBOL"))
+                .andExpect(jsonPath("$[0].tradable").value(false));
         }
     }
 
@@ -105,7 +137,7 @@ class InstrumentControllerTest {
         @Test
         @DisplayName("Returns instrument successfully when found")
         void returnsInstrumentWhenFound() throws Exception {
-            when(instrumentService.getInstrument(TEST_SYMBOL)).thenReturn(instrument);
+            when(instrumentService.getInstrument(TEST_SYMBOL)).thenReturn(tradableInstrument);
 
             mockMvc.perform(get("/instruments/{symbol}", TEST_SYMBOL))
                 .andExpect(status().isOk())

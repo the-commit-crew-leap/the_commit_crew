@@ -18,8 +18,11 @@ public class InstrumentService {
         this.instrumentRepository = instrumentRepository;
     }
 
-    public List<InstrumentResponseDTO> getInstruments() {
-        return instrumentRepository.findAll().stream()
+    public List<InstrumentResponseDTO> getInstruments(Boolean tradable) {
+        List<InstrumentEntity> instruments = tradable == null 
+            ? instrumentRepository.findAll()
+            : instrumentRepository.findByTradable(tradable);
+        return instruments.stream()
             .map(this::toResponse)
             .toList();
     }
