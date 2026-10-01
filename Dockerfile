@@ -6,6 +6,7 @@ COPY pom.xml .
 # Copy both modules
 COPY auth/ auth/
 COPY app/ app/
+COPY execution-engine/ execution-engine/
 
 RUN mvn -B dependency:go-offline -f pom.xml
 RUN mvn -B clean package -DskipTests
