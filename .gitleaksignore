@@ -1,0 +1,9 @@
+# Gitleaks False Positives - Test Data
+# These fingerprints represent test data strings that match the generic-api-key pattern
+# but are not actual secrets
+
+# Test data in OrderPlacementCharacterizationTest.java
+555014ea690793eb690069eac1b087220645239e:app/src/test/java/com/thecommitcrew/service/OrderPlacementCharacterizationTest.java:generic-api-key:274
+
+# Test data in OrderResponseTest.java
+96a95096f6d21fac158ea40d66f30e958f4a286f:app/src/test/java/com/thecommitcrew/domain/dto/OrderResponseTest.java:generic-api-key:36
