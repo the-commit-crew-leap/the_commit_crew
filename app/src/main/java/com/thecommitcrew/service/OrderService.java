@@ -19,6 +19,8 @@ import com.thecommitcrew.persistence.mapper.OrderMapper;
 import com.thecommitcrew.persistence.mapper.PositionMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +62,7 @@ public class OrderService {
             request.quantity(),
             request.price(),
             OrderStatus.NEW,
-            LocalDateTime.now(),
+            LocalDateTime.now(ZoneId.of("UTC")),
             request.idempotencyKey()
         );
 
@@ -99,7 +101,7 @@ public class OrderService {
             request.quantity(),
             request.price(),
             OrderStatus.NEW,
-            LocalDateTime.now(),
+            LocalDateTime.now(ZoneId.of("UTC")),
             request.idempotencyKey()
         ));
     }

@@ -40,8 +40,12 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("java:S5123")  // CSRF disabled for stateless JWT API (see comment below)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         logger.info("SecurityConfig: authEnabled = {}", authEnabled);
+        // CSRF is disabled because this is a stateless JWT API.
+        // CSRF tokens are only relevant for session-based authentication with cookies.
+        // JWT tokens are transmitted in headers and are not vulnerable to CSRF attacks.
         var authConfig = http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

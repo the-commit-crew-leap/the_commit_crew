@@ -2,17 +2,18 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # Resolve dependencies first so they're cached across source-only changes
-COPY execution-engine/pom.xml .
-RUN mvn -B dependency:go-offline
+COPY pom.xml .
+COPY execution-engine/pom.xml execution-engine/
+RUN mvn -B dependency:go-offline -f execution-engine/pom.xml
 
-COPY execution-engine/src ./src
-RUN mvn -B clean package -DskipTests
+COPY execution-engine/src ./execution-engine/src
+RUN mvn -B clean package -DskipTests -f execution-engine/pom.xml
 
 FROM eclipse-temurin:21-jre-alpine
 
 RUN addgroup -S engine && adduser -S engine -G engine
 WORKDIR /opt/execution-engine
-COPY --from=build /build/target/execution-engine-0.1.0.jar app.jar
+COPY --from=build /build/execution-engine/target/execution-engine-0.1.0.jar app.jar
 USER engine
 
 ENV SERVER_PORT=8080 \

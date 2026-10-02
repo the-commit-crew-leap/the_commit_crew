@@ -75,6 +75,19 @@ Copy the token and navigate to swagger:
 
 Click the green Authorize button and paste your JWT token.
 
+## SonarCube
+
+```bash
+# on the Linux VM
+docker run -d --name sonarqube -p 8085:9000 sonarqube:community
+
+# check status
+curl -s http://localhost:8085/api/system/status
+
+# run SonarCube
+mvn sonar:sonar "-Dsonar.host.url=http://10.9.75.153:8085" "-Dsonar.token=<sonar-token>" "-Dsonar.qualitygate.wait=true"
+```
+
 ## Coding Conventions
 
 ### Naming 

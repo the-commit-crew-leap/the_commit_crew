@@ -56,6 +56,7 @@ class AuthEntryPointJwtTest {
 
             @Override
             public void setWriteListener(WriteListener writeListener) {
+                // Not used in this test - WriteListener is not required for unit testing response output
             }
         });
     }
