@@ -11,7 +11,7 @@ import java.util.UUID;
  */
 public record OrderEvent(
         UUID orderId,
-        long accountId,
+        Long accountId,
         String symbol,
         OrderSide side,
         int quantity,

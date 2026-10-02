@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController 
-@RequestMapping("/accounts") 
+@RequestMapping("/api/v1/accounts") 
 public class AccountController {
     private final AccountService accountService;
     private final PriceService priceService;
