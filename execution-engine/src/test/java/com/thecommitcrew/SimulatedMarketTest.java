@@ -2,7 +2,6 @@ package com.thecommitcrew;
 
 import org.junit.jupiter.api.Test;
 
-import com.thecommitcrew.Side;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -10,6 +9,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Random;
 import java.util.UUID;
+import com.thecommitcrew.OrderSide;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,8 +24,8 @@ class SimulatedMarketTest {
         return new SimulatedMarket(props, new Random(seed), CLOCK);
     }
 
-    private static OrderEvent order(Side side, String limit) {
-        return new OrderEvent(UUID.randomUUID(), 1001L, "ACME", side, 10, new BigDecimal(limit), new BigDecimal(limit), NOW);
+    private static OrderEvent order(OrderSide side, String limit) {
+        return new OrderEvent(UUID.randomUUID(), 1001L, "ACME", side, 10, new BigDecimal(limit), NOW);
     }
 
     @Test
@@ -33,7 +33,7 @@ class SimulatedMarketTest {
         SimulatedMarket market = market(50, 1);
         BigDecimal limit = new BigDecimal("25.50");
         for (int i = 0; i < 1_000; i++) {
-            BigDecimal price = market.fillPrice(Side.BUY, limit);
+            BigDecimal price = market.fillPrice(OrderSide.BUY, limit);
             assertTrue(price.compareTo(limit) <= 0, "BUY filled above limit: " + price);
             assertTrue(price.compareTo(new BigDecimal("25.37")) >= 0, "BUY improved by more than 50bps: " + price);
         }
@@ -44,7 +44,7 @@ class SimulatedMarketTest {
         SimulatedMarket market = market(50, 2);
         BigDecimal limit = new BigDecimal("25.50");
         for (int i = 0; i < 1_000; i++) {
-            BigDecimal price = market.fillPrice(Side.SELL, limit);
+            BigDecimal price = market.fillPrice(OrderSide.SELL, limit);
             assertTrue(price.compareTo(limit) >= 0, "SELL filled below limit: " + price);
             assertTrue(price.compareTo(new BigDecimal("25.63")) <= 0, "SELL improved by more than 50bps: " + price);
         }
@@ -52,14 +52,14 @@ class SimulatedMarketTest {
 
     @Test
     void testFillPrice_ZeroImprovement_FillsExactlyAtLimit() {
-        assertEquals(new BigDecimal("25.50"), market(0, 3).fillPrice(Side.BUY, new BigDecimal("25.50")));
+        assertEquals(new BigDecimal("25.50"), market(0, 3).fillPrice(OrderSide.BUY, new BigDecimal("25.50")));
     }
 
     @Test
     void testFillPrice_AlwaysTwoDecimalPlacesAndPositive() {
         SimulatedMarket market = market(9_999, 4);
         for (int i = 0; i < 1_000; i++) {
-            BigDecimal price = market.fillPrice(Side.BUY, new BigDecimal("0.01"));
+            BigDecimal price = market.fillPrice(OrderSide.BUY, new BigDecimal("0.01"));
             assertEquals(2, price.scale());
             assertTrue(price.signum() > 0);
         }
@@ -76,7 +76,7 @@ class SimulatedMarketTest {
 
     @Test
     void testExecute_CopiesOrderDetailsAndStampsVenueAndTime() {
-        OrderEvent order = order(Side.SELL, "12.00");
+        OrderEvent order = order(OrderSide.SELL, "12.00");
 
         ExecutionEvent fill = market(50, 6).execute(order);
 

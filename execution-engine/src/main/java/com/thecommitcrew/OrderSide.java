@@ -1,6 +1,5 @@
 package com.thecommitcrew;
-
-public enum Side {
-    BUY,
+public enum OrderSide {
+    BUY, 
     SELL
 }

@@ -49,6 +49,7 @@ public class OrderListener {
             JsonProcessingException {
         OrderEvent order;
         try {
+            log.info("-----> Reading Message {}", message);
             order = objectMapper.readValue(message, OrderEvent.class);
         } catch (JsonProcessingException e) {
             log.error("Skipping unreadable order message: {}", message, e);

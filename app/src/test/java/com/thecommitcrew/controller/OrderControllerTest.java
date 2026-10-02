@@ -35,6 +35,7 @@ import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.DuplicateOrderException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.OrderService;
+import com.thecommitcrew.messaging.OrderEventPublisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -69,6 +70,9 @@ class OrderControllerTest {
     
     @MockBean
     private OrderService orderService;
+    
+    @MockBean
+    private OrderEventPublisher orderEventPublisher;
 
     @MockBean 
     private JwtTokenProvider jwtTokenProvider;

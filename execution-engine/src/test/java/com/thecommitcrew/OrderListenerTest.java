@@ -1,6 +1,5 @@
 package com.thecommitcrew;
 
-import com.thecommitcrew.Side;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -16,6 +15,7 @@ import java.time.ZoneOffset;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.thecommitcrew.OrderSide;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -49,10 +49,9 @@ class OrderListenerTest {
             UUID.randomUUID(), 
             1004L,  
             "VERDA", 
-            Side.SELL, 
+            OrderSide.SELL, 
             5,
-            new BigDecimal("4.20"),  
-            new BigDecimal("4.20"), 
+            new BigDecimal("4.20"),
             Instant.EPOCH
         );
 

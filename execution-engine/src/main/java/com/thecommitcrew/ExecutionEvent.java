@@ -10,7 +10,7 @@ public record ExecutionEvent(
         UUID orderId,
         Long accountId,
         String symbol,
-        Side side,
+        OrderSide side,
         int quantity,
         BigDecimal price,
         BigDecimal limitPrice,

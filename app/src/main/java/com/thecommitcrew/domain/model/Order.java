@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
+import com.thecommitcrew.domain.exception.NegativePriceException;
 
 public class Order {
     private final UUID id;
@@ -84,12 +85,14 @@ public class Order {
         return value;
     }
 
-    private static BigDecimal validatePriceNotNull(BigDecimal value, String message) {
-        if (value == null) throw new IllegalArgumentException(message);
-        if (value.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Price must be positive");
+    private static BigDecimal validatePriceNotNull(BigDecimal price, String message) {
+        if (price == null) {
+            throw new IllegalArgumentException(message);
         }
-        return value;
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NegativePriceException("Price must be positive");
+        }
+        return price;
     }
 
 }
