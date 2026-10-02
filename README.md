@@ -106,3 +106,21 @@ Click the green Authorize button and paste your JWT token.
 ```bash
 mvn sonar:sonar "-Dsonar.host.url=http://localhost:8082" "-Dsonar.token=<your-sonar-token>" "-Dsonar.qualitygate.wait=true"
 ```
+
+## TEMP post order curl:
+
+TOKEN=$(curl -s -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser"}' | jq -r '.token')
+
+curl -X POST http://localhost:8081/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "accountId": 1,
+    "symbol": "AAPL",
+    "side": "BUY",
+    "quantity": 2,
+    "price": 25.00,
+    "idempotencyKey": "order-001-kafka"
+  }'

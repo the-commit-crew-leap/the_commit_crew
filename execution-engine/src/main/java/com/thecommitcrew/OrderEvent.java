@@ -1,6 +1,5 @@
 package com.thecommitcrew;
 
-import com.thecommitcrew.Side;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -12,11 +11,10 @@ import java.util.UUID;
  */
 public record OrderEvent(
         UUID orderId,
-        Long accountId,
+        long accountId,
         String symbol,
-        Side side,
+        OrderSide side,
         int quantity,
-        BigDecimal limitPrice,
         BigDecimal price,
         Instant createdOn
 ) {

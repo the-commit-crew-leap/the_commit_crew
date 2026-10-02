@@ -1,7 +1,6 @@
 package com.thecommitcrew.messaging;
 
 import com.thecommitcrew.domain.enums.OrderSide;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -13,7 +12,7 @@ import java.util.UUID;
  */
 public record OrderEvent(
         UUID orderId,
-        Long accountId,
+        long accountId,
         String symbol,
         OrderSide side,
         int quantity,

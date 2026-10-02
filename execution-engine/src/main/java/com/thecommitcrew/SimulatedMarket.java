@@ -41,10 +41,10 @@ public class SimulatedMarket {
                 properties.venue(), clock.instant());
     }
 
-    BigDecimal fillPrice(Side side, BigDecimal limit) {
+    BigDecimal fillPrice(OrderSide side, BigDecimal limit) {
         int bps = random.nextInt(properties.maxPriceImprovementBps() + 1);
         BigDecimal improvement = limit.multiply(BigDecimal.valueOf(bps)).divide(BPS, 2, RoundingMode.DOWN);
-        BigDecimal price = side == Side.BUY ? limit.subtract(improvement) : limit.add(improvement);
+        BigDecimal price = side == OrderSide.BUY ? limit.subtract(improvement) : limit.add(improvement);
         return price.max(MIN_PRICE).setScale(2, RoundingMode.HALF_EVEN);
     }
 }

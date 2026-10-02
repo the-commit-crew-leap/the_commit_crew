@@ -4,6 +4,10 @@ import com.thecommitcrew.SimulatedMarket;
 import com.thecommitcrew.EngineProperties;
 import com.thecommitcrew.Pauser;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +19,15 @@ import java.util.Random;
 
 @Configuration
 public class EngineConfig {
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.registerModule(new com.fasterxml.jackson.module.paramnames.ParameterNamesModule());
+        mapper.disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        return mapper;
+    }
 
     @Bean
     public SimulatedMarket simulatedMarket(EngineProperties properties) {
