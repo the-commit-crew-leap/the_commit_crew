@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-public class PriceHistoryTest {
+class PriceHistoryTest {
 
     private UUID id;
     private String symbol;
@@ -88,65 +88,49 @@ public class PriceHistoryTest {
         @Test
         @DisplayName("Throws exception when ID is null")
         void throwsExceptionWhenIdIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(null, symbol, priceDate, openPrice, highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(null, symbol, priceDate, openPrice, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when symbol is null")
         void throwsExceptionWhenSymbolIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, null, priceDate, openPrice, highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, null, priceDate, openPrice, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when symbol is blank")
         void throwsExceptionWhenSymbolIsBlank() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, "  ", priceDate, openPrice, highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, "  ", priceDate, openPrice, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when price date is null")
         void throwsExceptionWhenPriceDateIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, null, openPrice, highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, null, openPrice, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when open price is null")
         void throwsExceptionWhenOpenPriceIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, null, highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, null, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when high price is null")
         void throwsExceptionWhenHighPriceIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, null, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, null, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when low price is null")
         void throwsExceptionWhenLowPriceIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, highPrice, null, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, highPrice, null, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when close price is null")
         void throwsExceptionWhenClosePriceIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, null, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, null, volume));
         }
     }
 
@@ -154,36 +138,30 @@ public class PriceHistoryTest {
     @DisplayName("Negative price validations")
     class NegativePriceValidations {
         
+        private BigDecimal negativePriceValue = new BigDecimal("-10.00");
+        
         @Test
         @DisplayName("Throws exception when open price is negative")
         void throwsExceptionWhenOpenPriceNegative() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, new BigDecimal("-10.00"), highPrice, lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, negativePriceValue, highPrice, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when high price is negative")
         void throwsExceptionWhenHighPriceNegative() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, new BigDecimal("-10.00"), lowPrice, closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, negativePriceValue, lowPrice, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when low price is negative")
         void throwsExceptionWhenLowPriceNegative() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, highPrice, new BigDecimal("-10.00"), closePrice, volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, highPrice, negativePriceValue, closePrice, volume));
         }
 
         @Test
         @DisplayName("Throws exception when close price is negative")
         void throwsExceptionWhenClosePriceNegative() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, new BigDecimal("-10.00"), volume);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, negativePriceValue, volume));
         }
     }
 
@@ -194,9 +172,7 @@ public class PriceHistoryTest {
         @Test
         @DisplayName("Throws exception when volume is negative")
         void throwsExceptionWhenVolumeNegative() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, closePrice, -1000L);
-            });
+            assertThrows(IllegalArgumentException.class, () -> new PriceHistory(id, symbol, priceDate, openPrice, highPrice, lowPrice, closePrice, -1000L));
         }
 
         @Test

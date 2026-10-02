@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.thecommitcrew.domain.enums.AccountStatus;
 import com.thecommitcrew.domain.model.Money;
 
-public class AccountResponseDTOTest {
+class AccountResponseDTOTest {
 
     @Test
     void testAccountResponseCreation() {

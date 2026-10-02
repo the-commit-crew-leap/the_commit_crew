@@ -2,10 +2,7 @@ package com.thecommitcrew.application;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -24,19 +21,20 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @DisplayName("AfterCommit Tests")
 @ExtendWith(MockitoExtension.class)
-public class AfterCommitTest {
+class AfterCommitTest {
 
     private Runnable mockAction;
 
     @BeforeEach
     void setUp() {
-        mockAction = Mockito.mock(Runnable.class);
+        mockAction = mock(Runnable.class);
     }
 
     @Nested
     @DisplayName("When transaction is active")
     class WhenTransactionIsActive {
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should defer action execution until after commit")
         void shouldDeferActionExecution() {
@@ -44,7 +42,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
 
                 ArgumentCaptor<TransactionSynchronization> captor = 
@@ -63,6 +61,7 @@ public class AfterCommitTest {
             }
         }
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should register synchronization with TransactionSynchronizationManager")
         void shouldRegisterSynchronization() {
@@ -70,7 +69,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
 
                 // Act
@@ -82,6 +81,7 @@ public class AfterCommitTest {
             }
         }
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should execute action when afterCommit is called on registered synchronization")
         void shouldExecuteActionOnAfterCommit() {
@@ -89,7 +89,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
 
                 ArgumentCaptor<TransactionSynchronization> captor = 
@@ -105,6 +105,7 @@ public class AfterCommitTest {
             }
         }
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should handle action that throws exception")
         void shouldHandleActionException() {
@@ -112,7 +113,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
                 RuntimeException testException = new RuntimeException("Test error");
                 doThrow(testException).when(mockAction).run();
@@ -127,7 +128,8 @@ public class AfterCommitTest {
                 mocked.verify(() -> TransactionSynchronizationManager.registerSynchronization(captor.capture()));
                 
                 // Assert - exception propagates from afterCommit
-                RuntimeException thrown = assertThrows(RuntimeException.class, () -> captor.getValue().afterCommit());
+                TransactionSynchronization sync = captor.getValue();
+                RuntimeException thrown = assertThrows(RuntimeException.class, sync::afterCommit);
                 assertTrue(thrown.getMessage().contains("Test error"));
                 verify(mockAction, times(1)).run();
             }
@@ -138,6 +140,7 @@ public class AfterCommitTest {
     @DisplayName("When no transaction is active")
     class WhenNoTransactionIsActive {
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should execute action immediately")
         void shouldExecuteActionImmediately() {
@@ -145,7 +148,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(false);
 
                 // Act
@@ -158,6 +161,7 @@ public class AfterCommitTest {
             }
         }
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should not register synchronization")
         void shouldNotRegisterSynchronization() {
@@ -165,7 +169,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(false);
 
                 // Act
@@ -184,7 +188,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(false);
                 RuntimeException testException = new RuntimeException("Test error");
                 doThrow(testException).when(mockAction).run();
@@ -204,6 +208,7 @@ public class AfterCommitTest {
     @DisplayName("Action execution behavior")
     class ActionExecutionBehavior {
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should execute action exactly once per AfterCommit.run call with active transaction")
         void shouldExecuteActionOnceWithTransaction() {
@@ -211,7 +216,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
 
                 ArgumentCaptor<TransactionSynchronization> captor = 
@@ -227,6 +232,7 @@ public class AfterCommitTest {
             }
         }
 
+        @SuppressWarnings("null")
         @Test
         @DisplayName("Should allow multiple AfterCommit.run calls with different actions")
         void shouldAllowMultipleActionsWithActiveTransaction() {
@@ -234,11 +240,11 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(true);
 
-                Runnable action1 = Mockito.mock(Runnable.class);
-                Runnable action2 = Mockito.mock(Runnable.class);
+                Runnable action1 = mock(Runnable.class);
+                Runnable action2 = mock(Runnable.class);
 
                 // Act
                 AfterCommit.run(action1);
@@ -256,7 +262,7 @@ public class AfterCommitTest {
                     Mockito.mockStatic(TransactionSynchronizationManager.class)) {
 
                 // Arrange
-                mocked.when(() -> TransactionSynchronizationManager.isSynchronizationActive())
+                mocked.when(TransactionSynchronizationManager::isSynchronizationActive)
                     .thenReturn(false);
 
                 AtomicBoolean executed = new AtomicBoolean(false);

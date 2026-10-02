@@ -3,14 +3,14 @@ package com.thecommitcrew.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 
-@Component 
+@Service
 public class PositionService {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final long ZERO_QUANTITY = 0L;
@@ -46,9 +46,7 @@ public class PositionService {
         BigDecimal costBasis = calculateCostBasis(position);
         BigDecimal tradeTotal = new BigDecimal(order.getQuantity()).multiply(order.getPrice());
         BigDecimal newTotal = costBasis.add(tradeTotal);
-        BigDecimal averageCost = newTotal.divide(new BigDecimal(newQuantity), RoundingMode.HALF_UP);
-
-        return averageCost;
+        return newTotal.divide(new BigDecimal(newQuantity), RoundingMode.HALF_UP);
     }
 
     public BigDecimal marketValue(Position position, BigDecimal currentPrice) throws NegativePriceException {
@@ -60,8 +58,7 @@ public class PositionService {
 
     public BigDecimal unrealizedProfitLoss(Position position, BigDecimal currentPrice) throws NegativePriceException {
         BigDecimal costBasis = calculateCostBasis(position);
-        BigDecimal profitLoss = marketValue(position, currentPrice).subtract(costBasis);
-        return profitLoss;
+        return  marketValue(position, currentPrice).subtract(costBasis);
     }
 
     public BigDecimal unrealizedPnLPercent(Position position, BigDecimal currentPrice) throws NegativePriceException {

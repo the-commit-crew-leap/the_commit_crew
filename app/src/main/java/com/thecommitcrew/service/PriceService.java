@@ -3,14 +3,14 @@ package com.thecommitcrew.service;
 import java.math.BigDecimal;
 import java.util.Optional;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.thecommitcrew.domain.model.PriceHistory;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.exception.PriceNotFoundException;
 import com.thecommitcrew.persistence.mapper.PriceHistoryMapper;
 
-@Component
+@Service 
 public class PriceService {
     private final PriceHistoryMapper priceHistoryMapper;
 

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.thecommitcrew.domain.enums.AccountStatus;
 
 @DisplayName("AccountEntity Tests")
-public class AccountEntityTest {
+class AccountEntityTest {
 
     private static final String TEST_ACCOUNT_ID = "ACC001";
     private static final String TEST_HOLDER_NAME = "Jane Smith";

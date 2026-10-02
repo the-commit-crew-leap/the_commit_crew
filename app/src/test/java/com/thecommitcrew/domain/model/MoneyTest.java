@@ -5,20 +5,17 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class MoneyTest {
-        
+class MoneyTest {
+    
+    private static final BigDecimal NEGATIVE_AMOUNT = new BigDecimal("-1000.00");
 
     @Test
-    public void testDebit_NegativeAmount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Money(new BigDecimal("-1000.00"));
-        });
+    void testDebit_NegativeAmount() {
+        assertThrows(IllegalArgumentException.class, () -> new Money(NEGATIVE_AMOUNT));
     }
 
     @Test
-    public void testCredit_NegativeAmount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Money(new BigDecimal("-1000.00"));
-        });
+    void testCredit_NegativeAmount() {
+        assertThrows(IllegalArgumentException.class, () -> new Money(NEGATIVE_AMOUNT));
     }
 }

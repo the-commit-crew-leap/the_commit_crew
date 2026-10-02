@@ -12,7 +12,7 @@ import com.thecommitcrew.domain.enums.OrderStatus;
 
 import org.junit.jupiter.api.Test;
 
-public class OrderResponseDTOTest {
+class OrderResponseDTOTest {
     
     @Test
     void testOrderResponseCreation() {

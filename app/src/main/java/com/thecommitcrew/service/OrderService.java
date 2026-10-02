@@ -20,7 +20,6 @@ import com.thecommitcrew.persistence.mapper.PositionMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,7 +116,8 @@ public class OrderService {
                 "Instrument not found for symbol: " + order.getSymbol()
         ));
 
-        if (!instrument.isTradable()) {
+        boolean tradable = instrument.isTradable();
+        if (!tradable) {
             throw new IllegalStateException("Instrument is not tradable: " + order.getSymbol());
         }
 

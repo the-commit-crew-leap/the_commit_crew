@@ -99,7 +99,8 @@ public class OrderSettlementService {
                 .map(instrumentMapper::toDomain)
                 .orElseThrow(() -> new InstrumentNotFoundException("Instrument not found for symbol: " + order.getSymbol()));
 
-        if (!instrument.isTradable()) {
+        boolean tradable = instrument.isTradable();
+        if (!tradable) {
             reject(order, fill, "Instrument is not tradable: " + order.getSymbol());
             return;
         }
@@ -134,7 +135,7 @@ public class OrderSettlementService {
             orderMapper.save(order);
         } catch (Exception e) {
             log.error("Failed to persist settlement for order {}: {}", order.getId(), e.getMessage(), e);
-            throw e;
+            throw new RuntimeException("Failed to persist settlement for order " + order.getId(), e);
         }
 
         log.info("Order {} FILLED: {} {} {} @ {} ({})",

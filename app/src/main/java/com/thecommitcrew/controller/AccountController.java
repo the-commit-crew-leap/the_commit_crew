@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController 
-@RequestMapping("/accounts") 
+@RequestMapping("/accounts/{id}") 
 public class AccountController {
     private final AccountService accountService;
     private final PriceService priceService;
@@ -35,7 +35,7 @@ public class AccountController {
         this.positionService = positionService;
     }
 
-    @GetMapping("/{id}")
+    @GetMapping
     public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") Long accountId) {
         Account account = accountService.getAccount(accountId);
         AccountResponseDTO response = new AccountResponseDTO(
@@ -46,14 +46,14 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/balance")
+    @GetMapping("/balance")
     public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") Long accountId) {
         Money balance = accountService.getBalance(accountId);
         BalanceResponseDTO response = new BalanceResponseDTO(accountId, balance);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/positions")
+    @GetMapping("/positions")
     public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") Long accountId) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
@@ -77,7 +77,7 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/orders")
+    @GetMapping("/orders")
     public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") Long accountId) {
         List<Order> orders = accountService.getOrders(accountId);
         List<OrderResponseDTO> response = orders.stream()

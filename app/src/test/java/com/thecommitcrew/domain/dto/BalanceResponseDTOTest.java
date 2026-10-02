@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.thecommitcrew.domain.model.Money;
 
-public class BalanceResponseDTOTest {
+class BalanceResponseDTOTest {
     
     @Test
     void testBalanceResponseCreation() {

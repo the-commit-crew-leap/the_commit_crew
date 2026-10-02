@@ -31,7 +31,7 @@ import com.thecommitcrew.persistence.mapper.PositionMapper;
 import com.thecommitcrew.persistence.mapper.OrderMapper;
 
 @ExtendWith(MockitoExtension.class)
-public class AccountServiceTests {
+class AccountServiceTests {
 
     private static final Long TEST_ACCOUNT_ID = 1L;
     private static final Long INVALID_ACCOUNT_ID = 999L;
@@ -53,7 +53,7 @@ public class AccountServiceTests {
     private AccountEntity testAccountEntity;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         accountService = new AccountService(accountRepository, positionMapper, orderMapper, accountMapper);
         testAccount = new Account(
             TEST_ACCOUNT_ID,
