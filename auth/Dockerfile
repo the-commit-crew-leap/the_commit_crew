@@ -11,7 +11,7 @@ WORKDIR /app
 RUN apk add --no-cache curl
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
-COPY --from=build /build/auth/target/the-commit-crew-auth-0.1.0.jar app.jar
+COPY --from=build /build/auth/target/the-commit-crew-auth-0.1.0-exec.jar app.jar
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
