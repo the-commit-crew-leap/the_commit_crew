@@ -71,6 +71,7 @@
                     <format>JSON</format>
                     <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     <failBuildOnCVSS>5.0</failBuildOnCVSS>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                 </configuration>
             </plugin>
         </plugins>

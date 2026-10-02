@@ -44,7 +44,9 @@ pipeline {
         stage('Dependency Scanning') {
             steps {
                 script {
-                    sh 'mvn -B dependency-check:check'
+                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                        sh 'mvn -B dependency-check:check'
+                    }
                 }
             }
             post {
