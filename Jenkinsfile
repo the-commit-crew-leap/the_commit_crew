@@ -254,7 +254,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonarserver') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                        sh 'mvn -B sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.qualitygate.wait=true'
+                        sh 'mvn -B sonar:sonar -Dsonar.host.url=http://10.9.75.153:8082 -Dsonar.token=$SONAR_TOKEN -Dsonar.qualitygate.wait=true'
                     }
                 }
             }
