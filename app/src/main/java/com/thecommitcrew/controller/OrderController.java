@@ -1,5 +1,6 @@
 package com.thecommitcrew.controller;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,8 @@ import com.thecommitcrew.domain.dto.PlaceOrderRequestDTO;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.OrderService;
+import com.thecommitcrew.messaging.OrderEventPublisher;
+import com.thecommitcrew.messaging.OrderEvent;
 
 
 /**
@@ -30,9 +33,11 @@ import com.thecommitcrew.service.OrderService;
 public class OrderController {
     
     private final OrderService orderService;
+    private final OrderEventPublisher orderEventPublisher;
     
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, OrderEventPublisher orderEventPublisher) {
         this.orderService = orderService;
+        this.orderEventPublisher = orderEventPublisher;
     }
     
     /**
@@ -60,6 +65,20 @@ public class OrderController {
         // Returns Order with status FILLED or REJECTED, or throws exception
         Order order = orderService.placeOrder(request);
         
+        // Send order to execution venue (Kafka)
+        if (order.getStatus().toString().equals("NEW")) {
+            OrderEvent event = new OrderEvent(
+                order.getId(),
+                order.getAccountId(),
+                order.getSymbol(),
+                order.getSide(),
+                (int) order.getQuantity(),
+                order.getPrice(),
+                Instant.now()
+            );
+            orderEventPublisher.publish(event);
+        }
+
         OrderResponseDTO response = mapToResponse(order);
         return ResponseEntity
             .status(HttpStatus.CREATED)

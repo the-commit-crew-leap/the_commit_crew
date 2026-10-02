@@ -23,7 +23,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
   db:
     build: 
@@ -79,7 +79,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ENGINE_MIN_DELAY: ${ENGINE_MIN_DELAY:-500ms}
       ENGINE_MAX_DELAY: ${ENGINE_MAX_DELAY:-2000ms}
       ENGINE_MAX_PRICE_IMPROVEMENT_BPS: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:-50}

@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version>
+        <version>3.5.16</version>
         <relativePath/>
     </parent>
     <groupId>com.thecommitcrew</groupId>
@@ -166,6 +166,9 @@
                     <source>21</source>
                     <target>21</target>
                     <release>21</release>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>

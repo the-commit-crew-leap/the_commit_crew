@@ -1,7 +1,6 @@
 package com.thecommitcrew;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thecommitcrew.Side;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -13,7 +12,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
-
+import com.thecommitcrew.OrderSide;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,10 +51,9 @@ class ExecutionEngineKafkaTest {
             UUID.randomUUID(), 
             1001L, 
             "ACME", 
-            Side.BUY,
+            OrderSide.BUY,
             10,
             new BigDecimal("25.50"), 
-            new BigDecimal("25.50"),
             Instant.now());
 
         try (Consumer<String, String> consumer = executionsConsumer()) {
