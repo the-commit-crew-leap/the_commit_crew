@@ -45,7 +45,16 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                        sh 'mvn -B dependency-check:check'
+                        sh '''
+                            mvn -B dependency-check:check \
+                                -DnvdApiKey="$NVD_API_KEY" \
+                                -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
+                            
+                            if [ "${EXIT_CODE:-0}" -ne 0 ]; then
+                                echo "Dependency-Check completed with issues"
+                                exit 1
+                            fi
+                        '''
                     }
                 }
             }
