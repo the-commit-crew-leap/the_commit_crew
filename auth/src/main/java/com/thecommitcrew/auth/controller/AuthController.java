@@ -18,7 +18,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> request) {
         // Mock auth: accept any username, generate token
         String username = request.getOrDefault("username", "testuser");
         String token = jwtTokenProvider.generateToken(username);

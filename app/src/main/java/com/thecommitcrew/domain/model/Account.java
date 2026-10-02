@@ -1,6 +1,7 @@
 package com.thecommitcrew.domain.model;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 
 import com.thecommitcrew.domain.enums.AccountStatus;
@@ -40,19 +41,19 @@ public class Account {
         statusValidator.validateCanDebit(this.status);
         Money newBalance = this.cashBalance.subtract(amount);
         return new Account(accountId, holderName, newBalance, status, version + 1, 
-                          LocalDateTime.now(), statusValidator);  
+                          LocalDateTime.now(ZoneId.of("UTC")), statusValidator);  
     }
 
     public Account credit(Money amount) {
         statusValidator.validateCanCredit(this.status);
         Money newBalance = this.cashBalance.add(amount);
         return new Account(accountId, holderName, newBalance, status, version + 1, 
-                          LocalDateTime.now(), statusValidator);
+                          LocalDateTime.now(ZoneId.of("UTC")), statusValidator);
     }
 
     public Account updateStatus(AccountStatus newStatus) {
         return new Account(accountId, holderName, cashBalance, newStatus, version + 1, 
-                          LocalDateTime.now(), statusValidator);
+                          LocalDateTime.now(ZoneId.of("UTC")), statusValidator);
     }
 
     // Getters only (no setters)
