@@ -61,6 +61,18 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0</version>
             </plugin>
+
+            <!-- OWASP Dependency Check Plugin -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.0.0</version>
+                <configuration>
+                    <format>JSON</format>
+                    <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
+                    <failBuildOnCVSS>5.0</failBuildOnCVSS>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

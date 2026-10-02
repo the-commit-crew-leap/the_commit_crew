@@ -10,9 +10,47 @@ pipeline {
                 checkout scm 
             } 
         }
+        stage('Secret Detection') {
+            steps {
+                script {
+                    sh '''
+                        docker run --rm \
+                            -v "$(pwd)":/repo \
+                            zricethezav/gitleaks:latest \
+                            detect \
+                            --source /repo \
+                            --report-path /repo/gitleaks-report.json \
+                            --report-format json || EXIT_CODE=$?
+                        
+                        if [ "${EXIT_CODE:-0}" -eq 1 ]; then
+                            echo "Secrets detected!"
+                            exit 1
+                        fi
+                        exit 0
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+                }
+            }
+        }
         stage('Build') {
             steps {
                 sh 'mvn -B clean package'
+            }
+        }
+        stage('Dependency Scanning') {
+            steps {
+                script {
+                    sh 'mvn -B dependency-check:check'
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
+                }
             }
         }
         stage('Build Image') {
