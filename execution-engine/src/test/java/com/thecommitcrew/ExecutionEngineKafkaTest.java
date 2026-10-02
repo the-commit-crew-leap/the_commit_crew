@@ -12,7 +12,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
-import com.thecommitcrew.OrderSide;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -63,15 +62,15 @@ class ExecutionEngineKafkaTest {
             
             kafkaTemplate.send("orders", accountIdKey, orderJson).get();
 
-            ConsumerRecord<String, String> record =
+            ConsumerRecord<String, String> consumerRecord =
                     KafkaTestUtils.getSingleRecord(consumer, "executions", Duration.ofSeconds(20));
-            ExecutionEvent fill = objectMapper.readValue(record.value(), ExecutionEvent.class);
+            ExecutionEvent fill = objectMapper.readValue(consumerRecord.value(), ExecutionEvent.class);
 
-            assertEquals("1001", record.key());
+            assertEquals("1001", consumerRecord.key());
             assertEquals(order.orderId(), fill.orderId());
             assertEquals(10, fill.quantity());
             assertTrue(fill.price().compareTo(order.price()) <= 0);
-            assertTrue(record.value().contains("\"executedOn\":\""), "timestamps should be ISO strings");
+            assertTrue(consumerRecord.value().contains("\"executedOn\":\""), "timestamps should be ISO strings");
         }
     }
 

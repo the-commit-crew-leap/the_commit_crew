@@ -10,8 +10,10 @@ class EnginePropertiesTest {
 
     @Test
     void testMaxDelayBelowMinDelay_Rejected() {
+        Duration maxDelay = Duration.ofSeconds(2);
+        Duration minDelay = Duration.ofSeconds(1);
         assertThrows(IllegalArgumentException.class,
-                () -> new EngineProperties(Duration.ofSeconds(2), Duration.ofSeconds(1), 50, "SIM"));
+                () -> new EngineProperties(maxDelay, minDelay, 50, "SIM"));
     }
 
     @Test
