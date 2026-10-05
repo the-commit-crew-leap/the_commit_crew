@@ -36,7 +36,7 @@ class AuthEntryPointJwtTest {
     private ByteArrayOutputStream outputStream;
 
     @BeforeEach
-    void setUp() throws IOException, ServletException {
+    void setUp() throws IOException {
         authEntryPointJwt = new AuthEntryPointJwt();
         outputStream = new ByteArrayOutputStream();
         

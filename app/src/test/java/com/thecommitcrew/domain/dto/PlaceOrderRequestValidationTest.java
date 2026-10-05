@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Nested;
 * Using Validator instance since this class has annotations
 * Validator checks that the validation rules work correctly
 */
-public class PlaceOrderRequestValidationTest {
+class PlaceOrderRequestValidationTest {
     
     private Validator validator;
     

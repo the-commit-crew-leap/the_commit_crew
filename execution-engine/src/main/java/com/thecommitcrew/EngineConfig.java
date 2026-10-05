@@ -1,12 +1,7 @@
 package com.thecommitcrew;
 
-import com.thecommitcrew.SimulatedMarket;
-import com.thecommitcrew.EngineProperties;
-import com.thecommitcrew.Pauser;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,15 +33,17 @@ public class EngineConfig {
 
     @Bean
     public Pauser pauser() {
-        return duration -> Thread.sleep(duration);
+        return Thread::sleep;
     }
 
+    @SuppressWarnings("null")
     @Bean
     public NewTopic ordersTopic(@Value("${engine.topics.orders}") String name,
                                 @Value("${engine.topics.partitions}") int partitions) {
         return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
     }
 
+    @SuppressWarnings("null")
     @Bean
     public NewTopic executionsTopic(@Value("${engine.topics.executions}") String name,
                                     @Value("${engine.topics.partitions}") int partitions) {

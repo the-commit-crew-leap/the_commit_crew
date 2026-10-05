@@ -20,7 +20,7 @@ import com.thecommitcrew.domain.validator.DefaultAccountStatusValidator;
 import com.thecommitcrew.persistence.entity.AccountEntity;
 
 @DisplayName("AccountMapper Tests")
-public class AccountMapperTest {
+class AccountMapperTest {
 
     private AccountMapper mapper;
     private AccountStatusValidator statusValidator;

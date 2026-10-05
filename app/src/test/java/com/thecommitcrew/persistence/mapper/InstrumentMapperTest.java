@@ -24,7 +24,7 @@ import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("InstrumentMapper Tests")
-public class InstrumentMapperTest {
+class InstrumentMapperTest {
 
     @Mock
     private InstrumentRepository instrumentRepository;

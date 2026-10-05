@@ -16,7 +16,7 @@ import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 
-public class OrderTest {
+class OrderTest {
 
     private UUID validId;
     private Long validAccountId;
@@ -28,6 +28,8 @@ public class OrderTest {
     private LocalDateTime validCreatedOn;
     private String validIdempotencyKey;
     private Order order;
+
+    private static final BigDecimal NEGATIVE_PRICE = new BigDecimal("-50.00");
 
     @BeforeEach
     void setUp() {
@@ -143,7 +145,7 @@ public class OrderTest {
         void shouldThrowWhenPriceIsNegative() {
             assertThrows(NegativePriceException.class, () -> new Order(
                 validId, validAccountId, validSymbol, validSide,
-                validQuantity, new BigDecimal("-50.00"), validStatus, validCreatedOn, validIdempotencyKey
+                validQuantity, NEGATIVE_PRICE, validStatus, validCreatedOn, validIdempotencyKey
             ));
         }
 

@@ -21,7 +21,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.model.PriceHistory;
 import com.thecommitcrew.persistence.mapper.PriceHistoryMapper;
 
-public class PriceServiceTest {
+class PriceServiceTest {
 
     @Mock
     private PriceHistoryMapper priceHistoryMapper;
@@ -74,9 +74,7 @@ public class PriceServiceTest {
             when(priceHistoryMapper.findLatestPriceBySymbol(symbol))
                 .thenReturn(Optional.empty());
 
-            assertThrows(PriceNotFoundException.class, () -> {
-                priceService.getCurrentPrice(symbol);
-            });
+            assertThrows(PriceNotFoundException.class, () -> priceService.getCurrentPrice(symbol));
         }
 
         @Test
@@ -88,9 +86,7 @@ public class PriceServiceTest {
             when(priceHistoryMapper.findLatestPriceBySymbol(symbol))
                 .thenReturn(Optional.of(mockPriceHistory));
 
-            assertThrows(NegativePriceException.class, () -> {
-                priceService.getCurrentPrice(symbol);
-            });
+            assertThrows(NegativePriceException.class, () -> priceService.getCurrentPrice(symbol));
         }
 
         @Test

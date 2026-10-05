@@ -24,6 +24,7 @@ class JwtTokenProviderTest {
     private String testSecret;
     private long testExpiration;
 
+    @SuppressWarnings("null")
     @BeforeEach
     void setUp() {
         testSecret = "mySecretKeyThatIsLongEnoughForHS256SigningAlgorithm123";
@@ -39,8 +40,7 @@ class JwtTokenProviderTest {
         
         String token = jwtTokenProvider.generateToken(username);
         
-        assertThat(token).isNotNull();
-        assertThat(token).isNotBlank();
+        assertThat(token).isNotNull().isNotBlank();
     }
 
     @Test
@@ -62,6 +62,7 @@ class JwtTokenProviderTest {
         assertThat(isValid).isFalse();
     }
 
+    @SuppressWarnings("null")
     @Test
     void validateToken_shouldReturnFalseForExpiredToken() {
         ReflectionTestUtils.setField(jwtTokenProvider, "jwtExpiration", -1000);

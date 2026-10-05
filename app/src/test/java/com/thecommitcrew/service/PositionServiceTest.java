@@ -17,7 +17,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.model.Position;
 
-public class PositionServiceTest {
+class PositionServiceTest {
 
     private PositionService positionService;
     private Position position;
@@ -63,9 +63,7 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Throws exception for negative price")
         void marketValueWithNegativePrice() {
-            assertThrows(NegativePriceException.class, () -> {
-                positionService.marketValue(position, negativeCurrentPrice);
-            });
+            assertThrows(NegativePriceException.class, () -> positionService.marketValue(position, negativeCurrentPrice));
         }
     }
 
@@ -87,9 +85,7 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Throws exception for negative price")
         void unrealizedProfitLossWithNegativePrice() {
-            assertThrows(NegativePriceException.class, () -> {
-                positionService.unrealizedProfitLoss(position, negativeCurrentPrice);
-            });
+            assertThrows(NegativePriceException.class, () -> positionService.unrealizedProfitLoss(position, negativeCurrentPrice));
         }
     }
 
@@ -130,9 +126,7 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Throws exception for negative price")
         void unrealizedPnLPercentThrowsExceptionForNegativePrice() {
-            assertThrows(NegativePriceException.class, () -> {
-                positionService.unrealizedPnLPercent(position, negativeCurrentPrice);
-            });
+            assertThrows(NegativePriceException.class, () -> positionService.unrealizedPnLPercent(position, negativeCurrentPrice));
         }
     }
 
@@ -186,9 +180,7 @@ public class PositionServiceTest {
         void applyOrderThrowsExceptionWhenSellingMoreThanOwned() {
             Order sellOrderTooMany = new Order(UUID.randomUUID(), 1L, "TSLA", OrderSide.SELL, 15L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
             
-            assertThrows(IllegalArgumentException.class, () -> {
-                positionService.applyOrder(position, sellOrderTooMany);
-            });
+            assertThrows(IllegalArgumentException.class, () -> positionService.applyOrder(position, sellOrderTooMany));
         }
     }
 }

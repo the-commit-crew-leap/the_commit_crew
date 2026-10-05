@@ -45,7 +45,7 @@ import java.util.UUID;
 @Import(AccountControllerTest.TestSecurityConfig.class)
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
-public class AccountControllerTest {
+class AccountControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

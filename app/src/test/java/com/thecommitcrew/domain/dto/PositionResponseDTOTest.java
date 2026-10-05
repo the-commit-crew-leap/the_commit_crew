@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
-public class PositionResponseDTOTest {
+class PositionResponseDTOTest {
     
     @Test
     void testPositionResponseCreation() {
