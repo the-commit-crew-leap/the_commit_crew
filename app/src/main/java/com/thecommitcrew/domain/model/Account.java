@@ -12,7 +12,7 @@ import com.thecommitcrew.domain.validator.AccountStatusValidator;
  * Maintains account state and enforces business rules.
  */
 public class Account {
-    private final Long accountId;
+    private final String accountId;
     private final String holderName;
     private final Money cashBalance;
     private final AccountStatus status;
@@ -22,10 +22,10 @@ public class Account {
     private final AccountStatusValidator statusValidator;
 
     // Constructor
-    public Account(Long accountId, String holderName, Money cashBalance, 
+    public Account(String accountId, String holderName, Money cashBalance, 
                    AccountStatus status, int version, LocalDateTime lastUpdated,
                    AccountStatusValidator statusValidator) {
-        this.accountId = validateNotNull(accountId, "Account ID cannot be null");
+        this.accountId = validateNotBlank(accountId, "Account ID cannot be blank");
         this.holderName = validateNotBlank(holderName, "Holder name cannot be blank");
         this.cashBalance = validateNotNull(cashBalance, "Cash balance cannot be null");
         this.status = validateNotNull(status, "Status cannot be null");
@@ -57,7 +57,7 @@ public class Account {
     }
 
     // Getters only (no setters)
-    public Long getAccountId() { return accountId; }
+    public String getAccountId() { return accountId; }
     public String getHolderName() { return holderName; }
     public Money getCashBalance() { return cashBalance; }
     public AccountStatus getStatus() { return status; }
@@ -80,7 +80,7 @@ public class Account {
 
     @Override
     public String toString() {
-        return String.format("Account{id=%d, holder=%s, balance=%s, status=%s}", 
+        return String.format("Account{accountId=%s, holder=%s, balance=%s, status=%s}", 
             accountId, holderName, cashBalance, status);
     }
 

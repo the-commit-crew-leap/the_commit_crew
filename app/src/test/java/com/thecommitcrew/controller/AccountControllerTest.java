@@ -62,7 +62,7 @@ class AccountControllerTest {
     @MockBean 
     private JwtTokenProvider jwtTokenProvider;
 
-    private static final Long TEST_ACCOUNT_ID = 1L;
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_ACCOUNT_HOLDER = "John Doe";
 
     private Account testAccount;

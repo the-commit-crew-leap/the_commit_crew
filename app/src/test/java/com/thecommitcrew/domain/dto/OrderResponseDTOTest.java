@@ -17,7 +17,7 @@ class OrderResponseDTOTest {
     @Test
     void testOrderResponseCreation() {
         UUID orderId = UUID.randomUUID();
-        Long accountId = 1L;
+        String accountId = "ACC-1001";
         String symbol = "AAPL";
         OrderSide side = OrderSide.BUY;
         long quantity = 100L;
@@ -44,7 +44,7 @@ class OrderResponseDTOTest {
     @Test
     void testOrderResponseFields() {
         UUID orderId = UUID.randomUUID();
-        Long accountId = 1L;
+        String accountId = "ACC-1001";
         String symbol = "AAPL";
         OrderSide side = OrderSide.SELL;
         long quantity = 50L;

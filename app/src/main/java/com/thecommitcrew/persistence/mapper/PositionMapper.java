@@ -9,7 +9,7 @@ import com.thecommitcrew.domain.model.Position;
 
 @Mapper 
 public interface PositionMapper {
-    Optional<Position> findByAccountIdAndSymbol(Long accountId, String symbol);
-    List<Position> findByAccountId(Long accountId);
+    Optional<Position> findByAccountIdAndSymbol(String accountId, String symbol);
+    List<Position> findByAccountId(String accountId);
     void save(Position position);
 }

@@ -9,7 +9,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 
 public class Order {
     private final UUID id;
-    private final Long accountId;
+    private final String accountId;
     private final String symbol;
     private final OrderSide side;
     private final long quantity;
@@ -18,9 +18,9 @@ public class Order {
     private final LocalDateTime createdOn;
     private final String idempotencyKey;
 
-    public Order(UUID id, Long accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
+    public Order(UUID id, String accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
         this.id = validateNotNull(id, "Order ID cannot be null");
-        this.accountId = validateNotNull(accountId, "Account ID cannot be null");
+        this.accountId = validateNotBlank(accountId, "Account ID cannot be blank");
         this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
         this.side = validateNotNull(side, "Order side cannot be null");
         this.quantity = validatePositive(quantity, "Quantity must be positive");
@@ -34,7 +34,7 @@ public class Order {
         return id;
     }
 
-    public Long getAccountId() {
+    public String getAccountId() {
         return accountId;
     }
 

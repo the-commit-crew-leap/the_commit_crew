@@ -48,7 +48,7 @@ class ExecutionEngineKafkaTest {
     void testOrderOnOrdersTopic_ProducesFillOnExecutionsTopic() throws Exception {
         OrderEvent order = new OrderEvent(
             UUID.randomUUID(), 
-            1001L, 
+            "ACC-1001", 
             "ACME", 
             OrderSide.BUY,
             10,
@@ -57,7 +57,7 @@ class ExecutionEngineKafkaTest {
 
         try (Consumer<String, String> consumer = executionsConsumer()) {
             // Send order to Kafka with accountId as String key
-            String accountIdKey = String.valueOf(order.accountId());
+            String accountIdKey = order.accountId();
             String orderJson = objectMapper.writeValueAsString(order);
             
             kafkaTemplate.send("orders", accountIdKey, orderJson).get();
@@ -66,7 +66,7 @@ class ExecutionEngineKafkaTest {
                     KafkaTestUtils.getSingleRecord(consumer, "executions", Duration.ofSeconds(20));
             ExecutionEvent fill = objectMapper.readValue(consumerRecord.value(), ExecutionEvent.class);
 
-            assertEquals("1001", consumerRecord.key());
+            assertEquals("ACC-1001", consumerRecord.key());
             assertEquals(order.orderId(), fill.orderId());
             assertEquals(10, fill.quantity());
             assertTrue(fill.price().compareTo(order.price()) <= 0);

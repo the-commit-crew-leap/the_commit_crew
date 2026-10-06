@@ -68,7 +68,7 @@ sleep 2
 
 echo "== Stage: Wait for Service Ready =="
 for i in $(seq 1 60); do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/1" || true)
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001" || true)
   if [ "$code" != "000" ]; then 
     echo "Service is ready (HTTP $code)"
     break
@@ -83,17 +83,17 @@ echo "== Stage: Application Logs =="
 docker logs "$APP_CONTAINER" 2>&1 | tail -100
 
 echo "== Stage: Test Account Retrieval =="
-RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1")
+RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001")
 echo "Full response: $RESPONSE"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/1")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001")
 echo "HTTP code: $HTTP_CODE"
 echo "$RESPONSE" | grep -q '"status":"ACTIVE"' || { echo "FAIL: account not found"; exit 1; }
 echo "PASS: account retrieved from database"
 
 echo "== Stage: Test Get Account Balance =="
-BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/balance")
+BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/balance")
 echo "Balance response: $BALANCE_RESPONSE"
-echo "$BALANCE_RESPONSE" | grep -q '"accountId":1' || { echo "FAIL: balance endpoint failed"; exit 1; }
+echo "$BALANCE_RESPONSE" | grep -q '"accountId":"ACC-1001"' || { echo "FAIL: balance endpoint failed"; exit 1; }
 echo "$BALANCE_RESPONSE" | grep -q '"cashBalance"' || { echo "FAIL: cashBalance not in response"; exit 1; }
 echo "PASS: account balance retrieved"
 
@@ -110,20 +110,20 @@ echo "PASS: bean validation caught invalid request (400)"
 echo "== Stage: Test Place Order - Success =="
 ORDER_RESPONSE=$(curl -s -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d "{\"accountId\":1,\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
+  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
 echo "Order response: $ORDER_RESPONSE"
 
 echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
 echo "PASS: order placed and persisted"
 
 echo "== Stage: Test Get Account Orders =="
-ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/orders")
+ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/orders")
 echo "Orders response (with data): $ORDERS_RESPONSE"
 echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order not in response"; exit 1; }
 echo "PASS: orders endpoint returns placed order"
 
 echo "== Stage: Test Get Account Positions =="
-POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/1/positions")
+POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/positions")
 echo "Positions response (with data): $POSITIONS_RESPONSE"
 echo "$POSITIONS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: position not in response"; exit 1; }
 echo "$POSITIONS_RESPONSE" | grep -q '"averageCost"' || { echo "FAIL: averageCost not in response"; exit 1; }
@@ -160,7 +160,7 @@ fi
 
 echo "== Stage: Verify Data in Postgres =="
 docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \
-  "SELECT account_id, symbol, quantity, average_cost FROM positions WHERE account_id=1 AND symbol='AAPL';"
+  "SELECT account_id, symbol, quantity, average_cost FROM positions WHERE account_id="ACC-1001" AND symbol='AAPL';"
 
 echo "== Stage: Verify Price History Data in Postgres =="
 docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \

@@ -10,7 +10,7 @@ import com.thecommitcrew.domain.enums.OrderStatus;
 public record OrderResponseDTO (
 
     UUID orderId,
-    Long accountId,
+    String accountId,
     String symbol,
     OrderSide side,
     long quantity,

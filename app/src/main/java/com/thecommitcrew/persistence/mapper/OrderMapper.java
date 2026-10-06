@@ -15,7 +15,7 @@ import com.thecommitcrew.messaging.OrderEvent;
 public interface OrderMapper {
     Optional<Order> findById(UUID orderId);
     void save(Order order);
-    List<Order> findByAccountId(Long accountId);
-    List<Order> findByAccountIdAndStatus(Long accountId, OrderStatus status);
+    List<Order> findByAccountId(String accountId);
+    List<Order> findByAccountIdAndStatus(String accountId, OrderStatus status);
     List<OrderEvent> findPendingOlderThan(@Param("seconds") long seconds, @Param("limit") int limit);
 }
