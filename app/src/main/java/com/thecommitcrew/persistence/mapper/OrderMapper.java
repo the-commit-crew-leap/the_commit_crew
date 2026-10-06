@@ -13,7 +13,7 @@ import com.thecommitcrew.messaging.OrderEvent;
 
 @Mapper
 public interface OrderMapper {
-    Optional<Order> findById(UUID orderId);
+    Optional<Order> findById(@Param("orderId") UUID orderId);
     void save(Order order);
     List<Order> findByAccountId(String accountId);
     List<Order> findByAccountIdAndStatus(String accountId, OrderStatus status);
