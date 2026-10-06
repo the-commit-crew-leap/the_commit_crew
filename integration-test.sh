@@ -33,8 +33,8 @@ if ! docker ps --filter "name=${POSTGRES_CONTAINER}" --quiet >/dev/null 2>&1; th
 fi
 
 # Get the network postgres is on
-POSTGRES_NETWORK=$(docker inspect "$POSTGRES_CONTAINER" --format='{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')
-echo "Postgres is on network: $POSTGRES_NETWORK"
+POSTGRES_NETWORK=$NETWORK
+echo "Using network: $POSTGRES_NETWORK"
 
 # Wait for postgres to be ready
 echo "== Waiting for Postgres to be ready =="
