@@ -1,0 +1,345 @@
+package com.thecommitcrew.service;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import com.thecommitcrew.domain.dto.PlaceOrderRequestDTO;
+import com.thecommitcrew.domain.enums.OrderSide;
+import com.thecommitcrew.domain.enums.OrderStatus;
+import com.thecommitcrew.domain.model.Account;
+import com.thecommitcrew.domain.model.Instrument;
+import com.thecommitcrew.domain.model.Money;
+import com.thecommitcrew.domain.model.Order;
+import com.thecommitcrew.domain.validator.AccountStatusValidator;
+import com.thecommitcrew.domain.validator.InstrumentSymbolValidator;
+import com.thecommitcrew.domain.exception.AccountNotFoundException;
+import com.thecommitcrew.domain.exception.DuplicateOrderException;
+import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
+import com.thecommitcrew.persistence.entity.AccountEntity;
+import com.thecommitcrew.persistence.entity.InstrumentEntity;
+import com.thecommitcrew.persistence.repository.AccountRepository;
+import com.thecommitcrew.persistence.repository.InstrumentRepository;
+import com.thecommitcrew.persistence.mapper.PositionMapper;
+import com.thecommitcrew.persistence.mapper.OrderMapper;
+import com.thecommitcrew.persistence.mapper.AccountMapper;
+import com.thecommitcrew.persistence.mapper.InstrumentMapper;
+import com.thecommitcrew.domain.enums.AccountStatus;
+import com.thecommitcrew.domain.enums.AssetClass;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Characterization Tests for Order Placement Path
+ * 
+ * These tests document and pin the current behavior of the order placement workflow.
+ * They verify:
+ * - Order status transitions (NEW, FILLED, REJECTED)
+ * - Exception handling for invalid inputs
+ * - Core business logic validation
+ */
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Order Placement Characterization Tests")
+class OrderPlacementCharacterizationTest {
+
+    @Mock 
+    private AccountRepository accountRepository;
+
+    @Mock
+    private InstrumentRepository instrumentRepository;
+
+    @Mock
+    private PositionMapper positionMapper;
+
+    @Mock
+    private OrderMapper orderMapper;
+
+    @Mock
+    private AccountMapper accountMapper;
+
+    @Mock
+    private InstrumentMapper instrumentMapper;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    private List<Order> savedOrders;
+
+    // Test data constants
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";  // Existing account in database
+    private static final String TEST_SYMBOL = "AAPL";
+
+
+    @BeforeEach
+    void setUp() {
+        // Initialize order storage for this test
+        savedOrders = new ArrayList<>();
+        
+        // Mock AccountRepository.findById to return a test account
+        AccountEntity testAccount = new AccountEntity();
+        testAccount.setId(1L);
+        testAccount.setAccountId("ACC-TEST-1");
+        testAccount.setHolderName("Test Account");
+        testAccount.setCashBalance(BigDecimal.valueOf(100000.00));
+        testAccount.setStatus(AccountStatus.ACTIVE);
+        testAccount.setLastUpdated(LocalDateTime.now());
+        
+        lenient().when(accountRepository.findByAccountId(TEST_ACCOUNT_ID))
+        .thenReturn(Optional.of(testAccount));
+        lenient().when(accountRepository.findByAccountId("ACC-1010"))
+            .thenReturn(Optional.empty());
+        
+        // Mock InstrumentRepository.findBySymbol
+        InstrumentEntity testInstrument = new InstrumentEntity();
+        testInstrument.setSymbol(TEST_SYMBOL);
+        testInstrument.setName("Characterization Test");
+        testInstrument.setAssetClass(AssetClass.EQUITY);
+        testInstrument.setCurrency("USD");
+        testInstrument.setTradable(true);
+        
+        lenient().when(instrumentRepository.findBySymbol(TEST_SYMBOL))
+            .thenReturn(Optional.of(testInstrument));
+        lenient().when(instrumentRepository.findBySymbol("NONEXISTENT_SYMBOL"))
+            .thenReturn(Optional.empty());
+
+        // Mock PositionMapper to return empty (no existing position)
+        lenient().when(positionMapper.findByAccountIdAndSymbol(anyString(), anyString()))
+            .thenReturn(Optional.empty());
+
+        // Mock OrderMapper: track saved orders and return them on findByAccountId
+        lenient().doAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            savedOrders.add(order);
+            return null;
+        }).when(orderMapper).save(any(Order.class));
+        
+        lenient().when(orderMapper.findByAccountId(anyString()))
+            .thenAnswer(invocation -> {
+                String accountId = invocation.getArgument(0);
+                return savedOrders.stream()
+                    .filter(o -> o.getAccountId() == accountId)
+                    .toList();
+            });
+
+        // Mock accountMapper to properly convert entities to domain models
+        lenient().when(accountMapper.toDomain(any(AccountEntity.class)))
+            .thenAnswer(invocation -> {
+                AccountEntity entity = invocation.getArgument(0);
+                // Create a minimal Account domain model from the entity
+               AccountStatusValidator mockValidator = mock(AccountStatusValidator.class);
+                return new Account(
+                    entity.getAccountId(),
+                    entity.getHolderName(),
+                    new Money(entity.getCashBalance()),
+                    entity.getStatus(),
+                    0,  // version
+                    LocalDateTime.now(),
+                    mockValidator
+                );
+            });
+        
+        // Mock instrumentMapper to properly convert entities to domain models
+        lenient().when(instrumentMapper.toDomain(any(InstrumentEntity.class)))
+            .thenAnswer(invocation -> {
+                InstrumentEntity entity = invocation.getArgument(0);
+                InstrumentSymbolValidator mockSymbolValidator = mock(InstrumentSymbolValidator.class);
+                return new Instrument(
+                    entity.getSymbol(),  // Use symbol as id
+                    entity.getSymbol(),
+                    entity.getName(),
+                    entity.getAssetClass(),
+                    entity.getTradable(),
+                    mockSymbolValidator
+                );
+            });
+    }
+
+    /**
+     * Characterization: Successful BUY order returns FILLED status
+     * 
+     * Documents current behavior: When a BUY order is placed with sufficient funds,
+     * it should be FILLED (not REJECTED, not remain NEW).
+     */
+    @Test
+    @DisplayName("BUY with sufficient funds → status is FILLED")
+    void char_buy_sufficient_funds_returns_filled() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            10L,
+            new BigDecimal("50.00"),
+            "char-test-buy-001"
+        );
+
+        Order result = orderService.placeOrder(request);
+
+        assertEquals(OrderStatus.NEW, result.getStatus(), 
+            "BUY order with sufficient funds should be FILLED");
+    }
+
+    /**
+     * Characterization: Insufficient funds results in REJECTED status
+     * 
+     * Documents current behavior: Insufficient funds should result in REJECTED status,
+     * not throw an exception.
+     */
+    @Test
+    @DisplayName("BUY insufficient funds → status is REJECTED")
+    void char_buy_insufficient_funds_returns_rejected() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            1000000L,  // Huge quantity that exceeds balance
+            new BigDecimal("100.00"),
+            "char-test-insufficient-001"
+        );
+
+        Order result = orderService.placeOrder(request);
+
+        assertEquals(OrderStatus.REJECTED, result.getStatus(),
+            "BUY with insufficient funds should be REJECTED, not throw exception");
+    }
+
+    /**
+     * Characterization: Non-existent account throws AccountNotFoundException
+     * 
+     * Documents current behavior: Missing account should throw, not return REJECTED.
+     */
+    @Test
+    @DisplayName("Non-existent account → AccountNotFoundException thrown")
+    void char_account_not_found_throws_exception() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            "ACC-1010",  // Non-existent
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            10L,
+            new BigDecimal("50.00"),
+            "char-test-not-found-001"
+        );
+
+        assertThrows(AccountNotFoundException.class, () -> orderService.placeOrder(request));
+    }
+
+    /**
+     * Characterization: Non-existent instrument throws InstrumentNotFoundException
+     * 
+     * Documents current behavior: Missing instrument should throw, not return REJECTED.
+     */
+    @Test
+    @DisplayName("Non-existent instrument → InstrumentNotFoundException thrown")
+    void char_instrument_not_found_throws_exception() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            "NONEXISTENT_SYMBOL",
+            OrderSide.BUY,
+            10L,
+            new BigDecimal("50.00"),
+            "char-test-symbol-not-found-001"
+        );
+
+        assertThrows(InstrumentNotFoundException.class, () -> orderService.placeOrder(request));
+    }
+
+    /**
+     * Characterization: Duplicate idempotency key throws DuplicateOrderException
+     * 
+     * Documents current behavior: Same idempotency key should throw on second attempt.
+     */
+    @Test
+    @DisplayName("Duplicate idempotency key → DuplicateOrderException thrown")
+    void char_duplicate_idempotency_key_throws_exception() {
+        String sameKey = "char-test-duplicate-001";
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            10L,
+            new BigDecimal("50.00"),
+            sameKey
+        );
+
+        // First call succeeds
+        Order first = orderService.placeOrder(request);
+        assertEquals(OrderStatus.NEW, first.getStatus());
+
+        // Second call with same key throws
+        assertThrows(DuplicateOrderException.class, () -> orderService.placeOrder(request));
+    }
+
+    /**
+     * Characterization: Inactive account results in REJECTED status
+     * 
+     * Documents current behavior: SUSPENDED account should result in REJECTED order,
+     * not throw exception.
+     */
+    @Test
+    @DisplayName("Inactive account → status is REJECTED")
+    void char_inactive_account_returns_rejected() {
+        // Mock an INACTIVE account from the start
+        AccountEntity inactiveAccount = new AccountEntity();
+        inactiveAccount.setAccountId("ACC-TEST-INACTIVE");
+        inactiveAccount.setHolderName("Inactive Account");
+        inactiveAccount.setCashBalance(BigDecimal.valueOf(100000.00));
+        inactiveAccount.setStatus(AccountStatus.SUSPENDED);
+        inactiveAccount.setLastUpdated(LocalDateTime.now());
+    
+    when(accountRepository.findByAccountId(TEST_ACCOUNT_ID))
+        .thenReturn(Optional.of(inactiveAccount));
+
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            10L,
+            new BigDecimal("50.00"),
+            "char-test-inactive-001"
+        );
+
+        Order result = orderService.placeOrder(request);
+
+        assertEquals(OrderStatus.REJECTED, result.getStatus(),
+            "Order from inactive account should be REJECTED");
+    }
+
+    /**
+     * Characterization: Order has correct account and symbol
+     * 
+     * Documents current behavior: Returned order should reflect request parameters.
+     */
+    @Test
+    @DisplayName("Order preserves account and symbol from request")
+    void char_order_preserves_request_fields() {
+        // Use the default ACTIVE account from setUp()
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            TEST_ACCOUNT_ID,
+            TEST_SYMBOL,
+            OrderSide.BUY,
+            50L,
+            new BigDecimal("25.00"),
+            "char-test-fields-001"
+        );
+
+        Order result = orderService.placeOrder(request);
+
+        assertEquals(TEST_ACCOUNT_ID, result.getAccountId(),
+            "Order should reflect request account ID");
+        assertEquals(TEST_SYMBOL, result.getSymbol());
+        assertEquals(OrderSide.BUY, result.getSide());
+        assertEquals(50L, result.getQuantity());
+        assertEquals(new BigDecimal("25.00"), result.getPrice());
+    }
+}

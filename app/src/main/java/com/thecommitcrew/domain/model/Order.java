@@ -5,10 +5,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
+import com.thecommitcrew.domain.exception.NegativePriceException;
 
 public class Order {
     private final UUID id;
-    private final Long accountId;
+    private final String accountId;
     private final String symbol;
     private final OrderSide side;
     private final long quantity;
@@ -17,9 +18,9 @@ public class Order {
     private final LocalDateTime createdOn;
     private final String idempotencyKey;
 
-    public Order(UUID id, Long accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
+    public Order(UUID id, String accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
         this.id = validateNotNull(id, "Order ID cannot be null");
-        this.accountId = validateNotNull(accountId, "Account ID cannot be null");
+        this.accountId = validateNotBlank(accountId, "Account ID cannot be blank");
         this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
         this.side = validateNotNull(side, "Order side cannot be null");
         this.quantity = validatePositive(quantity, "Quantity must be positive");
@@ -33,7 +34,7 @@ public class Order {
         return id;
     }
 
-    public Long getAccountId() {
+    public String getAccountId() {
         return accountId;
     }
 
@@ -84,12 +85,14 @@ public class Order {
         return value;
     }
 
-    private static BigDecimal validatePriceNotNull(BigDecimal value, String message) {
-        if (value == null) throw new IllegalArgumentException(message);
-        if (value.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Price must be positive");
+    private static BigDecimal validatePriceNotNull(BigDecimal price, String message) {
+        if (price == null) {
+            throw new IllegalArgumentException(message);
         }
-        return value;
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NegativePriceException("Price must be positive");
+        }
+        return price;
     }
 
 }

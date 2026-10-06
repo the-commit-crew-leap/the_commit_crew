@@ -15,6 +15,7 @@ import com.thecommitcrew.domain.exception.InsufficientFundsException;
 import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
+import com.thecommitcrew.domain.exception.PriceNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleInstrumentNotFound(InstrumentNotFoundException e) {
         ErrorResponseDTO error = new ErrorResponseDTO("INSTRUMENT_NOT_FOUND", e.getMessage());
+        return ResponseEntity.status(404).body(error);
+    }
+
+    @ExceptionHandler(PriceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handlePriceNotFound(PriceNotFoundException e) {
+        ErrorResponseDTO error = new ErrorResponseDTO("PRICE_NOT_FOUND", e.getMessage());
         return ResponseEntity.status(404).body(error);
     }
 

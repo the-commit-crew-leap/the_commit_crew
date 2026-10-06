@@ -60,6 +60,37 @@ prod:
 docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres -d the-commit-crew-prod -c "\dt"
 ```
 You should see the list of tables for each database.
+
+## Using auth:
+
+After running the app, run this command to get a JWT token:
+```bash 
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser"}'
+```
+Copy the token and navigate to swagger:
+
+[Swagger UI](http://localhost:8081/swagger-ui/index.html#/)
+
+Click the green Authorize button and paste your JWT token.
+
+## SonarCube
+
+```bash
+# on the Linux VM
+docker run -d --name sonarqube -p 8085:9000 sonarqube:community
+
+# check status
+curl -s http://localhost:8085/api/system/status
+
+# run SonarCube
+mvn sonar:sonar "-Dsonar.host.url=http://10.9.75.153:8085" "-Dsonar.token=<sonar-token>" "-Dsonar.qualitygate.wait=true"
+```
+
+## Docker down
+```bash
+docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
 ```
 
 ## Coding Conventions
@@ -88,3 +119,26 @@ You should see the list of tables for each database.
 ## Jira backlog:
 
 [The Commit Crew](https://thecommitcrew.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
+
+## Sonar:
+```bash
+mvn sonar:sonar "-Dsonar.host.url=http://localhost:8082" "-Dsonar.token=<your-sonar-token>" "-Dsonar.qualitygate.wait=true"
+```
+
+## TEMP post order curl:
+
+TOKEN=$(curl -s -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser"}' | jq -r '.token')
+
+curl -X POST http://localhost:8081/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "accountId": 1,
+    "symbol": "AAPL",
+    "side": "BUY",
+    "quantity": 2,
+    "price": 25.00,
+    "idempotencyKey": "order-001-kafka"
+  }'

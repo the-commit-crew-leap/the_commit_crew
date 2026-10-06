@@ -1,6 +1,6 @@
 package com.thecommitcrew.service;
 
-import java.util.*;
+import java.util.List;
 import com.thecommitcrew.persistence.repository.AccountRepository;
 import com.thecommitcrew.domain.model.Order;
 import org.springframework.stereotype.Service;
@@ -27,23 +27,23 @@ public class AccountService {
         this.accountMapper = accountMapper;
     }
 
-    public Account getAccount(Long accountId) {
-        return accountRepository.findById(accountId)
+    public Account getAccount(String accountId) {
+        return accountRepository.findByAccountId(accountId)
             .map(accountMapper::toDomain)
             .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountId));
     }
 
-    public List<Position> getPositions(Long accountId) {
+    public List<Position> getPositions(String accountId) {
         getAccount(accountId); // Validate account exists
         return positionMapper.findByAccountId(accountId);
     }
 
-    public List<Order> getOrders(Long accountId) {
+    public List<Order> getOrders(String accountId) {
         getAccount(accountId); // Validate account exists
         return orderMapper.findByAccountId(accountId);
     }
 
-    public Money getBalance(Long accountId) {
+    public Money getBalance(String accountId) {
         return getAccount(accountId).getCashBalance();
     }
     

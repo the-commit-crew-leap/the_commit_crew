@@ -11,7 +11,10 @@ import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.AccountService;
+import com.thecommitcrew.service.PositionService;
+import com.thecommitcrew.service.PriceService;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -20,16 +23,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController 
-@RequestMapping("/accounts") 
+@RequestMapping("/accounts/{id}") 
 public class AccountController {
     private final AccountService accountService;
+    private final PriceService priceService;
+    private final PositionService positionService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService) {
         this.accountService = accountService;
+        this.priceService = priceService;
+        this.positionService = positionService;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") Long accountId) {
+    @GetMapping
+    public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") String accountId) {
         Account account = accountService.getAccount(accountId);
         AccountResponseDTO response = new AccountResponseDTO(
             account.getAccountId(),
@@ -39,31 +46,39 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/balance")
-    public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") Long accountId) {
+    @GetMapping("/balance")
+    public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") String accountId) {
         Money balance = accountService.getBalance(accountId);
         BalanceResponseDTO response = new BalanceResponseDTO(accountId, balance);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/positions")
-    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") Long accountId) {
+    @GetMapping("/positions")
+    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") String accountId) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
-            .map(pos -> new PositionResponseDTO(
-                pos.getSymbol(),
-                pos.getQuantity(),
-                pos.getAverageCost(),
-                null,
-                null,
-                null
-            ))
+            .map(pos -> {
+                BigDecimal currentPrice = priceService.getCurrentPrice(pos.getSymbol());
+                BigDecimal marketValue = positionService.marketValue(pos, currentPrice);
+                BigDecimal unrealizedPnL = positionService.unrealizedProfitLoss(pos, currentPrice);
+                BigDecimal unrealizedPnLPercent = positionService.unrealizedPnLPercent(pos, currentPrice);
+                
+                return new PositionResponseDTO(
+                    pos.getSymbol(),
+                    pos.getQuantity(),
+                    pos.getAverageCost(),
+                    currentPrice,
+                    marketValue,
+                    unrealizedPnL,
+                    unrealizedPnLPercent
+                );
+            })
             .toList();
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/orders")
-    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") Long accountId) {
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") String accountId) {
         List<Order> orders = accountService.getOrders(accountId);
         List<OrderResponseDTO> response = orders.stream()
             .map(order -> new OrderResponseDTO(

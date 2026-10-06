@@ -1,6 +1,7 @@
 package com.thecommitcrew.domain.dto;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.math.BigDecimal;
 
@@ -21,7 +22,7 @@ import org.junit.jupiter.api.Nested;
 * Using Validator instance since this class has annotations
 * Validator checks that the validation rules work correctly
 */
-public class PlaceOrderRequestValidationTest {
+class PlaceOrderRequestValidationTest {
     
     private Validator validator;
     
@@ -34,7 +35,7 @@ public class PlaceOrderRequestValidationTest {
     @Test
     void testValidPlaceOrderRequest() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             OrderSide.BUY,
             100L,
@@ -54,7 +55,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test null symbol")
         void testSymbolCannotBeNull() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 null,
                 OrderSide.BUY,
                 100L,
@@ -70,7 +71,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test empty symbol")
         void testSymbolCannotBeBlank() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "   ",
                 OrderSide.BUY,
                 100L,
@@ -87,7 +88,7 @@ public class PlaceOrderRequestValidationTest {
     @DisplayName("Test null side")
     void testSideCannotBeNull() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             null,
             100L,
@@ -107,7 +108,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test zero quantity")
         void testQuantityCannotBeZero() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 0L,
@@ -123,7 +124,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test negative quantity")
         void testQuantityMustBePositive() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 -5L,
@@ -144,7 +145,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test null price")
         void testPriceCannotBeNull() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -160,7 +161,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test zero price")
         void testPriceMustBePositive() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -181,7 +182,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test blank idempotency key")
         void testIdempotencyKeyCannotBeBlank() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -197,7 +198,7 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test valid idempotency key")
         void testValidIdempotencyKey() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,

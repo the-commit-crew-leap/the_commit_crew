@@ -1,8 +1,35 @@
+-- Auto-generated from ticker_metadata.csv
+-- Do not edit manually; regenerate with: python python/generate_instruments_seed.py
+
 INSERT INTO instruments (symbol, name, asset_class, currency, tradable) VALUES
-    ('AAPL', 'Apple Inc.', 'EQUITY', 'USD', TRUE),
-    ('MSFT', 'Microsoft Corporation', 'EQUITY', 'USD', TRUE),
-    ('GOOGL', 'Alphabet Inc.', 'EQUITY', 'USD', TRUE),
-    ('US10Y', 'US Treasury 10-Year Note', 'BOND', 'USD', TRUE),
-    ('VFIAX', 'Vanguard 500 Index Fund', 'FUND', 'USD', TRUE),
-    ('CASH-USD', 'US Dollar Cash', 'CASH', 'USD', FALSE)
+    ('AAPL', 'Apple Inc.', 'EQUITY', 'USD', true),
+    ('AMZN', 'Amazon.com, Inc.', 'EQUITY', 'USD', true),
+    ('BABA', 'Alibaba Group Holding Limited', 'EQUITY', 'USD', true),
+    ('DIA', 'State Street SPDR Dow Jones Industrial Average ETF Trust', 'FUND', 'USD', true),
+    ('GOOGL', 'Alphabet Inc.', 'EQUITY', 'USD', true),
+    ('HYG', 'iShares iBoxx $ High Yield Corporate Bond ETF', 'BOND', 'USD', true),
+    ('IEF', 'iShares 7-10 Year Treasury Bond ETF', 'BOND', 'USD', true),
+    ('IEI', 'iShares 3-7 Year Treasury Bond ETF', 'BOND', 'USD', true),
+    ('IWM', 'iShares Russell 2000 ETF', 'FUND', 'USD', true),
+    ('LQD', 'iShares iBoxx $ Investment Grade Corporate Bond ETF', 'BOND', 'USD', true),
+    ('META', 'Meta Platforms, Inc.', 'EQUITY', 'USD', true),
+    ('MSFT', 'Microsoft Corporation', 'EQUITY', 'USD', true),
+    ('MUB', 'iShares National Muni Bond ETF', 'BOND', 'USD', true),
+    ('NFLX', 'Netflix, Inc.', 'EQUITY', 'USD', true),
+    ('NVDA', 'NVIDIA Corporation', 'EQUITY', 'USD', true),
+    ('QQQ', 'Invesco QQQ Trust', 'FUND', 'USD', true),
+    ('SHY', 'iShares 1-3 Year Treasury Bond ETF', 'BOND', 'USD', true),
+    ('SPY', 'State Street SPDR S&P 500 ETF Trust', 'FUND', 'USD', true),
+    ('TIP', 'iShares TIPS Bond ETF', 'BOND', 'USD', true),
+    ('TLH', 'iShares 10-20 Year Treasury Bond ETF', 'BOND', 'USD', true),
+    ('TLT', 'iShares 20+ Year Treasury Bond ETF', 'BOND', 'USD', true),
+    ('TSLA', 'Tesla, Inc.', 'EQUITY', 'USD', true),
+    ('TTWO', 'Take-Two Interactive Software, Inc.', 'EQUITY', 'USD', true),
+    ('VGIT', 'Vanguard Intermediate-Term Treasury Index Fund ETF Shares', 'BOND', 'USD', true),
+    ('VNQ', 'Vanguard Real Estate Index Fund ETF Shares', 'FUND', 'USD', true),
+    ('VTI', 'Vanguard Morningstar Total Stock Market ETF', 'FUND', 'USD', true),
+    ('XLE', 'State Street Energy Select Sector SPDR ETF', 'FUND', 'USD', true),
+    ('XLF', 'State Street Financial Select Sector SPDR ETF', 'FUND', 'USD', true),
+    ('XLK', 'State Street Technology Select Sector SPDR ETF', 'FUND', 'USD', true),
+    ('XLV', 'State Street Health Care Select Sector SPDR ETF', 'FUND', 'USD', true)
 ON CONFLICT (symbol) DO NOTHING;

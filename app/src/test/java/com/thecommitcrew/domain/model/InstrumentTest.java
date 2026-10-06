@@ -15,13 +15,17 @@ import com.thecommitcrew.domain.validator.InstrumentSymbolValidator;
 import com.thecommitcrew.persistence.entity.InstrumentEntity;
 import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
-public class InstrumentTest {
+class InstrumentTest {
 
     @Mock
     private InstrumentRepository instrumentRepository;
@@ -30,7 +34,7 @@ public class InstrumentTest {
     private InstrumentSymbolValidator validator;
     
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         validator = new BasicInstrumentSymbolValidator(instrumentRepository);
 
         // Mock valid symbol
@@ -41,7 +45,7 @@ public class InstrumentTest {
     }
     
     @Test
-    public void testConstructor() {
+    void testConstructor() {
         assertNotNull(instrument);
         assertEquals("1", instrument.getId());
         assertEquals("AAPL", instrument.getSymbol());
@@ -57,42 +61,32 @@ public class InstrumentTest {
 
         @Test
         @DisplayName("Testing null id")
-        public void testConstructor_NullId() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new Instrument(null, "AAPL", "Apple Inc.", AssetClass.EQUITY, true, validator);
-            });
+        void testConstructor_NullId() {
+            assertThrows(IllegalArgumentException.class, () -> new Instrument(null, "AAPL", "Apple Inc.", AssetClass.EQUITY, true, validator));
         }
         
         @Test
         @DisplayName("Testing null name")
-        public void testConstructor_NullName() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new Instrument("1", "AAPL", null, AssetClass.EQUITY, true, validator);
-            });
+        void testConstructor_NullName() {
+            assertThrows(IllegalArgumentException.class, () -> new Instrument("1", "AAPL", null, AssetClass.EQUITY, true, validator));
         }
         
         @Test
         @DisplayName("Testing null asset class")
-        public void testConstructor_NullAssetClass() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new Instrument("1", "AAPL", "Apple Inc.", null, true, validator);
-            });
+        void testConstructor_NullAssetClass() {
+            assertThrows(IllegalArgumentException.class, () -> new Instrument("1", "AAPL", "Apple Inc.", null, true, validator));
         }
         
         @Test
         @DisplayName("Testing null validator")
-        public void testConstructor_NullValidator() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                new Instrument("1", "AAPL", "Apple Inc.", AssetClass.EQUITY, true, null);
-            });
+        void testConstructor_NullValidator() {
+            assertThrows(IllegalArgumentException.class, () -> new Instrument("1", "AAPL", "Apple Inc.", AssetClass.EQUITY, true, null));
         }
 
         @Test
         @DisplayName("Testing invalid symbol")
-        public void testConstructor_InvalidSymbol() {
-            assertThrows(InstrumentNotFoundException.class, () -> {
-                new Instrument("1", "INVALID_SYMBOL", "Apple Inc.", AssetClass.EQUITY, true, validator);
-            });
+        void testConstructor_InvalidSymbol() {
+            assertThrows(InstrumentNotFoundException.class, () -> new Instrument("1", "INVALID_SYMBOL", "Apple Inc.", AssetClass.EQUITY, true, validator));
         }
     }
     
@@ -101,44 +95,44 @@ public class InstrumentTest {
     class testingGetters {
 
         @Test
-        public void testGetId() {
+    void testGetId() {
             assertEquals("1", instrument.getId());
         }
         
         @Test
-        public void testGetSymbol() {
+    void testGetSymbol() {
             assertEquals("AAPL", instrument.getSymbol());
         }
         
         @Test
-        public void testGetName() {
+    void testGetName() {
             assertEquals("Apple Inc.", instrument.getName());
         }
         
         @Test
-        public void testGetAssetClass() {
+    void testGetAssetClass() {
             assertEquals(AssetClass.EQUITY, instrument.getAssetClass());
         }
         
         @Test
-        public void testGetCurrency() {
+    void testGetCurrency() {
             assertEquals("USD", instrument.getCurrency());
         }
         
         @Test
-        public void testIsTradableTrue() {
+        void testIsTradableTrue() {
             assertTrue(instrument.isTradable());
         }
         
         @Test
-        public void testIsTradableFalse() {
+        void testIsTradableFalse() {
             Instrument nonTradable = new Instrument("2", "AAPL", "Apple Inc.", AssetClass.EQUITY, false, validator);
             assertFalse(nonTradable.isTradable());
         }
     }
     
     @Test
-    public void testImmutability() {
+    void testImmutability() {
         // Since fields are final, attempting to change them should not be possible
         // This test verifies the object remains unchanged after creation
         String originalSymbol = instrument.getSymbol();

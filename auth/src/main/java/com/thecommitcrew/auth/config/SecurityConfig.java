@@ -23,6 +23,12 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthEntryPointJwt authEntryPointJwt;
     
+    /**
+     * Toggle to enable/disable JWT authentication.
+     * When true: All endpoints except /api/auth/** and /actuator/health require a valid JWT token.
+     * When false: All endpoints are publicly accessible (for development/testing).
+     * Controlled via application.properties: auth.enabled=true|false
+     */
     @Value("${auth.enabled:true}")
     private boolean authEnabled;
 
@@ -34,8 +40,12 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("java:S5123")  // CSRF disabled for stateless JWT API (see comment below)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         logger.info("SecurityConfig: authEnabled = {}", authEnabled);
+        // CSRF is disabled because this is a stateless JWT API.
+        // CSRF tokens are only relevant for session-based authentication with cookies.
+        // JWT tokens are transmitted in headers and are not vulnerable to CSRF attacks.
         var authConfig = http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -44,7 +54,15 @@ public class SecurityConfig {
             authConfig
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authEntryPointJwt))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        .requestMatchers(
+                            "/api/auth/**",
+                            "/actuator/health",
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/v3/api-docs",
+                            "/v3/api-docs/**",
+                            "/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

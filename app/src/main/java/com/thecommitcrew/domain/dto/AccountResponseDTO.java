@@ -5,7 +5,7 @@ import com.thecommitcrew.domain.model.Money;
 
 public record AccountResponseDTO (
 
-    Long accountId,
+    String accountId,
     AccountStatus status,
     Money cashBalance
 

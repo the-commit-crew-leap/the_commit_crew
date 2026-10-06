@@ -35,6 +35,7 @@ import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.DuplicateOrderException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.OrderService;
+import com.thecommitcrew.messaging.OrderEventPublisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -53,7 +54,7 @@ import java.util.UUID;
 @SuppressWarnings("null")
 class OrderControllerTest {
 
-    private static final Long ACCOUNT_ID = 1L;
+    private static final String ACCOUNT_ID = "ACC-1001";
     private static final String SYMBOL = "AAPL";
     private static final long QUANTITY = 100L;
     private static final String PRICE = "150.00";
@@ -69,6 +70,9 @@ class OrderControllerTest {
     
     @MockBean
     private OrderService orderService;
+    
+    @MockBean
+    private OrderEventPublisher orderEventPublisher;
 
     @MockBean 
     private JwtTokenProvider jwtTokenProvider;

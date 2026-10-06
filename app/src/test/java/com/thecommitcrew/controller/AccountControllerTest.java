@@ -1,8 +1,10 @@
 package com.thecommitcrew.controller;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +33,8 @@ import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.service.AccountService;
+import com.thecommitcrew.service.PositionService;
+import com.thecommitcrew.service.PriceService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,7 +45,7 @@ import java.util.UUID;
 @Import(AccountControllerTest.TestSecurityConfig.class)
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
-public class AccountControllerTest {
+class AccountControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,10 +53,16 @@ public class AccountControllerTest {
     @MockBean
     private AccountService accountService;
 
+    @MockBean
+    private PriceService priceService;
+
+    @MockBean
+    private PositionService positionService;
+
     @MockBean 
     private JwtTokenProvider jwtTokenProvider;
 
-    private static final Long TEST_ACCOUNT_ID = 1L;
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_ACCOUNT_HOLDER = "John Doe";
 
     private Account testAccount;
@@ -140,22 +150,49 @@ public class AccountControllerTest {
     class GetAccountPositionsEndpoint {
         @BeforeEach
         void setup() {
-            reset(accountService);
+            reset(accountService, priceService, positionService);
         }
 
         @Test
-        @DisplayName("Returns positions successfully when account found")
-        void returnsPositionsWhenAccountFound() throws Exception {
+        @DisplayName("Returns positions with price and PnL data when account found")
+        void returnsPositionsWithPriceAndPnLWhenAccountFound() throws Exception {
             Position position = new Position(TEST_ACCOUNT_ID, "AAPL", 100L, new BigDecimal("150.00"));
             List<Position> positions = List.of(position);
 
+            BigDecimal currentPrice = new BigDecimal("195.50");
+            BigDecimal marketValue = new BigDecimal("19550.00");
+            BigDecimal unrealizedPnL = new BigDecimal("4550.00");
+            BigDecimal unrealizedPnLPercent = new BigDecimal("30.3333");
+
             when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(positions);
+            when(priceService.getCurrentPrice("AAPL")).thenReturn(currentPrice);
+            when(positionService.marketValue(position, currentPrice)).thenReturn(marketValue);
+            when(positionService.unrealizedProfitLoss(position, currentPrice)).thenReturn(unrealizedPnL);
+            when(positionService.unrealizedPnLPercent(position, currentPrice)).thenReturn(unrealizedPnLPercent);
 
             mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value("AAPL"))
                 .andExpect(jsonPath("$[0].quantity").value(100))
-                .andExpect(jsonPath("$[0].averageCost").value("150.0"));
+                .andExpect(jsonPath("$[0].averageCost").value("150.0"))
+                .andExpect(jsonPath("$[0].currentPrice").value("195.5"))
+                .andExpect(jsonPath("$[0].marketValue").value("19550.0"))
+                .andExpect(jsonPath("$[0].unrealizedPnL").value("4550.0"))
+                .andExpect(jsonPath("$[0].unrealizedPnLPercent").value("30.3333"));
+        }
+
+        @Test
+        @DisplayName("Returns 404 when price not found for symbol")
+        void returns404WhenPriceNotFound() throws Exception {
+            Position position = new Position(TEST_ACCOUNT_ID, "UNKNOWN", 100L, new BigDecimal("150.00"));
+            List<Position> positions = List.of(position);
+
+            when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(positions);
+            when(priceService.getCurrentPrice("UNKNOWN"))
+                .thenThrow(new com.thecommitcrew.domain.exception.PriceNotFoundException("No price found for symbol: UNKNOWN"));
+
+            mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
+                .andExpect(status().isNotFound());
         }
 
         @Test

@@ -10,6 +10,10 @@ import com.thecommitcrew.persistence.mapper.InstrumentMapper;
 import com.thecommitcrew.persistence.mapper.OrderMapper;
 import com.thecommitcrew.persistence.mapper.PositionMapper;
 import com.thecommitcrew.persistence.repository.AccountRepository;
+import com.thecommitcrew.messaging.OrderEventPublisher;
+import com.thecommitcrew.application.OrderSettlementService;
+import com.thecommitcrew.messaging.ExecutionListener;
+import com.thecommitcrew.messaging.PendingOrderRepublisher;
 import com.thecommitcrew.auth.JwtTokenProvider;
 
 @SpringBootTest()
@@ -32,6 +36,18 @@ class MainTests {
   
   @MockBean
   private InstrumentMapper instrumentMapper;
+
+  @MockBean
+  private OrderEventPublisher orderEventPublisher;
+
+  @MockBean
+  private OrderSettlementService orderSettlementService;
+
+  @MockBean
+  private ExecutionListener executionListener;
+
+  @MockBean
+  private PendingOrderRepublisher pendingOrderRepublisher;
 
   @MockBean
   private JwtTokenProvider jwtTokenProvider;

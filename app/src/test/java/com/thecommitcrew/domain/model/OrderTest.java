@@ -14,11 +14,12 @@ import org.junit.jupiter.api.Test;
 
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
+import com.thecommitcrew.domain.exception.NegativePriceException;
 
-public class OrderTest {
+class OrderTest {
 
     private UUID validId;
-    private Long validAccountId;
+    private String validAccountId;
     private String validSymbol;
     private OrderSide validSide;
     private long validQuantity;
@@ -28,10 +29,12 @@ public class OrderTest {
     private String validIdempotencyKey;
     private Order order;
 
+    private static final BigDecimal NEGATIVE_PRICE = new BigDecimal("-50.00");
+
     @BeforeEach
     void setUp() {
         validId = UUID.randomUUID();
-        validAccountId = 123L;
+        validAccountId = "ACC-1001";
         validSymbol = "AAPL";
         validSide = OrderSide.BUY;
         validQuantity = 100L;
@@ -131,7 +134,7 @@ public class OrderTest {
         @Test
         @DisplayName("Should throw when price is zero")
         void shouldThrowWhenPriceIsZero() {
-            assertThrows(IllegalArgumentException.class, () -> new Order(
+            assertThrows(NegativePriceException.class, () -> new Order(
                 validId, validAccountId, validSymbol, validSide,
                 validQuantity, BigDecimal.ZERO, validStatus, validCreatedOn, validIdempotencyKey
             ));
@@ -140,9 +143,9 @@ public class OrderTest {
         @Test
         @DisplayName("Should throw when price is negative")
         void shouldThrowWhenPriceIsNegative() {
-            assertThrows(IllegalArgumentException.class, () -> new Order(
+            assertThrows(NegativePriceException.class, () -> new Order(
                 validId, validAccountId, validSymbol, validSide,
-                validQuantity, new BigDecimal("-50.00"), validStatus, validCreatedOn, validIdempotencyKey
+                validQuantity, NEGATIVE_PRICE, validStatus, validCreatedOn, validIdempotencyKey
             ));
         }
 

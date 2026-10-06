@@ -1,7 +1,9 @@
 package com.thecommitcrew.persistence.mapper;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
@@ -22,7 +24,7 @@ import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("InstrumentMapper Tests")
-public class InstrumentMapperTest {
+class InstrumentMapperTest {
 
     @Mock
     private InstrumentRepository instrumentRepository;

@@ -4,13 +4,13 @@ import java.util.Objects;
 
 public class Money {
     private final BigDecimal amount;
-    private final String currency = "USD";
+    private static final String CURRENCY = "USD";
 
     /**
      * Constructs a new Money instance with the specified amount and currency.
      *
      * @param amount   the monetary amount, must be non-negative
-     * @param currency the currency code, cannot be null or blank
+     * @param CURRENCY the currency code, cannot be null or blank
      * @throws IllegalArgumentException if the amount is negative or the currency is null/blank
      */
     public Money(BigDecimal amount) {
@@ -28,7 +28,6 @@ public class Money {
      * @throws IllegalArgumentException if the currencies do not match
      */
     public Money add(Money other) {
-        validateSameCurrency(other);
         return new Money(this.amount.add(other.amount));
     }
 
@@ -40,7 +39,6 @@ public class Money {
      * @throws IllegalArgumentException if the currencies do not match or if the other amount is greater than this amount
      */
     public Money subtract(Money other) {
-        validateSameCurrency(other);
         if (other.amount.compareTo(this.amount) > 0) {
             throw new IllegalArgumentException("Insufficient funds");
         }
@@ -71,14 +69,7 @@ public class Money {
      * @return the currency as a String
      */
     public String getCurrency() {
-        return currency;
-    }
-
-    private void validateSameCurrency(Money other) {
-        if (!this.currency.equals(other.currency)) {
-            throw new IllegalArgumentException(
-                String.format("Currency mismatch: %s vs %s", this.currency, other.currency));
-        }
+        return CURRENCY;
     }
 
     @Override
@@ -86,16 +77,16 @@ public class Money {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Money money = (Money) o;
-        return Objects.equals(amount, money.amount) && Objects.equals(currency, money.currency);
+        return Objects.equals(amount, money.amount) && Objects.equals(CURRENCY, Money.CURRENCY);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(amount, currency);
+        return Objects.hash(amount, CURRENCY);
     }
 
     @Override
     public String toString() {
-        return amount + " " + currency;
+        return amount + " " + CURRENCY;
     }
 }

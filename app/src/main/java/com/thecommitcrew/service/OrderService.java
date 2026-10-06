@@ -3,16 +3,12 @@ package com.thecommitcrew.service;
 import com.thecommitcrew.domain.dto.PlaceOrderRequestDTO;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
-import com.thecommitcrew.domain.exception.AccountNotActiveException;
 import com.thecommitcrew.domain.exception.AccountNotFoundException;
 import com.thecommitcrew.domain.exception.DuplicateOrderException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
-import com.thecommitcrew.domain.exception.InsufficientFundsException;
-import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.model.Account;
 import com.thecommitcrew.domain.model.Instrument;
-import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.persistence.repository.AccountRepository;
@@ -23,7 +19,7 @@ import com.thecommitcrew.persistence.mapper.OrderMapper;
 import com.thecommitcrew.persistence.mapper.PositionMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.time.ZoneId;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,19 +36,16 @@ public class OrderService {
     private final InstrumentRepository instrumentRepository;
     private final AccountMapper accountMapper;
     private final InstrumentMapper instrumentMapper;
-    private final PositionService positionService;
 
     public OrderService(OrderMapper orderMapper, AccountRepository accountRepository,
                         PositionMapper positionMapper, InstrumentRepository instrumentRepository,
-                        AccountMapper accountMapper, InstrumentMapper instrumentMapper,
-                        PositionService positionService) {
+                        AccountMapper accountMapper, InstrumentMapper instrumentMapper) {
         this.orderMapper = orderMapper;
         this.accountRepository = accountRepository;
         this.positionMapper = positionMapper;
         this.instrumentRepository = instrumentRepository;
         this.accountMapper = accountMapper;
         this.instrumentMapper = instrumentMapper;
-        this.positionService = positionService;
     }
 
     @Transactional
@@ -68,7 +61,7 @@ public class OrderService {
             request.quantity(),
             request.price(),
             OrderStatus.NEW,
-            LocalDateTime.now(),
+            LocalDateTime.now(ZoneId.of("UTC")),
             request.idempotencyKey()
         );
 
@@ -84,9 +77,6 @@ public class OrderService {
         order.setStatus(status);
 
         orderMapper.save(order);
-        if (order.getStatus() == OrderStatus.NEW) {
-            executeLoadedOrder(order);
-        }
         return order;
     }
 
@@ -110,14 +100,9 @@ public class OrderService {
             request.quantity(),
             request.price(),
             OrderStatus.NEW,
-            LocalDateTime.now(),
+            LocalDateTime.now(ZoneId.of("UTC")),
             request.idempotencyKey()
         ));
-    }
-
-    @Transactional
-    public void executeOrder(UUID orderId) {
-        executeLoadedOrder(getOrder(orderId));
     }
 
     private void validateOrder(Order order) {
@@ -131,7 +116,8 @@ public class OrderService {
                 "Instrument not found for symbol: " + order.getSymbol()
         ));
 
-        if (!instrument.isTradable()) {
+        boolean tradable = instrument.isTradable();
+        if (!tradable) {
             throw new IllegalStateException("Instrument is not tradable: " + order.getSymbol());
         }
 
@@ -142,57 +128,6 @@ public class OrderService {
                 "Duplicate order detected for idempotency key: " + order.getIdempotencyKey()
             );
         }
-    }
-
-    private void executeLoadedOrder(Order order) {
-        if (order.getStatus() != OrderStatus.NEW) {
-            throw new IllegalStateException("Only NEW orders can be executed");
-        }
-
-        Account account = getAccount(order.getAccountId());
-        if (!account.isActive()) {
-            throw new AccountNotActiveException("Account is not active: " + order.getAccountId());
-        }
-
-        Optional<Position> existingPosition = positionMapper.findByAccountIdAndSymbol(
-            order.getAccountId(),
-            order.getSymbol()
-        );
-        long availableHoldings = existingPosition.map(Position::getQuantity).orElse(ZERO_QUANTITY);
-        BigDecimal tradeValue = calculateTradeValue(order.getQuantity(), order.getPrice());
-
-        if (order.getSide() == OrderSide.SELL && order.getQuantity() > availableHoldings) {
-            throw new InsufficientHoldingsException(
-                "Insufficient holdings to sell " + order.getQuantity() + " shares of " + order.getSymbol()
-            );
-        }
-
-        if (order.getSide() == OrderSide.BUY && tradeValue.compareTo(account.getCashBalance().getAmount()) > 0) {
-            throw new InsufficientFundsException(
-                "Insufficient funds to buy " + order.getQuantity() + " shares of " + order.getSymbol()
-            );
-        }
-
-        Money tradeAmount = new Money(tradeValue);
-        Account updatedAccount = order.getSide() == OrderSide.BUY
-            ? account.debit(tradeAmount)
-            : account.credit(tradeAmount);
-        com.thecommitcrew.persistence.entity.AccountEntity accountEntity = accountRepository.findById(order.getAccountId())
-            .orElseThrow(() -> new AccountNotFoundException("Account not found: " + order.getAccountId()));
-        accountEntity.setCashBalance(updatedAccount.getCashBalance().getAmount());
-        accountRepository.save(accountEntity);
-
-        Position basePosition = existingPosition.orElseGet(() -> new Position(
-            order.getAccountId(),
-            order.getSymbol(),
-            ZERO_QUANTITY,
-            BigDecimal.ZERO
-        ));
-        Position updatedPosition = positionService.applyOrder(basePosition, order);
-        positionMapper.save(updatedPosition);
-
-        order.setStatus(OrderStatus.FILLED);
-        orderMapper.save(order);
     }
 
     private OrderStatus determineStatus(Account account, OrderSide side, long quantity, BigDecimal price,
@@ -210,8 +145,8 @@ public class OrderService {
         return OrderStatus.NEW;
     }
 
-    private Account getAccount(Long accountId) {
-        return accountRepository.findById(accountId)
+    private Account getAccount(String accountId) {
+        return accountRepository.findByAccountId(accountId)
             .map(accountMapper::toDomain)
             .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountId));
     }
@@ -221,7 +156,7 @@ public class OrderService {
             .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
     }
 
-    private long getAvailableHoldings(Long accountId, String symbol) {
+    private long getAvailableHoldings(String accountId, String symbol) {
         return positionMapper.findByAccountIdAndSymbol(accountId, symbol)
             .map(Position::getQuantity)
             .orElse(ZERO_QUANTITY);
