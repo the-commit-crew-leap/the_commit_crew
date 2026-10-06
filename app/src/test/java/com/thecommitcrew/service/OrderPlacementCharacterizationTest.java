@@ -78,7 +78,7 @@ class OrderPlacementCharacterizationTest {
     private List<Order> savedOrders;
 
     // Test data constants
-    private static final long TEST_ACCOUNT_ID = 1L;  // Existing account in database
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";  // Existing account in database
     private static final String TEST_SYMBOL = "AAPL";
 
 
@@ -96,9 +96,9 @@ class OrderPlacementCharacterizationTest {
         testAccount.setStatus(AccountStatus.ACTIVE);
         testAccount.setLastUpdated(LocalDateTime.now());
         
-        lenient().when(accountRepository.findById(TEST_ACCOUNT_ID))
+        lenient().when(accountRepository.findByAccountId(TEST_ACCOUNT_ID))
         .thenReturn(Optional.of(testAccount));
-        lenient().when(accountRepository.findById(999999L))
+        lenient().when(accountRepository.findByAccountId("ACC-1010"))
             .thenReturn(Optional.empty());
         
         // Mock InstrumentRepository.findBySymbol
@@ -115,7 +115,7 @@ class OrderPlacementCharacterizationTest {
             .thenReturn(Optional.empty());
 
         // Mock PositionMapper to return empty (no existing position)
-        lenient().when(positionMapper.findByAccountIdAndSymbol(anyLong(), anyString()))
+        lenient().when(positionMapper.findByAccountIdAndSymbol(anyString(), anyString()))
             .thenReturn(Optional.empty());
 
         // Mock OrderMapper: track saved orders and return them on findByAccountId
@@ -125,9 +125,9 @@ class OrderPlacementCharacterizationTest {
             return null;
         }).when(orderMapper).save(any(Order.class));
         
-        lenient().when(orderMapper.findByAccountId(anyLong()))
+        lenient().when(orderMapper.findByAccountId(anyString()))
             .thenAnswer(invocation -> {
-                long accountId = invocation.getArgument(0);
+                String accountId = invocation.getArgument(0);
                 return savedOrders.stream()
                     .filter(o -> o.getAccountId() == accountId)
                     .toList();
@@ -140,7 +140,7 @@ class OrderPlacementCharacterizationTest {
                 // Create a minimal Account domain model from the entity
                AccountStatusValidator mockValidator = mock(AccountStatusValidator.class);
                 return new Account(
-                    entity.getId(),
+                    entity.getAccountId(),
                     entity.getHolderName(),
                     new Money(entity.getCashBalance()),
                     entity.getStatus(),
@@ -223,7 +223,7 @@ class OrderPlacementCharacterizationTest {
     @DisplayName("Non-existent account → AccountNotFoundException thrown")
     void char_account_not_found_throws_exception() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            999999L,  // Non-existent
+            "ACC-1010",  // Non-existent
             TEST_SYMBOL,
             OrderSide.BUY,
             10L,
@@ -291,14 +291,13 @@ class OrderPlacementCharacterizationTest {
     void char_inactive_account_returns_rejected() {
         // Mock an INACTIVE account from the start
         AccountEntity inactiveAccount = new AccountEntity();
-        inactiveAccount.setId(TEST_ACCOUNT_ID);
         inactiveAccount.setAccountId("ACC-TEST-INACTIVE");
         inactiveAccount.setHolderName("Inactive Account");
         inactiveAccount.setCashBalance(BigDecimal.valueOf(100000.00));
         inactiveAccount.setStatus(AccountStatus.SUSPENDED);
         inactiveAccount.setLastUpdated(LocalDateTime.now());
     
-    when(accountRepository.findById(TEST_ACCOUNT_ID))
+    when(accountRepository.findByAccountId(TEST_ACCOUNT_ID))
         .thenReturn(Optional.of(inactiveAccount));
 
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(

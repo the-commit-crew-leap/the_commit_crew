@@ -14,7 +14,7 @@ class AccountResponseDTOTest {
 
     @Test
     void testAccountResponseCreation() {
-        Long accountId = 1L;
+        String accountId = "ACC-1001";
         AccountStatus status = AccountStatus.ACTIVE;
         Money cashBalance = new Money(new BigDecimal("10000.00"));
         
@@ -29,7 +29,7 @@ class AccountResponseDTOTest {
 
     @Test
     void testAccountResponseFields() {
-        Long accountId = 2L;
+        String accountId = "ACC-1002";
         AccountStatus status = AccountStatus.SUSPENDED;
         Money cashBalance = new Money(new BigDecimal("25000.50"));
         

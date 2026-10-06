@@ -35,7 +35,7 @@ class PlaceOrderRequestValidationTest {
     @Test
     void testValidPlaceOrderRequest() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             OrderSide.BUY,
             100L,
@@ -55,7 +55,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test null symbol")
         void testSymbolCannotBeNull() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 null,
                 OrderSide.BUY,
                 100L,
@@ -71,7 +71,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test empty symbol")
         void testSymbolCannotBeBlank() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "   ",
                 OrderSide.BUY,
                 100L,
@@ -88,7 +88,7 @@ class PlaceOrderRequestValidationTest {
     @DisplayName("Test null side")
     void testSideCannotBeNull() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             null,
             100L,
@@ -108,7 +108,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test zero quantity")
         void testQuantityCannotBeZero() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 0L,
@@ -124,7 +124,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test negative quantity")
         void testQuantityMustBePositive() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 -5L,
@@ -145,7 +145,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test null price")
         void testPriceCannotBeNull() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -161,7 +161,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test zero price")
         void testPriceMustBePositive() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -182,7 +182,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test blank idempotency key")
         void testIdempotencyKeyCannotBeBlank() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,
@@ -198,7 +198,7 @@ class PlaceOrderRequestValidationTest {
         @DisplayName("Test valid idempotency key")
         void testValidIdempotencyKey() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
                 100L,

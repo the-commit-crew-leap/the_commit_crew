@@ -24,7 +24,7 @@ class AccountMapperTest {
 
     private AccountMapper mapper;
     private AccountStatusValidator statusValidator;
-    private static final Long TEST_ACCOUNT_ID = 1L;
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_HOLDER_NAME = "John Doe";
     private static final BigDecimal TEST_BALANCE = new BigDecimal("5000.00");
     private static final AccountStatus TEST_STATUS = AccountStatus.ACTIVE;
@@ -45,14 +45,13 @@ class AccountMapperTest {
         void convertEntityToDomainSuccessfully() {
             LocalDateTime now = LocalDateTime.now();
             AccountEntity entity = new AccountEntity(
-                TEST_ACCOUNT_ID.toString(),
+                TEST_ACCOUNT_ID,
                 TEST_HOLDER_NAME,
                 TEST_BALANCE,
                 TEST_STATUS,
                 TEST_VERSION,
                 now
             );
-            entity.setId(TEST_ACCOUNT_ID);
 
             Account result = mapper.toDomain(entity);
 
@@ -97,7 +96,7 @@ class AccountMapperTest {
         void mapsAccountStatusesCorrectly() {
             for (AccountStatus status : AccountStatus.values()) {
                 AccountEntity entity = new AccountEntity(
-                    "1",
+                    "ACC-1001",
                     TEST_HOLDER_NAME,
                     TEST_BALANCE,
                     status,
@@ -116,14 +115,13 @@ class AccountMapperTest {
         @DisplayName("Maps zero balance correctly")
         void mapsZeroBalance() {
             AccountEntity entity = new AccountEntity(
-                "1",
+                "ACC-1001",
                 TEST_HOLDER_NAME,
                 BigDecimal.ZERO,
                 TEST_STATUS,
                 TEST_VERSION,
                 LocalDateTime.now()
             );
-            entity.setId(1L);
 
             Account result = mapper.toDomain(entity);
 
@@ -170,7 +168,7 @@ class AccountMapperTest {
         @Test
         @DisplayName("Correctly converts account ID to string")
         void convertsAccountIdToString() {
-            Long accountId = 999L;
+            String accountId = "ACC-1003";
             Account domain = new Account(
                 accountId,
                 TEST_HOLDER_NAME,
@@ -183,7 +181,7 @@ class AccountMapperTest {
 
             AccountEntity result = mapper.toEntity(domain);
 
-            assertEquals("999", result.getAccountId());
+            assertEquals("ACC-1003", result.getAccountId());
         }
 
         @Test
@@ -215,7 +213,7 @@ class AccountMapperTest {
         void entityToDomainToEntityPreservesData() {
             LocalDateTime now = LocalDateTime.now();
             AccountEntity original = new AccountEntity(
-                TEST_ACCOUNT_ID.toString(),
+                TEST_ACCOUNT_ID,
                 TEST_HOLDER_NAME,
                 TEST_BALANCE,
                 TEST_STATUS,

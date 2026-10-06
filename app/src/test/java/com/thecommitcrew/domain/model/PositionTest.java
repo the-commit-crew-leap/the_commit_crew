@@ -27,39 +27,39 @@ public class PositionTest {
         @Test
         @DisplayName("Throws exception when symbol is null")
         void throwsExceptionWhenSymbolIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> new Position(1L, null, 10L, TEST_PRICE));
+            assertThrows(IllegalArgumentException.class, () -> new Position("ACC-1001", null, 10L, TEST_PRICE));
         }
 
         @Test
         @DisplayName("Throws exception when symbol is blank")
         void throwsExceptionWhenSymbolIsBlank() {
-            assertThrows(IllegalArgumentException.class, () -> new Position(1L, "   ", 10L, TEST_PRICE));
+            assertThrows(IllegalArgumentException.class, () -> new Position("ACC-1001", "   ", 10L, TEST_PRICE));
         }
 
         @Test
         @DisplayName("Throws exception when quantity is negative")
         void throwsExceptionWhenQuantityIsNegative() {
-            assertThrows(IllegalArgumentException.class, () -> new Position(1L, "AAPL", -5L, TEST_PRICE));
+            assertThrows(IllegalArgumentException.class, () -> new Position("ACC-1001", "AAPL", -5L, TEST_PRICE));
         }
 
         @Test
         @DisplayName("Throws exception when average cost is null")
         void throwsExceptionWhenAverageCostIsNull() {
-            assertThrows(IllegalArgumentException.class, () -> new Position(1L, "AAPL", 10L, null));
+            assertThrows(IllegalArgumentException.class, () -> new Position("ACC-1001", "AAPL", 10L, null));
         }
 
         @Test
         @DisplayName("Throws exception when average cost is negative")
         void throwsExceptionWhenAverageCostIsNegative() {
-            assertThrows(IllegalArgumentException.class, () -> new Position(1L, "AAPL", 10L, NEGATIVE_PRICE));
+            assertThrows(IllegalArgumentException.class, () -> new Position("ACC-1001", "AAPL", 10L, NEGATIVE_PRICE));
         }
 
         @Test
         @DisplayName("Succeeds with valid inputs")
         void succeedsWithValidInputs() {
-            Position position = new Position(1L, "AAPL", 10L, new BigDecimal("100"));
+            Position position = new Position("ACC-1001", "AAPL", 10L, new BigDecimal("100"));
             assertNotNull(position);
-            assertEquals(1L, position.getAccountId());
+            assertEquals("ACC-1001", position.getAccountId());
         }
     }
 }

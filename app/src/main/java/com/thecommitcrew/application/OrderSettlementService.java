@@ -70,7 +70,7 @@ public class OrderSettlementService {
 
     @Transactional
     public void settle(ExecutionEvent fill) {
-        Long accountId = fill.accountId();
+        String accountId = fill.accountId();
 
         Optional<Order> orderOpt = orderMapper.findById(fill.orderId());
         if (orderOpt.isEmpty()) {
@@ -91,7 +91,7 @@ public class OrderSettlementService {
             return;
         }
 
-        Account account = accountRepository.findById(accountId)
+        Account account = accountRepository.findByAccountId(accountId)
                 .map(accountMapper::toDomain)
                 .orElseThrow(() -> new IllegalStateException("Order " + order.getId() + " has no account"));
 
@@ -124,7 +124,7 @@ public class OrderSettlementService {
         }
 
         try {
-            var accountEntity = accountRepository.findById(accountId)
+            var accountEntity = accountRepository.findByAccountId(accountId)
                     .orElseThrow(() -> new IllegalStateException("Account not found"));
             accountEntity.setCashBalance(updatedAccount.getCashBalance().getAmount());
             accountRepository.save(accountEntity);

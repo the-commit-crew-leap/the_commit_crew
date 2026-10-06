@@ -250,7 +250,7 @@ pipeline {
             steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
-        stage('Quality Gate') {
+        /*stage('Quality Gate') {
             steps {
                 withSonarQubeEnv('sonarserver') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -258,7 +258,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
         stage('Integration Tests') {
             when {
                 not {

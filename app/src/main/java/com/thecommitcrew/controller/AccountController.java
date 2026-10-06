@@ -40,7 +40,7 @@ public class AccountController {
     @GetMapping
     @CheckAuth
     public ResponseEntity<AccountResponseDTO> getAccount(
-        @PathVariable("id") Long accountId,
+        @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
         Account account = accountService.getAccount(accountId);
         AccountResponseDTO response = new AccountResponseDTO(
@@ -54,7 +54,7 @@ public class AccountController {
     @GetMapping("/balance")
     @CheckAuth
     public ResponseEntity<BalanceResponseDTO> getAccountBalance(
-        @PathVariable("id") Long accountId,
+        @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
         Money balance = accountService.getBalance(accountId);
         BalanceResponseDTO response = new BalanceResponseDTO(accountId, balance);
@@ -64,7 +64,7 @@ public class AccountController {
     @GetMapping("/positions")
     @CheckAuth
     public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(
-        @PathVariable("id") Long accountId,
+        @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
@@ -91,7 +91,7 @@ public class AccountController {
     @GetMapping("/orders")
     @CheckAuth
     public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(
-        @PathVariable("id") Long accountId,
+        @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
         List<Order> orders = accountService.getOrders(accountId);
         List<OrderResponseDTO> response = orders.stream()

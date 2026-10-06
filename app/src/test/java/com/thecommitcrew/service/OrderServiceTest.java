@@ -48,7 +48,7 @@ import static org.mockito.Mockito.doNothing;
 @SuppressWarnings("null")
 class OrderServiceTest {
 
-    private static final Long ACCOUNT_ID = 1L;
+    private static final String ACCOUNT_ID = "ACC-1001";
     private static final String SYMBOL = "AAPL";
     private static final String IDEMPOTENCY_KEY = "idem-123";
 
@@ -121,7 +121,7 @@ class OrderServiceTest {
     void placeOrder_buyWithFunds_createsNewOrder() {
         PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
 
-        when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
+        when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
         when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
         when(instrumentMapper.toDomain(tradableInstrumentEntity)).thenReturn(tradableInstrument);
         when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.of(tradableInstrumentEntity));
@@ -143,7 +143,7 @@ class OrderServiceTest {
     void placeOrder_buyWithoutFunds_rejectsOrder() {
         PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 100L, "1000.00", IDEMPOTENCY_KEY);
 
-        when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
+        when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
         when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
         when(instrumentMapper.toDomain(tradableInstrumentEntity)).thenReturn(tradableInstrument);
         when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.of(tradableInstrumentEntity));
@@ -162,7 +162,7 @@ class OrderServiceTest {
     void placeOrder_missingAccount_throwsException() {
         PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
 
-        when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+        when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.empty());
 
         assertThrows(AccountNotFoundException.class, () -> orderService.placeOrder(request));
     }
@@ -229,7 +229,7 @@ class OrderServiceTest {
         assertThrows(NegativePriceException.class, () -> orderService.validateOrder(request));
     }
 
-    private PlaceOrderRequestDTO request(Long accountId, String symbol, OrderSide side, long quantity,
+    private PlaceOrderRequestDTO request(String accountId, String symbol, OrderSide side, long quantity,
                                          String price, String idempotencyKey) {
         return new PlaceOrderRequestDTO(
             accountId,

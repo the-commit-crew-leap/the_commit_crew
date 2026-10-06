@@ -19,7 +19,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 class OrderTest {
 
     private UUID validId;
-    private Long validAccountId;
+    private String validAccountId;
     private String validSymbol;
     private OrderSide validSide;
     private long validQuantity;
@@ -34,7 +34,7 @@ class OrderTest {
     @BeforeEach
     void setUp() {
         validId = UUID.randomUUID();
-        validAccountId = 123L;
+        validAccountId = "ACC-1001";
         validSymbol = "AAPL";
         validSide = OrderSide.BUY;
         validQuantity = 100L;

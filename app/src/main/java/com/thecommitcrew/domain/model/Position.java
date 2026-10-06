@@ -6,12 +6,12 @@ package com.thecommitcrew.domain.model;
 import java.math.BigDecimal;
 
 public class Position {
-    private final Long accountId;
+    private final String accountId;
     private final String symbol;
     private final long quantity;
     private final BigDecimal averageCost;
 
-    public Position(Long accountId, String symbol, long quantity, BigDecimal averageCost) {
+    public Position(String accountId, String symbol, long quantity, BigDecimal averageCost) {
         this.accountId = validateNotNull(accountId, "Account ID cannot be null");
         this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
         this.quantity = validateNonNegative(quantity, "Quantity cannot be negative");
@@ -22,7 +22,7 @@ public class Position {
         }
     }
 
-    public Long getAccountId() {
+    public String getAccountId() {
         return accountId;
     }
 
