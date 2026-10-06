@@ -110,7 +110,7 @@ echo "PASS: bean validation caught invalid request (400)"
 echo "== Stage: Test Place Order - Success =="
 ORDER_RESPONSE=$(curl -s -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}"
+  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
 echo "Order response: $ORDER_RESPONSE"
 
 echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
