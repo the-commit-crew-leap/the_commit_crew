@@ -37,7 +37,7 @@ public class OrderEventPublisher {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not serialise order " + event.orderId(), e);
         }
-        kafkaTemplate.send(topic, event.accountId().toString(), json).whenComplete((result, error) -> {
+        kafkaTemplate.send(topic, event.accountId(), json).whenComplete((result, error) -> {
             if (error != null) {
                 log.warn("Failed to publish order {} to {}; it will be retried: {}", event.orderId(), topic, error.getMessage());
             } else {

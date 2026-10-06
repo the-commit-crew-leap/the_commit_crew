@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Positive;
 
 public record PlaceOrderRequestDTO (
 
+    @NotNull(message = "Account id cannot be null")
     @NotBlank(message = "Account id cannot be blank")
     String accountId,
     
