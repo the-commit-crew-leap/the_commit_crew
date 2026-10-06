@@ -68,7 +68,7 @@ sleep 2
 
 echo "== Stage: Wait for Service Ready =="
 for i in $(seq 1 60); do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/AC-1001" || true)
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001" || true)
   if [ "$code" != "000" ]; then 
     echo "Service is ready (HTTP $code)"
     break
@@ -83,15 +83,15 @@ echo "== Stage: Application Logs =="
 docker logs "$APP_CONTAINER" 2>&1 | tail -100
 
 echo "== Stage: Test Account Retrieval =="
-RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/AC-1001")
+RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001")
 echo "Full response: $RESPONSE"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/AC-1001")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001")
 echo "HTTP code: $HTTP_CODE"
 echo "$RESPONSE" | grep -q '"status":"ACTIVE"' || { echo "FAIL: account not found"; exit 1; }
 echo "PASS: account retrieved from database"
 
 echo "== Stage: Test Get Account Balance =="
-BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/AC-1001/balance")
+BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/balance")
 echo "Balance response: $BALANCE_RESPONSE"
 echo "$BALANCE_RESPONSE" | grep -q '"accountId":"ACC-1001"' || { echo "FAIL: balance endpoint failed"; exit 1; }
 echo "$BALANCE_RESPONSE" | grep -q '"cashBalance"' || { echo "FAIL: cashBalance not in response"; exit 1; }
@@ -117,13 +117,13 @@ echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was 
 echo "PASS: order placed and persisted"
 
 echo "== Stage: Test Get Account Orders =="
-ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/AC-1001/orders")
+ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/orders")
 echo "Orders response (with data): $ORDERS_RESPONSE"
 echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order not in response"; exit 1; }
 echo "PASS: orders endpoint returns placed order"
 
 echo "== Stage: Test Get Account Positions =="
-POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/AC-1001/positions")
+POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/positions")
 echo "Positions response (with data): $POSITIONS_RESPONSE"
 echo "$POSITIONS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: position not in response"; exit 1; }
 echo "$POSITIONS_RESPONSE" | grep -q '"averageCost"' || { echo "FAIL: averageCost not in response"; exit 1; }
