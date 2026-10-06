@@ -36,7 +36,7 @@ public class AccountController {
     }
 
     @GetMapping
-    public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") Long accountId) {
+    public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") String accountId) {
         Account account = accountService.getAccount(accountId);
         AccountResponseDTO response = new AccountResponseDTO(
             account.getAccountId(),
@@ -47,14 +47,14 @@ public class AccountController {
     }
 
     @GetMapping("/balance")
-    public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") Long accountId) {
+    public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") String accountId) {
         Money balance = accountService.getBalance(accountId);
         BalanceResponseDTO response = new BalanceResponseDTO(accountId, balance);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/positions")
-    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") Long accountId) {
+    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") String accountId) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
             .map(pos -> {
@@ -78,7 +78,7 @@ public class AccountController {
     }
 
     @GetMapping("/orders")
-    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") Long accountId) {
+    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") String accountId) {
         List<Order> orders = accountService.getOrders(accountId);
         List<OrderResponseDTO> response = orders.stream()
             .map(order -> new OrderResponseDTO(

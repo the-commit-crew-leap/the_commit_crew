@@ -26,7 +26,7 @@ paths:
             schema:
               $ref: '#/components/schemas/OrderRequest'
             example:
-              accountId: 1
+              accountId: ACC-1001
               symbol: AAPL
               side: BUY
               quantity: 100
@@ -41,7 +41,7 @@ paths:
                 $ref: '#/components/schemas/OrderResponse'
               example:
                 orderId: 550e8400-e29b-41d4-a716-446655440000
-                accountId: 1
+                accountId: ACC-1001
                 symbol: AAPL
                 side: BUY
                 quantity: 100
@@ -109,7 +109,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountResponse'
               example:
-                accountId: 1
+                accountId: ACC-1001
                 status: ACTIVE
                 cashBalance:
                   amount: 10000.00
@@ -142,7 +142,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BalanceResponse'
               example:
-                accountId: 1
+                accountId: ACC-1001
                 cashBalance:
                   amount: 10000.00
                   currency: USD
@@ -214,7 +214,7 @@ paths:
                   $ref: '#/components/schemas/OrderResponse'
               example:
                 - orderId: 550e8400-e29b-41d4-a716-446655440000
-                  accountId: 1
+                  accountId: ACC-1001
                   symbol: AAPL
                   side: BUY
                   quantity: 100
@@ -242,8 +242,7 @@ components:
       required: [accountId, symbol, side, quantity, price, idempotencyKey]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         symbol:
           type: string
           example: AAPL
@@ -271,8 +270,7 @@ components:
           type: string
           format: uuid
         accountId:
-          type: integer
-          format: int64
+          type: string
         symbol:
           type: string
         side:
@@ -296,8 +294,7 @@ components:
       required: [accountId, status, cashBalance]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         status:
           type: string
           enum: [ACTIVE, SUSPENDED, CLOSED]
@@ -309,8 +306,7 @@ components:
       required: [accountId, cashBalance]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         cashBalance:
           $ref: '#/components/schemas/Money'
 

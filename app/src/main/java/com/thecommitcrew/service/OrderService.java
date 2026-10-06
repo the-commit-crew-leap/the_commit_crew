@@ -145,8 +145,8 @@ public class OrderService {
         return OrderStatus.NEW;
     }
 
-    private Account getAccount(Long accountId) {
-        return accountRepository.findById(accountId)
+    private Account getAccount(String accountId) {
+        return accountRepository.findByAccountId(accountId)
             .map(accountMapper::toDomain)
             .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountId));
     }
@@ -156,7 +156,7 @@ public class OrderService {
             .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
     }
 
-    private long getAvailableHoldings(Long accountId, String symbol) {
+    private long getAvailableHoldings(String accountId, String symbol) {
         return positionMapper.findByAccountIdAndSymbol(accountId, symbol)
             .map(Position::getQuantity)
             .orElse(ZERO_QUANTITY);

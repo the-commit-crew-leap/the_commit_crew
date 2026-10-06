@@ -20,7 +20,7 @@ class AccountTest {
     private Account account;
     private static final AccountStatusValidator VALIDATOR = new DefaultAccountStatusValidator();
     
-    private static final Long TEST_ACCOUNT_ID = 1L;
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_HOLDER_NAME = "John Doe";
     private static final int TEST_VERSION = 1;
 
@@ -111,7 +111,7 @@ class AccountTest {
             createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
         
-        assertNotEquals(account, new Account(2L, "Different Name",
+        assertNotEquals(account, new Account("ACC-1002", "Different Name",
             createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
     }

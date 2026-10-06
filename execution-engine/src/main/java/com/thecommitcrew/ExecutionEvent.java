@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public record ExecutionEvent(
         UUID executionId,
         UUID orderId,
-        Long accountId,
+        String accountId,
         String symbol,
         OrderSide side,
         int quantity,
