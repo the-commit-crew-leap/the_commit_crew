@@ -88,6 +88,11 @@ curl -s http://localhost:8085/api/system/status
 mvn sonar:sonar "-Dsonar.host.url=http://10.9.75.153:8085" "-Dsonar.token=<sonar-token>" "-Dsonar.qualitygate.wait=true"
 ```
 
+## Docker down
+```bash
+docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
+```
+
 ## Coding Conventions
 
 ### Naming 
