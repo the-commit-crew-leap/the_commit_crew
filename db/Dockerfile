@@ -25,7 +25,7 @@ RUN mkdir -p /docker-entrypoint-initdb.d/data && \
     cp /market_data/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
 
 # Single init script that runs everything in proper order
-RUN echo '#!/bin/bash\nset -e\n\n# Wait for PGDATA to be ready\nwhile [ ! -d "$PGDATA" ]; do sleep 0.1; done\n\n# Add IP restriction\necho "host all all 10.9.0.0/16 scram-sha-256" >> "$PGDATA/pg_hba.conf"\n' > /docker-entrypoint-initdb.d/00-init.sh \
+RUN echo '#!/bin/bash\nset -e\n\nwhile [ ! -d "$PGDATA" ]; do sleep 0.1; done\n\necho "host all all 10.9.0.0/16 scram-sha-256" >> "$PGDATA/pg_hba.conf"\n\npsql -U postgres -c "CREATE DATABASE \\"$AUTH_DB\\";"\n' > /docker-entrypoint-initdb.d/00-init.sh \
     && chmod +x /docker-entrypoint-initdb.d/00-init.sh
 
 # Make all shell scripts executable

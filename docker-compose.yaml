@@ -44,6 +44,7 @@ services:
         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?}
+      AUTH_DB: ${AUTH_DB:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
