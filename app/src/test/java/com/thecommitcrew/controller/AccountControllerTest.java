@@ -22,8 +22,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.RestTemplate;
 
-import com.thecommitcrew.auth.JwtTokenProvider;
+import com.thecommitcrew.auth.AuthServiceClient;
+import com.thecommitcrew.auth.JwtAuthenticationFilter;
 import com.thecommitcrew.domain.enums.AccountStatus;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
@@ -36,6 +38,12 @@ import com.thecommitcrew.service.AccountService;
 import com.thecommitcrew.service.PositionService;
 import com.thecommitcrew.service.PriceService;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -58,9 +66,6 @@ class AccountControllerTest {
 
     @MockBean
     private PositionService positionService;
-
-    @MockBean 
-    private JwtTokenProvider jwtTokenProvider;
 
     private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_ACCOUNT_HOLDER = "John Doe";
@@ -278,6 +283,29 @@ class AccountControllerTest {
     @TestConfiguration
     @EnableWebSecurity
     public static class TestSecurityConfig {
+        
+        @Bean
+        public AuthServiceClient authServiceClient() {
+            return new AuthServiceClient(new RestTemplate());
+        }
+        
+        @Bean
+        public RestTemplate restTemplate() {
+            return new RestTemplate();
+        }
+        
+        @Bean
+        public JwtAuthenticationFilter jwtAuthenticationFilter(AuthServiceClient authServiceClient) {
+            return new JwtAuthenticationFilter(authServiceClient) {
+                @Override
+                protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+                        throws ServletException, IOException {
+                    request.setAttribute("username", "test-user");
+                    filterChain.doFilter(request, response);
+                }
+            };
+        }
+        
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
             http

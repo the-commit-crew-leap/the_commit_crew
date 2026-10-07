@@ -1,10 +1,12 @@
 package com.thecommitcrew;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import com.thecommitcrew.persistence.repository.InstrumentRepository;
+
 import com.thecommitcrew.persistence.mapper.AccountMapper;
 import com.thecommitcrew.persistence.mapper.InstrumentMapper;
 import com.thecommitcrew.persistence.mapper.OrderMapper;
@@ -14,7 +16,6 @@ import com.thecommitcrew.messaging.OrderEventPublisher;
 import com.thecommitcrew.application.OrderSettlementService;
 import com.thecommitcrew.messaging.ExecutionListener;
 import com.thecommitcrew.messaging.PendingOrderRepublisher;
-import com.thecommitcrew.auth.JwtTokenProvider;
 
 @SpringBootTest()
 class MainTests {
@@ -49,11 +50,8 @@ class MainTests {
   @MockBean
   private PendingOrderRepublisher pendingOrderRepublisher;
 
-  @MockBean
-  private JwtTokenProvider jwtTokenProvider;
-
   @Test
+  @DisplayName("Application context loads without errors")
   void contextLoads() {
   }
-
 }

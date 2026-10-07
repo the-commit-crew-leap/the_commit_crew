@@ -13,6 +13,8 @@ import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.AccountService;
 import com.thecommitcrew.service.PositionService;
 import com.thecommitcrew.service.PriceService;
+import com.thecommitcrew.auth.CheckAuth;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -36,7 +38,10 @@ public class AccountController {
     }
 
     @GetMapping
-    public ResponseEntity<AccountResponseDTO> getAccount(@PathVariable("id") String accountId) {
+    @CheckAuth
+    public ResponseEntity<AccountResponseDTO> getAccount(
+        @PathVariable("id") String accountId,
+        HttpServletRequest httpRequest) {
         Account account = accountService.getAccount(accountId);
         AccountResponseDTO response = new AccountResponseDTO(
             account.getAccountId(),
@@ -47,14 +52,20 @@ public class AccountController {
     }
 
     @GetMapping("/balance")
-    public ResponseEntity<BalanceResponseDTO> getAccountBalance(@PathVariable("id") String accountId) {
+    @CheckAuth
+    public ResponseEntity<BalanceResponseDTO> getAccountBalance(
+        @PathVariable("id") String accountId,
+        HttpServletRequest httpRequest) {
         Money balance = accountService.getBalance(accountId);
         BalanceResponseDTO response = new BalanceResponseDTO(accountId, balance);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/positions")
-    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(@PathVariable("id") String accountId) {
+    @CheckAuth
+    public ResponseEntity<List<PositionResponseDTO>> getAccountPositions(
+        @PathVariable("id") String accountId,
+        HttpServletRequest httpRequest) {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
             .map(pos -> {
@@ -78,7 +89,10 @@ public class AccountController {
     }
 
     @GetMapping("/orders")
-    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(@PathVariable("id") String accountId) {
+    @CheckAuth
+    public ResponseEntity<List<OrderResponseDTO>> getAccountOrders(
+        @PathVariable("id") String accountId,
+        HttpServletRequest httpRequest) {
         List<Order> orders = accountService.getOrders(accountId);
         List<OrderResponseDTO> response = orders.stream()
             .map(order -> new OrderResponseDTO(

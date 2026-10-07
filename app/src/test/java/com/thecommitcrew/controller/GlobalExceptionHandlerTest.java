@@ -14,15 +14,25 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thecommitcrew.auth.JwtTokenProvider;
+import com.thecommitcrew.auth.AuthServiceClient;
+import com.thecommitcrew.auth.JwtAuthenticationFilter;
 import com.thecommitcrew.domain.dto.ErrorResponseDTO;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.io.IOException;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 @WebMvcTest(TestController.class)
@@ -36,9 +46,6 @@ class GlobalExceptionHandlerTest {
     @Autowired
     private ObjectMapper objectMapper;
     
-    @MockBean 
-    private JwtTokenProvider jwtTokenProvider;
-
     @Nested
     @DisplayName("404 Not Found exceptions")
     class NotFoundExceptions {
@@ -173,16 +180,39 @@ class GlobalExceptionHandlerTest {
      * Test-only security configuration that disables authentication for all requests.
      */
     @TestConfiguration
-    @EnableWebSecurity
-    public static class TestSecurityConfig {
-        @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-            http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                    .anyRequest().permitAll()
-                );
-            return http.build();
-        }
+@EnableWebSecurity
+public static class TestSecurityConfig {
+    
+    @Bean
+    public AuthServiceClient authServiceClient() {
+        return new AuthServiceClient(new RestTemplate());
     }
+    
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+    
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(AuthServiceClient authServiceClient) {
+        return new JwtAuthenticationFilter(authServiceClient) {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+                    throws ServletException, IOException {
+                request.setAttribute("username", "test-user");
+                filterChain.doFilter(request, response);
+            }
+        };
+    }
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll()
+            );
+        return http.build();
+    }
+}
 }

@@ -20,7 +20,6 @@
     </parent>
     
     <modules>
-        <module>auth</module>
         <module>app</module>
         <module>execution-engine</module>
     </modules>
