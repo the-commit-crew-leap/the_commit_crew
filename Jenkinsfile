@@ -141,7 +141,7 @@ pipeline {
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f init-db.sql && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
 
-                                AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                                AUTH_DB=\$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
 
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
@@ -152,11 +152,11 @@ pipeline {
                                 echo "Database already running, checking if data exists..."
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps db
                                 
-                                POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                                AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                                POSTGRES_DB=\$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                                AUTH_DB=\$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
                                 
                                 # Check if trading database has data (instruments table)
-                                DATA_COUNT=$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                DATA_COUNT=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db psql -U postgres -d "\${POSTGRES_DB}" -t -c "SELECT COUNT(*) FROM instruments;" 2>/dev/null || echo "0")
                                 
@@ -168,7 +168,7 @@ pipeline {
                                 fi
                                 
                                 # Check if auth database has data (users table)
-                                AUTH_DATA_COUNT=$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                AUTH_DATA_COUNT=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db psql -U postgres -d "\${AUTH_DB}" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "0")
                                 
@@ -216,9 +216,9 @@ pipeline {
                             
                             echo "Running database update scripts..."
 
-                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            POSTGRES_DB=\$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            AUTH_DB=\$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            POSTGRES_PASSWORD=\$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
 
                             # Update trading database
                             if [ -f "db/update-data.sql" ]; then
