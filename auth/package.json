@@ -30,6 +30,7 @@
     "@nestjs/typeorm": "^12.0.2",
     "bcrypt": "^6.0.0",
     "class-validator": "^0.15.1",
+    "dotenv": "^18.0.6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.23.1",
