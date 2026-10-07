@@ -16,11 +16,14 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+  
+  // Serve Swagger UI
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(3000, '0.0.0.0');
   console.log('Auth service running on http://0.0.0.0:3000');
   console.log('Swagger docs available at http://0.0.0.0:3000/api/docs');
+  console.log('OpenAPI JSON: http://0.0.0.0:3000/api/docs-json');
 }
 
 bootstrap();
