@@ -47,7 +47,7 @@ def test_run_etl_success(monkeypatch, tmp_path):
 
     monkeypatch.setattr(loader, "load", test_load)
 
-    result = pipeline.run_etl(tickers=["AAPL", "SPY"])
+    result = pipeline.run(tickers=["AAPL", "SPY"])
 
     assert result["status"] == "success"
     assert result["extracted"] == 3
@@ -67,7 +67,7 @@ def test_run_etl_fails_when_extraction_fails(monkeypatch):
 
     monkeypatch.setattr(extractor, "extract", failing_extract)
 
-    result = pipeline.run_etl(tickers=["AAPL"])
+    result = pipeline.run(tickers=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -86,7 +86,7 @@ def test_run_etl_fails_when_transform_fails(monkeypatch):
 
     monkeypatch.setattr(transformer, "transform", failing_transform)
 
-    result = pipeline.run_etl(tickers=["AAPL"])
+    result = pipeline.run(tickers=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -104,7 +104,7 @@ def test_run_etl_reports_partial_load_failure(monkeypatch):
 
     monkeypatch.setattr(loader, "load", partially_failing_load)
 
-    result = pipeline.run_etl(tickers=["AAPL", "SPY"])
+    result = pipeline.run(tickers=["AAPL", "SPY"])
 
     assert result["status"] == "partial"
     assert result["saved"] == 1

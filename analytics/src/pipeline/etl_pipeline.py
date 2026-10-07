@@ -20,7 +20,7 @@ class ETLPipeline:
         self.db_loader = db_loader
 
 
-    def run_etl(self, tickers: list[str] = None, sync_to_db: bool = True):
+    def run(self, tickers: list[str] = None, sync_to_db: bool = True):
         """
         Execute the complete ETL workflow.
         
@@ -46,9 +46,7 @@ class ETLPipeline:
             
             if sync_to_db:
                 self.db_loader.load_price_history_from_csv(str(config.PRICE_HISTORY_FILE))
-                self.db_loader.load_instruments_from_csv(str(config.TICKER_METADATA_FILE))
 
-            
             summary = {
                 "status": ("success" if not result["errors"] else "partial"),
                 "extracted": len(raw),
@@ -81,6 +79,6 @@ if __name__ == "__main__":
     
     # Price data pipeline
     etl_pipeline = ETLPipeline(extractor, transformer, loader, db_loader)
-    price_result = etl_pipeline.run_etl()
+    price_result = etl_pipeline.run()
     print("Price ETL:", price_result)
 

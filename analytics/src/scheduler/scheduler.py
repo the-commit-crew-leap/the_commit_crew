@@ -34,7 +34,7 @@ class ETLScheduler:
         try:
             logger.info("Starting scheduled ETL run at %s", datetime.now())
             pipeline = self._create_pipeline()
-            result = pipeline.run_etl(tickers=config.INSTRUMENTS_LIST, sync_to_db=True)
+            result = pipeline.run(tickers=config.INSTRUMENTS_LIST, sync_to_db=True)
             
             status = result.get("status", "unknown")
             extracted = result.get("extracted", 0)
