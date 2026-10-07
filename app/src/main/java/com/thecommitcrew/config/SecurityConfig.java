@@ -31,6 +31,9 @@ public class SecurityConfig {
                 // Allow public access to Swagger/OpenAPI endpoints
                 .requestMatchers(
                     "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/actuator/health",
+                    "/v3/api-docs",
                     "/v3/api-docs/**",
                     "/swagger-resources/**",
                     "/swagger-resources",
