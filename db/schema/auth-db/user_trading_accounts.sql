@@ -6,6 +6,5 @@ CREATE TABLE IF NOT EXISTS user_trading_accounts (
     role            VARCHAR(32) NOT NULL,
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (account_id, user_id),
-    FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
