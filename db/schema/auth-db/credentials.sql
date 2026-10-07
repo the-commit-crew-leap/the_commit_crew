@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS credentials CASCADE;
 
 CREATE TABLE IF NOT EXISTS credentials (
     user_id                 BIGINT PRIMARY KEY NOT NULL,
-    password_hash           VARCHAR(60) NOT NULL,
+    password_hash           VARCHAR(255) NOT NULL,
     algorithm               VARCHAR(64) NOT NULL,
     last_login              TIMESTAMP,
     failed_login_attempts   INT DEFAULT 0,

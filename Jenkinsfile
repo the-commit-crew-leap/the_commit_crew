@@ -15,14 +15,14 @@ pipeline {
                 script {
                     sh '''
                         docker run --rm \
-                            -v "$(pwd)":/repo \
+                            -v "\$(pwd)":/repo \
                             zricethezav/gitleaks:latest \
                             detect \
                             --source /repo \
                             --report-path /repo/gitleaks-report.json \
                             --report-format json || EXIT_CODE=$?
                         
-                        if [ "${EXIT_CODE:-0}" -eq 1 ]; then
+                        if [ "\${EXIT_CODE:-0}" -eq 1 ]; then
                             echo "Secrets detected!"
                             exit 1
                         fi
@@ -47,7 +47,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
                         sh '''
                             mvn -B dependency-check:check \
-                                -DnvdApiKey="$NVD_API_KEY" \
+                                -DnvdApiKey="\$NVD_API_KEY" \
                                 -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
                             
                             # Always pass to allow pipeline to continue
@@ -140,26 +140,46 @@ pipeline {
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f init-db.sql && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
-                                
+
+                                AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                    -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+                                    db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${AUTH_DB}\" -f init-auth-db.sql && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${AUTH_DB}\" -f update-auth-data.sql"
+
                                 echo "Database initialization completed"
                             else
                                 echo "Database already running, checking if data exists..."
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps db
                                 
-                                # Check if instruments table has data (as a proxy for overall population)
-                                DATA_COUNT=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                                AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                                
+                                # Check if trading database has data (instruments table)
+                                DATA_COUNT=$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                     -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                     db psql -U postgres -d "\${POSTGRES_DB}" -t -c "SELECT COUNT(*) FROM instruments;" 2>/dev/null || echo "0")
                                 
                                 if [ "\$DATA_COUNT" -eq 0 ]; then
-                                    echo "Database exists but is unpopulated, loading seed data..."
+                                    echo "Trading database exists but is unpopulated, loading seed data..."
                                     docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
                                         -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
                                         db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
-                                    echo "Seed data loaded successfully"
-                                else
-                                    echo "Database already populated with data, skipping initialization"
                                 fi
+                                
+                                # Check if auth database has data (users table)
+                                AUTH_DATA_COUNT=$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                    -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+                                    db psql -U postgres -d "\${AUTH_DB}" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "0")
+                                
+                                if [ "\$AUTH_DATA_COUNT" -eq 0 ]; then
+                                    echo "Auth database exists but is unpopulated, loading seed data..."
+                                    docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                        -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+                                        db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${AUTH_DB}\" -f update-auth-data.sql"
+                                fi
+                                
+                                echo "Database check completed"
                             fi
                         """
                     }
@@ -194,16 +214,26 @@ pipeline {
                                 exit 0
                             fi
                             
-                            echo "Running database update script..."
-                            
-                            POSTGRES_DB=\$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            POSTGRES_PASSWORD=\$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            echo "Running database update scripts..."
 
-                            # Set ON_ERROR_STOP to exit on first error
-                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
-                                -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
-                                db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
-                            
+                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+
+                            # Update trading database
+                            if [ -f "db/update-data.sql" ]; then
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                    -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+                                    db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${POSTGRES_DB}\" -f update-data.sql"
+                            fi
+
+                            # Update auth database
+                            if [ -f "db/update-auth-data.sql" ]; then
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T \
+                                    -e PGPASSWORD="\${POSTGRES_PASSWORD}" \
+                                    db sh -c "cd /docker-entrypoint-initdb.d && psql -v ON_ERROR_STOP=1 -U postgres -d \"\${AUTH_DB}\" -f update-auth-data.sql"
+                            fi
+
                             echo "Database update completed successfully"
                         """
                     }
@@ -250,7 +280,7 @@ pipeline {
             steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
-        /*stage('Quality Gate') {
+        stage('Quality Gate') {
             steps {
                 withSonarQubeEnv('sonarserver') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -258,7 +288,7 @@ pipeline {
                     }
                 }
             }
-        }*/
+        }
         stage('Integration Tests') {
             when {
                 not {
@@ -272,7 +302,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'env-dev-file', variable: 'ENV_FILE_PATH')]) {
                     sh '''
                         chmod +x integration-test.sh
-                        ./integration-test.sh the-commit-crew:${BUILD_NUMBER} dev "${ENV_FILE_PATH}" the_commit_crew-db-1
+                        ./integration-test.sh the-commit-crew:${BUILD_NUMBER} dev "\${ENV_FILE_PATH}" the_commit_crew-db-1
                     '''
                 }
             }
