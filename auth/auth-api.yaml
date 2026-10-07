@@ -1,0 +1,210 @@
+openapi: 3.0.3
+info:
+  title: The Commit Crew - Auth API
+  version: 1.0.0
+  description: Authentication service API for user registration, login, token refresh, and validation
+
+servers:
+  - url: /api/auth
+    description: Auth API endpoint
+
+paths:
+  /register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+      responses:
+        '200':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid input data
+        '409':
+          description: User already exists
+
+  /login:
+    post:
+      summary: Login with credentials
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Invalid credentials
+        '404':
+          description: User not found
+
+  /refresh:
+    post:
+      summary: Refresh access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshDto'
+      responses:
+        '200':
+          description: Token successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Invalid or expired refresh token
+
+  /validate:
+    post:
+      summary: Validate an access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateDto'
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'SUCCESS'
+                  data:
+                    type: object
+                    properties:
+                      valid:
+                        type: boolean
+        '401':
+          description: Invalid or expired token
+
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'ok'
+
+components:
+  schemas:
+    RegisterDto:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: Unique username (alphanumeric, underscore, hyphen only)
+        email:
+          type: string
+          format: email
+          description: User email address
+        password:
+          type: string
+          minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]+$'
+          description: Password must contain uppercase, lowercase, number, and special character
+
+    LoginDto:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Username or email
+        password:
+          type: string
+          minLength: 1
+          description: User password
+
+    RefreshDto:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          format: jwt
+          description: Refresh token received from login/register
+
+    ValidateDto:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          format: jwt
+          description: Access token to validate
+
+    AuthResponseDto:
+      type: object
+      required:
+        - accessToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          format: jwt
+          description: JWT access token
+        refreshToken:
+          type: string
+          format: jwt
+          nullable: true
+          description: Refresh token (optional, only in login/register)
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Token expiration time in seconds
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Health
+    description: Service health check
