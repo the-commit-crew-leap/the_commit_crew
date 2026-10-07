@@ -70,6 +70,18 @@ export class AuthService implements OnModuleInit {
         this.logger.error('Failed to create default test user', error);
       }
     }
+import { UsersRepository } from './repositories/users.repository';
+
+@Injectable()
+export class AuthService {
+  private readonly bcryptCostFactor: number;
+
+  constructor(
+    private tokenService: TokenService,
+    private usersRepository: UsersRepository,
+  ) {
+    // Read cost factor from environment variable or default to 12
+    this.bcryptCostFactor = parseInt(process.env.BCRYPT_COST_FACTOR || '12', 10);
   }
 
   async register(registerDto: RegisterDto): Promise<any> {
@@ -84,8 +96,8 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('User already exists');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with configured cost factor
+    const hashedPassword = await bcrypt.hash(password, this.bcryptCostFactor);
 
     // Generate unique account ID
     const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
@@ -135,6 +147,19 @@ export class AuthService implements OnModuleInit {
       this.logger.error(`Registration failed for user ${username}:`, error);
       throw new BadRequestException('Registration failed. Please try again.');
     }
+    // Store user and credentials in database
+    const user = await this.usersRepository.createUser({
+      username,
+      email,
+      passwordHash: hashedPassword,
+    });
+
+    return {
+      user_id: user.user_id,
+      username: user.username,
+      email: user.email,
+      created_at: user.created_at,
+    };
   }
 
   async login(loginDto: LoginDto): Promise<any> {
@@ -146,6 +171,8 @@ export class AuthService implements OnModuleInit {
       relations: { tradingAccounts: true },
     });
 
+    // Find user in database
+    const user = await this.usersRepository.findByUsernameWithCredential(username);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -166,7 +193,16 @@ export class AuthService implements OnModuleInit {
 
     // Verify password
     const isValid = await bcrypt.compare(password, credential.passwordHash);
+    // Check if account is locked
+    if (user.credential?.locked_until && new Date() < user.credential.locked_until) {
+      throw new UnauthorizedException('Account is locked. Please try again later.');
+    }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, user.credential?.password_hash || '');
     if (!isValid) {
+      // Increment failed login attempts
+      await this.usersRepository.incrementFailedLoginAttempts(user.user_id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -193,6 +229,12 @@ export class AuthService implements OnModuleInit {
         role: primaryAccount.role,
       },
     };
+    // Reset failed login attempts on successful login
+    await this.usersRepository.resetFailedLoginAttempts(user.user_id);
+    await this.usersRepository.updateLastLogin(user.user_id);
+
+    // Generate tokens
+    return this.tokenService.issue(username);
   }
 
   async refresh(refreshToken: string): Promise<any> {
