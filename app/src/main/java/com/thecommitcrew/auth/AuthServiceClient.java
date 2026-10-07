@@ -30,15 +30,20 @@ public class AuthServiceClient {
             String payload = String.format("{\"token\": \"%s\"}", token);
             HttpEntity<String> request = new HttpEntity<>(payload, headers);
             
+            System.out.println("🔍 Calling auth service: " + authServiceUrl + "/api/auth/validate");
+            System.out.println("🔍 Auth service URL env var: " + System.getenv("AUTH_SERVICE_URL"));
+            
             ResponseEntity<String> response = restTemplate.postForEntity(
                 authServiceUrl + "/api/auth/validate",
                 request,
                 String.class
             );
             
-            // Parse response and return validation result
+            System.out.println("✅ Auth service response: " + response.getBody());
             return parseValidateResponse(response.getBody());
         } catch (Exception e) {
+            System.out.println("❌ Auth service call failed: " + e.getMessage());
+            e.printStackTrace();
             return new ValidateResponse(false, null);
         }
     }
