@@ -1,17 +1,36 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
-COPY pom.xml .
-COPY auth/pom.xml auth/
-RUN mvn -B dependency:go-offline -f auth/pom.xml
-COPY auth/src/ auth/src/
-RUN mvn -B clean package -DskipTests -f auth/pom.xml
+# Build stage
+FROM node:24-alpine AS builder
 
-FROM eclipse-temurin:21-jre-alpine
+WORKDIR /build
+
+# Copy all auth files
+COPY auth ./
+
+# Install all dependencies (including dev for build)
+RUN npm ci
+
+# Build
+RUN npm run build
+
+# Runtime stage
+FROM node:24-alpine
+
 WORKDIR /app
+
+# Install curl for healthcheck
 RUN apk add --no-cache curl
+
+# Copy built application
+COPY --from=builder /build/dist ./dist
+COPY --from=builder /build/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
-COPY --from=build /build/auth/target/the-commit-crew-auth-0.1.0-exec.jar app.jar
 
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]

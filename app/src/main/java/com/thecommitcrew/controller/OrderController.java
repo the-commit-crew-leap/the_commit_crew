@@ -12,9 +12,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import com.thecommitcrew.domain.dto.PlaceOrderRequestDTO;
+import com.thecommitcrew.domain.exception.AccountNotActiveException;
+import com.thecommitcrew.domain.exception.DuplicateOrderException;
+import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
+import com.thecommitcrew.domain.exception.InsufficientFundsException;
+import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
+import com.thecommitcrew.domain.exception.NegativePriceException;
+import com.thecommitcrew.auth.CheckAuth;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.OrderService;
@@ -40,51 +49,67 @@ public class OrderController {
         this.orderEventPublisher = orderEventPublisher;
     }
     
-    /**
-     * Submit an order for processing.
-     * 
-     * The request is validated by Jakarta validation (@Valid).
-     * The OrderService validates business rules and executes the order.
-     * Exceptions are thrown for validation failures and caught by @ControllerAdvice.
-     * 
-     * POST /api/v1/orders
-     * 
-     * @param request the order request with validated fields
-     * @return 201 Created with the created order response
-     * @throws AccountNotFoundException if account doesn't exist
-     * @throws InstrumentNotFoundException if instrument/symbol doesn't exist
-     * @throws AccountNotActiveException if account is not active
-     * @throws DuplicateOrderException if idempotency key already used
-     * @throws InsufficientFundsException if account lacks funds for BUY order
-     * @throws InsufficientHoldingsException if account lacks holdings for SELL order
-     * @throws NegativePriceException if price is invalid
-     */
-    @PostMapping
-    public ResponseEntity<OrderResponseDTO> submitOrder(@Valid @RequestBody PlaceOrderRequestDTO request) {
-        // OrderService.placeOrder handles all validation and execution
-        // Returns Order with status FILLED or REJECTED, or throws exception
-        Order order = orderService.placeOrder(request);
-        
-        // Send order to execution venue (Kafka)
-        if (order.getStatus().toString().equals("NEW")) {
-            OrderEvent event = new OrderEvent(
-                order.getId(),
-                order.getAccountId(),
-                order.getSymbol(),
-                order.getSide(),
-                (int) order.getQuantity(),
-                order.getPrice(),
-                Instant.now()
-            );
-            orderEventPublisher.publish(event);
-        }
-
-        OrderResponseDTO response = mapToResponse(order);
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(response);
+/**
+ * Submit an order for processing.
+ * 
+ * Requires JWT authentication token in Authorization header.
+ * The request is validated by Jakarta validation (@Valid).
+ * The OrderService validates business rules and executes the order.
+ * Exceptions are thrown for validation failures and caught by @ControllerAdvice.
+ * 
+ * POST /api/v1/orders
+ * Header: Authorization: Bearer eyJ...
+ * 
+ * @param request the order request with validated fields
+ * @param httpRequest the HTTP request (contains authenticated username)
+ * @return 201 Created with the created order response
+ * @throws UnauthorizedException if token is missing or invalid
+ * @throws AccountNotFoundException if account doesn't exist
+ * @throws InstrumentNotFoundException if instrument/symbol doesn't exist
+ * @throws AccountNotActiveException if account is not active
+ * @throws DuplicateOrderException if idempotency key already used
+ * @throws InsufficientFundsException if account lacks funds for BUY order
+ * @throws InsufficientHoldingsException if account lacks holdings for SELL order
+ * @throws NegativePriceException if price is invalid
+ */
+@PostMapping
+@CheckAuth
+public ResponseEntity<OrderResponseDTO> submitOrder(
+        @Valid @RequestBody PlaceOrderRequestDTO request,
+        HttpServletRequest httpRequest) {
+    
+    // Get authenticated username from JWT filter
+    String username = (String) httpRequest.getAttribute("username");
+    
+    // @CheckAuth aspect already validates username is present
+    // but explicit check adds safety and documentation
+    if (username == null) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    
+    // OrderService.placeOrder handles all validation and execution
+    // Returns Order with status FILLED or REJECTED, or throws exception
+    Order order = orderService.placeOrder(request);
+    
+    // Send order to execution venue (Kafka)
+    if (order.getStatus().toString().equals("NEW")) {
+        OrderEvent event = new OrderEvent(
+            order.getId(),
+            order.getAccountId(),
+            order.getSymbol(),
+            order.getSide(),
+            (int) order.getQuantity(),
+            order.getPrice(),
+            Instant.now()
+        );
+        orderEventPublisher.publish(event);
     }
 
+    OrderResponseDTO response = mapToResponse(order);
+    return ResponseEntity
+        .status(HttpStatus.CREATED)
+        .body(response);
+}
 
     /**
      * Cancel a working order.

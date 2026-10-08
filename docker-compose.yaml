@@ -5,13 +5,23 @@ services:
       context: .
       dockerfile: auth/Dockerfile
     ports:
-      - "0.0.0.0:8082:8080"
+      - "0.0.0.0:8082:3000"
     environment:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
+      NODE_ENV: ${NODE_ENV:-development}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 
   app:
     build: .
     depends_on:
+      auth:
+        condition: service_healthy
       db:
         condition: service_healthy
       kafka:
@@ -24,6 +34,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTH_SERVICE_URL: http://auth:3000
 
   db:
     build: 
@@ -33,6 +44,7 @@ services:
         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?}
+      AUTH_DB: ${AUTH_DB:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

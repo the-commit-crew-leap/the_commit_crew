@@ -38,6 +38,20 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- For testing with MockHttpServletRequest -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Boot Configuration Processor (generates metadata) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Spring Kafka (Producer) -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
@@ -89,13 +103,6 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.12.3</version>
             <scope>runtime</scope>
-        </dependency>
-
-        <!-- Auth module -->
-        <dependency>
-            <groupId>com.thecommitcrew</groupId>
-            <artifactId>the-commit-crew-auth</artifactId>
-            <version>0.1.0</version>
         </dependency>
 
         <!-- Lombok -->
@@ -153,6 +160,12 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
         </dependency>
     </dependencies>
 
