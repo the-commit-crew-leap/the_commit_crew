@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { TokenService } from './token.service';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
@@ -6,9 +6,10 @@ import { UsersRepository } from './repositories/users.repository';
 import { SecureLoggerService } from '../common/services/secure-logger.service';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly bcryptCostFactor: number;
   private readonly logger = new SecureLoggerService(AuthService.name);
+  private users: Map<string, any> = new Map();
 
   constructor(
     private tokenService: TokenService,
@@ -16,6 +17,19 @@ export class AuthService {
   ) {
     // Read cost factor from environment variable or default to 12
     this.bcryptCostFactor = parseInt(process.env.BCRYPT_COST_FACTOR || '12', 10);
+  }
+
+  async onModuleInit() {
+    // Default test user for development
+    const hashedPassword = await bcrypt.hash('testpass', 10);
+    this.users.set('testuser', {
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com',
+      password: hashedPassword,
+      createdAt: new Date(),
+    });
+    console.log('Default test user created: testuser/testpass');
   }
 
   async register(registerDto: RegisterDto): Promise<any> {

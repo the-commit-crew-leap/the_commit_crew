@@ -46,10 +46,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.thecommitcrew.messaging.OrderEventPublisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.UUID;
 
 
@@ -68,6 +72,7 @@ class OrderControllerTest {
     private static final long QUANTITY = 100L;
     private static final String PRICE = "150.00";
     private static final String IDEMPOTENCY_KEY = "idem-001";
+    private static final String TEST_SECRET_KEY = "test-secret-key-for-unit-tests-only";
 
     private PlaceOrderRequestDTO request;
 
@@ -94,6 +99,19 @@ class OrderControllerTest {
             IDEMPOTENCY_KEY
         );
     }
+
+    /**
+     * Generate a valid test JWT token dynamically.
+     * This avoids hardcoding secrets and keeps gitleaks scans clean.
+     */
+    private String generateTestJwt() {
+    return Jwts.builder()
+        .subject("1234567890")
+        .claim("name", "John Doe")
+        .issuedAt(Date.from(Instant.ofEpochMilli(1516239022000L)))
+        .signWith(Keys.hmacShaKeyFor(TEST_SECRET_KEY.getBytes()))
+        .compact();
+}
 
     // ========== SUCCESS TESTS ==========
 
@@ -161,7 +179,7 @@ class OrderControllerTest {
         // Act & Assert - Include Authorization header with valid token
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+                .header("Authorization", "Bearer " + generateTestJwt())
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.orderId").value(orderId.toString()))

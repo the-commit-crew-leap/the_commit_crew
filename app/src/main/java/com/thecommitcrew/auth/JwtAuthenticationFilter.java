@@ -2,11 +2,14 @@ package com.thecommitcrew.auth;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -20,26 +23,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
             throws ServletException, IOException {
         
-        // Get Authorization header: "Bearer eyJ..."
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
-                String token = authHeader.substring(7); // Remove "Bearer "
+                String token = authHeader.substring(7);
                 
-                // Call NestJS to validate token
                 AuthServiceClient.ValidateResponse validated = authServiceClient.validateToken(token);
                 
-                if (validated.valid) {
-                    // Token is valid - add username to request so controller can use it
+                if (validated.valid && validated.username != null) {
+                    // Set request attribute for AuthCheckAspect
                     request.setAttribute("username", validated.username);
+                    
+                    // Create proper Spring Security Authentication
+                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        validated.username, null, Collections.emptyList()
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                // Log error but don't fail - let controller handle missing auth
+                System.out.println("Error: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         
-        // Continue to next filter
         filterChain.doFilter(request, response);
     }
 }

@@ -1,5 +1,7 @@
 package com.thecommitcrew.auth;
 
+import java.util.Map;
+
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -24,19 +26,25 @@ public class AuthServiceClient {
      */
     public ValidateResponse validateToken(String token) {
         try {
+            // Test basic connectivity first
+            System.out.println("Attempting to reach auth service at: " + authServiceUrl);
+            ResponseEntity<String> healthCheck = restTemplate.getForEntity(authServiceUrl + "/api/auth/health", String.class);
+            System.out.println("Auth service health check: " + healthCheck.getBody());
+            
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/json");
             
-            String payload = String.format("{\"token\": \"%s\"}", token);
-            HttpEntity<String> request = new HttpEntity<>(payload, headers);
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, String> payload = Map.of("token", token);
+            String jsonPayload = mapper.writeValueAsString(payload);
+            
+            HttpEntity<String> request = new HttpEntity<>(jsonPayload, headers);
             
             ResponseEntity<String> response = restTemplate.postForEntity(
                 authServiceUrl + "/api/auth/validate",
                 request,
                 String.class
             );
-            
-            // Parse response and return validation result
             return parseValidateResponse(response.getBody());
         } catch (Exception e) {
             return new ValidateResponse(false, null);
