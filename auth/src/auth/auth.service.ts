@@ -1,14 +1,27 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { TokenService } from './token.service';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   // Mock user storage (replace with database later)
   private users: Map<string, any> = new Map();
 
   constructor(private tokenService: TokenService) {}
+
+  async onModuleInit() {
+    // Default test user for development
+    const hashedPassword = await bcrypt.hash('testpass', 10);
+    this.users.set('testuser', {
+      id: 1,
+      username: 'testuser',
+      email: 'test@example.com',
+      password: hashedPassword,
+      createdAt: new Date(),
+    });
+    console.log('Default test user created: testuser/testpass');
+  }
 
   async register(registerDto: RegisterDto): Promise<any> {
     const { username, email, password } = registerDto;
