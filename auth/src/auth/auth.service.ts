@@ -3,10 +3,12 @@ import * as bcrypt from 'bcrypt';
 import { TokenService } from './token.service';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
 import { UsersRepository } from './repositories/users.repository';
+import { SecureLoggerService } from '../common/services/secure-logger.service';
 
 @Injectable()
 export class AuthService {
   private readonly bcryptCostFactor: number;
+  private readonly logger = new SecureLoggerService(AuthService.name);
 
   constructor(
     private tokenService: TokenService,
@@ -19,9 +21,12 @@ export class AuthService {
   async register(registerDto: RegisterDto): Promise<any> {
     const { username, email, password } = registerDto;
 
+    this.logger.log(`Attempting to register user`, undefined, { username, email });
+
     // Check if user exists
     const existingUser = await this.usersRepository.findByUsername(username);
     if (existingUser) {
+      this.logger.warn(`Registration failed: user already exists`, undefined, { username });
       throw new BadRequestException('User already exists');
     }
 
@@ -35,6 +40,8 @@ export class AuthService {
       passwordHash: hashedPassword,
     });
 
+    this.logger.logAuthEvent('REGISTER_SUCCESS', username);
+
     return {
       user_id: user.user_id,
       username: user.username,
@@ -46,14 +53,18 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<any> {
     const { username, password } = loginDto;
 
+    this.logger.log(`Login attempt`, undefined, { username });
+
     // Find user in database
     const user = await this.usersRepository.findByUsernameWithCredential(username);
     if (!user) {
+      this.logger.warn(`Login failed: user not found`, undefined, { username });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Check if account is locked
     if (user.credential?.locked_until && new Date() < user.credential.locked_until) {
+      this.logger.warn(`Login failed: account locked`, undefined, { username });
       throw new UnauthorizedException('Account is locked. Please try again later.');
     }
 
@@ -62,12 +73,19 @@ export class AuthService {
     if (!isValid) {
       // Increment failed login attempts
       await this.usersRepository.incrementFailedLoginAttempts(user.user_id);
+      this.logger.warn(
+        `Login failed: invalid password`,
+        undefined,
+        { username, attempt: user.credential?.failed_login_attempts },
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Reset failed login attempts on successful login
     await this.usersRepository.resetFailedLoginAttempts(user.user_id);
     await this.usersRepository.updateLastLogin(user.user_id);
+
+    this.logger.logAuthEvent('LOGIN_SUCCESS', username);
 
     // Generate tokens
     return this.tokenService.issue(username);

@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Load environment variables BEFORE importing anything else
 const envFile = process.env.NODE_ENV === 'prod' ? '.env.prod' : '.env.dev';
@@ -46,3 +47,9 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+// Ensure logs directory exists
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir);
+}
