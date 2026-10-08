@@ -11,8 +11,6 @@ import org.springframework.web.client.RestTemplate;
 import com.thecommitcrew.auth.JwtAuthenticationFilter;
 import com.thecommitcrew.auth.AuthServiceClient;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import jakarta.servlet.ServletException;
-import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity

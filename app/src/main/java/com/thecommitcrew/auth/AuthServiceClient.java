@@ -27,9 +27,9 @@ public class AuthServiceClient {
     public ValidateResponse validateToken(String token) {
         try {
             // Test basic connectivity first
-            System.out.println("🔍 Attempting to reach auth service at: " + authServiceUrl);
+            System.out.println("Attempting to reach auth service at: " + authServiceUrl);
             ResponseEntity<String> healthCheck = restTemplate.getForEntity(authServiceUrl + "/api/auth/health", String.class);
-            System.out.println("✅ Auth service health check: " + healthCheck.getBody());
+            System.out.println("Auth service health check: " + healthCheck.getBody());
             
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/json");
@@ -38,9 +38,6 @@ public class AuthServiceClient {
             Map<String, String> payload = Map.of("token", token);
             String jsonPayload = mapper.writeValueAsString(payload);
             
-            System.out.println("🔍 Sending validation request to: " + authServiceUrl + "/api/auth/validate");
-            System.out.println("🔍 Payload: " + jsonPayload);
-            
             HttpEntity<String> request = new HttpEntity<>(jsonPayload, headers);
             
             ResponseEntity<String> response = restTemplate.postForEntity(
@@ -48,14 +45,8 @@ public class AuthServiceClient {
                 request,
                 String.class
             );
-            
-            System.out.println("✅ Auth service response status: " + response.getStatusCode());
-            System.out.println("✅ Auth service response body: " + response.getBody());
             return parseValidateResponse(response.getBody());
         } catch (Exception e) {
-            System.out.println("❌ Auth service error - " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            System.out.println("❌ Full error:");
-            e.printStackTrace();
             return new ValidateResponse(false, null);
         }
     }

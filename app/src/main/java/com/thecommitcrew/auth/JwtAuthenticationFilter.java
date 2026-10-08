@@ -28,10 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String token = authHeader.substring(7);
-                System.out.println("🔍 Validating token...");
                 
                 AuthServiceClient.ValidateResponse validated = authServiceClient.validateToken(token);
-                System.out.println("🔍 Valid: " + validated.valid + ", Username: " + validated.username);
                 
                 if (validated.valid && validated.username != null) {
                     // Set request attribute for AuthCheckAspect
@@ -42,10 +40,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         validated.username, null, Collections.emptyList()
                     );
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                    System.out.println("✅ User authenticated: " + validated.username);
                 }
             } catch (Exception e) {
-                System.out.println("❌ Error: " + e.getMessage());
+                System.out.println("Error: " + e.getMessage());
                 e.printStackTrace();
             }
         }
