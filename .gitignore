@@ -7,3 +7,16 @@ python/market_data/
 **/__pycache__/
 .pytest_cache/
 python/venv
+
+# Node.js
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+coverage/
+.nyc_output/
