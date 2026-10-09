@@ -35,7 +35,7 @@ export class AuthService implements OnModuleInit {
 
       try {
         // Create account in trading database
-        await this.databaseService.createAccount(accountId, 'Test User Account');
+        await this.databaseService.createAccount(accountId, 'Test User');
 
         // Create user in auth database
         const user = this.userRepository.create({
@@ -92,7 +92,7 @@ export class AuthService implements OnModuleInit {
 
     try {
       // Create account in trading database FIRST
-      await this.databaseService.createAccount(accountId, username);
+      await this.databaseService.createAccount(accountId, fullName || username);
 
       // Create user in auth database
       const user = this.userRepository.create({
@@ -148,6 +148,11 @@ export class AuthService implements OnModuleInit {
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if user is active
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('User account is not active');
     }
 
     // Get credential for this user
@@ -220,25 +225,34 @@ export class AuthService implements OnModuleInit {
   }
 
   async deleteUser(userId: number): Promise<{ message: string }> {
-    // Find the user
+    // Find the user and their trading account
     const user = await this.userRepository.findOne({
       where: { userId },
+      relations: { tradingAccounts: true },
     });
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
+    // Get the associated account ID before marking user as deleted
+    const accountId = user.tradingAccounts?.[0]?.accountId;
+
     try {
-      // Mark user as DELETED instead of deleting the record
+      // Mark user status as DELETED instead of deleting the record
       await this.userRepository.update(
         { userId },
         { status: 'DELETED' }
       );
 
-      this.logger.log(`User marked as deleted: ${user.username}`);
+      // Close the associated trading account
+      if (accountId) {
+        await this.databaseService.closeAccount(accountId);
+      }
 
-      return { message: `User ${user.username} marked as deleted` };
+      this.logger.log(`User marked as deleted: ${user.username}, account closed: ${accountId}`);
+
+      return { message: `User ${user.username} marked as deleted and account ${accountId} closed` };
     } catch (error: unknown) {
       this.logger.error(`Failed to mark user as deleted ${userId}:`, error);
       throw new BadRequestException('Failed to mark user as deleted');

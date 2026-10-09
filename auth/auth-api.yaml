@@ -108,7 +108,7 @@ paths:
 
   /delete/{id}:
     delete:
-      summary: Mark a user account as deleted
+      summary: Mark a user account as deleted and close associated trading account
       tags:
         - Authentication
       parameters:
@@ -121,7 +121,7 @@ paths:
             format: int64
       responses:
         '200':
-          description: User successfully marked as deleted
+          description: User successfully marked as deleted and associated trading account closed
           content:
             application/json:
               schema:
@@ -270,7 +270,7 @@ components:
           properties:
             message:
               type: string
-              example: 'User john_doe marked as deleted'
+              example: 'User john_doe marked as deleted and account ACC-12345678 closed'
 
     ErrorResponse:
       type: object
