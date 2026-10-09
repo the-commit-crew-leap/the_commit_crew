@@ -55,6 +55,16 @@ public class OrderService {
         Account account = getAccount(request.accountId());
         long availableHoldings = getAvailableHoldings(request.accountId(), request.symbol());
 
+        Instrument instrument = instrumentRepository.findBySymbol(request.symbol())
+            .map(instrumentMapper::toDomain)
+            .orElseThrow(() -> new InstrumentNotFoundException(
+                "Instrument not found for symbol: " + request.symbol()
+            ));
+
+        if (!instrument.isTradable()) {
+            throw new IllegalStateException("Instrument is not tradable: " + request.symbol());
+        }
+
         BigDecimal marketPrice = priceService.getCurrentPrice(request.symbol());
         String idempotencyKey = UUID.randomUUID().toString();
 
