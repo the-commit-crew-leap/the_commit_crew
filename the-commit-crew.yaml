@@ -227,6 +227,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  
+    /accounts/{id}/deposit:
+    post:
+      summary: Deposit money into account
+      operationId: depositFunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+            example:
+              amount: 1000.00
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+              example:
+                accountId: ACC-1001
+                transactionType: DEPOSIT
+                amount: 1000.00
+                newBalance:
+                  amount: 11000.00
+                  currency: USD
+                timestamp: 2026-09-21T10:30:00
+        '400':
+          description: Bad request - validation failed (amount must be positive)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{id}/withdraw:
+    post:
+      summary: Withdraw money from account
+      operationId: withdrawFunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+            example:
+              amount: 500.00
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+              example:
+                accountId: ACC-1001
+                transactionType: WITHDRAW
+                amount: 500.00
+                newBalance:
+                  amount: 9500.00
+                  currency: USD
+                timestamp: 2026-09-21T10:35:00
+        '400':
+          description: Bad request - validation failed (amount must be positive or insufficient funds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 
 components:
@@ -357,3 +453,31 @@ components:
           type: string
         message:
           type: string
+
+        TransactionRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+
+    TransactionResponse:
+      type: object
+      required: [accountId, transactionType, amount, newBalance, timestamp]
+      properties:
+        accountId:
+          type: string
+        transactionType:
+          type: string
+          enum: [DEPOSIT, WITHDRAW]
+        amount:
+          type: number
+          format: double
+        newBalance:
+          $ref: '#/components/schemas/Money'
+        timestamp:
+          type: string
+          format: date-time

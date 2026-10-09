@@ -3,6 +3,7 @@ package com.thecommitcrew.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -131,6 +132,114 @@ class AccountServiceTests {
 
         assertEquals(testAccount.getCashBalance(), result);
         verify(accountRepository).findByAccountId(TEST_ACCOUNT_ID);
+    }
+
+    @Test
+    void deposit_WithValidAmount_SuccessfullyDeposits() {
+        Money depositAmount = new Money(new BigDecimal("500.00"));
+        Money expectedNewBalance = new Money(new BigDecimal("10500.00"));
+        
+        Account accountAfterDeposit = new Account(
+            TEST_ACCOUNT_ID,
+            "John Doe",
+            expectedNewBalance,
+            AccountStatus.ACTIVE,
+            2,
+            LocalDateTime.now(),
+            statusValidator
+        );
+        
+        AccountEntity updatedEntity = new AccountEntity(
+            TEST_ACCOUNT_ID,
+            "John Doe",
+            new BigDecimal("10500.00"),
+            AccountStatus.ACTIVE,
+            2,
+            LocalDateTime.now()
+        );
+        
+        when(accountRepository.findByAccountId(TEST_ACCOUNT_ID)).thenReturn(Optional.of(testAccountEntity));
+        when(accountMapper.toDomain(testAccountEntity)).thenReturn(testAccount);
+        when(accountRepository.save(testAccountEntity)).thenReturn(updatedEntity);
+        when(accountMapper.toDomain(updatedEntity)).thenReturn(accountAfterDeposit);
+
+        Account result = accountService.deposit(TEST_ACCOUNT_ID, depositAmount);
+
+        assertEquals(expectedNewBalance.getAmount(), result.getCashBalance().getAmount());
+        verify(accountRepository, times(2)).findByAccountId(TEST_ACCOUNT_ID);
+        verify(accountRepository).save(testAccountEntity);
+    }
+
+    @Test
+    void deposit_WithAccountNotFound_ThrowsException() {
+        Money depositAmount = new Money(new BigDecimal("500.00"));
+        
+        when(accountRepository.findByAccountId(INVALID_ACCOUNT_ID)).thenReturn(Optional.empty());
+
+        assertThrows(AccountNotFoundException.class, () -> 
+            accountService.deposit(INVALID_ACCOUNT_ID, depositAmount)
+        );
+        verify(accountRepository).findByAccountId(INVALID_ACCOUNT_ID);
+    }
+
+    @Test
+    void withdraw_WithValidAmount_SuccessfullyWithdraws() {
+        Money withdrawAmount = new Money(new BigDecimal("1000.00"));
+        Money expectedNewBalance = new Money(new BigDecimal("9000.00"));
+        
+        Account accountAfterWithdraw = new Account(
+            TEST_ACCOUNT_ID,
+            "John Doe",
+            expectedNewBalance,
+            AccountStatus.ACTIVE,
+            2,
+            LocalDateTime.now(),
+            statusValidator
+        );
+        
+        AccountEntity updatedEntity = new AccountEntity(
+            TEST_ACCOUNT_ID,
+            "John Doe",
+            new BigDecimal("9000.00"),
+            AccountStatus.ACTIVE,
+            2,
+            LocalDateTime.now()
+        );
+        
+        when(accountRepository.findByAccountId(TEST_ACCOUNT_ID)).thenReturn(Optional.of(testAccountEntity));
+        when(accountMapper.toDomain(testAccountEntity)).thenReturn(testAccount);
+        when(accountRepository.save(testAccountEntity)).thenReturn(updatedEntity);
+        when(accountMapper.toDomain(updatedEntity)).thenReturn(accountAfterWithdraw);
+
+        Account result = accountService.withdraw(TEST_ACCOUNT_ID, withdrawAmount);
+
+        assertEquals(expectedNewBalance.getAmount(), result.getCashBalance().getAmount());
+        verify(accountRepository, times(2)).findByAccountId(TEST_ACCOUNT_ID);
+        verify(accountRepository).save(testAccountEntity);
+    }
+
+    @Test
+    void withdraw_WithInsufficientFunds_ThrowsException() {
+        Money withdrawAmount = new Money(new BigDecimal("15000.00"));
+        
+        when(accountRepository.findByAccountId(TEST_ACCOUNT_ID)).thenReturn(Optional.of(testAccountEntity));
+        when(accountMapper.toDomain(testAccountEntity)).thenReturn(testAccount);
+
+        assertThrows(IllegalArgumentException.class, () -> 
+            accountService.withdraw(TEST_ACCOUNT_ID, withdrawAmount)
+        );
+    }
+
+    @Test
+    void withdraw_WithAccountNotFound_ThrowsException() {
+        Money withdrawAmount = new Money(new BigDecimal("500.00"));
+        
+        when(accountRepository.findByAccountId(INVALID_ACCOUNT_ID)).thenReturn(Optional.empty());
+
+        assertThrows(AccountNotFoundException.class, () -> 
+            accountService.withdraw(INVALID_ACCOUNT_ID, withdrawAmount)
+        );
+        verify(accountRepository).findByAccountId(INVALID_ACCOUNT_ID);
     }
 
     private Position createPosition(String symbol, Long quantity) {

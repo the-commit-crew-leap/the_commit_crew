@@ -23,6 +23,7 @@ import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.domain.exception.InsufficientFundsException;
 import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
+import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
 import com.thecommitcrew.auth.CheckAuth;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.model.Order;
@@ -80,11 +81,19 @@ public ResponseEntity<OrderResponseDTO> submitOrder(
     
     // Get authenticated username from JWT filter
     String username = (String) httpRequest.getAttribute("username");
+    String userAccountId = (String) httpRequest.getAttribute("accountId");
     
     // @CheckAuth aspect already validates username is present
     // but explicit check adds safety and documentation
     if (username == null) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    // Verify the order's accountId matches the authenticated user's account
+    if (!request.accountId().toString().equals(userAccountId)) {
+        throw new UnauthorizedAccountException(
+            "Forbidden: You cannot place orders for account " + request.accountId()
+        );
     }
     
     // OrderService.placeOrder handles all validation and execution

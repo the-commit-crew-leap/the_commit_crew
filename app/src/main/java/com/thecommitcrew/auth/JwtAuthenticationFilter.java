@@ -32,8 +32,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 AuthServiceClient.ValidateResponse validated = authServiceClient.validateToken(token);
                 
                 if (validated.valid && validated.username != null) {
-                    // Set request attribute for AuthCheckAspect
+                    // Set request attributes for AuthCheckAspect and controllers
                     request.setAttribute("username", validated.username);
+                    request.setAttribute("accountId", validated.accountId);
+                    request.setAttribute("role", validated.role);
                     
                     // Create proper Spring Security Authentication
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
