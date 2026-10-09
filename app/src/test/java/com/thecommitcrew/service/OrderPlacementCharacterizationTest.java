@@ -75,6 +75,9 @@ class OrderPlacementCharacterizationTest {
     @InjectMocks
     private OrderService orderService;
 
+    @Mock
+    private PriceService priceService;
+
     private List<Order> savedOrders;
 
     // Test data constants
@@ -100,6 +103,8 @@ class OrderPlacementCharacterizationTest {
         .thenReturn(Optional.of(testAccount));
         lenient().when(accountRepository.findByAccountId("ACC-1010"))
             .thenReturn(Optional.empty());
+        lenient().when(priceService.getCurrentPrice(TEST_SYMBOL))
+            .thenReturn(new BigDecimal("25.00"));
         
         // Mock InstrumentRepository.findBySymbol
         InstrumentEntity testInstrument = new InstrumentEntity();
@@ -179,9 +184,7 @@ class OrderPlacementCharacterizationTest {
             TEST_ACCOUNT_ID,
             TEST_SYMBOL,
             OrderSide.BUY,
-            10L,
-            new BigDecimal("50.00"),
-            "char-test-buy-001"
+            10L
         );
 
         Order result = orderService.placeOrder(request);
@@ -203,9 +206,7 @@ class OrderPlacementCharacterizationTest {
             TEST_ACCOUNT_ID,
             TEST_SYMBOL,
             OrderSide.BUY,
-            1000000L,  // Huge quantity that exceeds balance
-            new BigDecimal("100.00"),
-            "char-test-insufficient-001"
+            1000000L  // Huge quantity that exceeds balance
         );
 
         Order result = orderService.placeOrder(request);
@@ -226,9 +227,7 @@ class OrderPlacementCharacterizationTest {
             "ACC-1010",  // Non-existent
             TEST_SYMBOL,
             OrderSide.BUY,
-            10L,
-            new BigDecimal("50.00"),
-            "char-test-not-found-001"
+            10L
         );
 
         assertThrows(AccountNotFoundException.class, () -> orderService.placeOrder(request));
@@ -246,38 +245,10 @@ class OrderPlacementCharacterizationTest {
             TEST_ACCOUNT_ID,
             "NONEXISTENT_SYMBOL",
             OrderSide.BUY,
-            10L,
-            new BigDecimal("50.00"),
-            "char-test-symbol-not-found-001"
+            10L
         );
 
         assertThrows(InstrumentNotFoundException.class, () -> orderService.placeOrder(request));
-    }
-
-    /**
-     * Characterization: Duplicate idempotency key throws DuplicateOrderException
-     * 
-     * Documents current behavior: Same idempotency key should throw on second attempt.
-     */
-    @Test
-    @DisplayName("Duplicate idempotency key → DuplicateOrderException thrown")
-    void char_duplicate_idempotency_key_throws_exception() {
-        String sameKey = "char-test-duplicate-001";
-        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            TEST_ACCOUNT_ID,
-            TEST_SYMBOL,
-            OrderSide.BUY,
-            10L,
-            new BigDecimal("50.00"),
-            sameKey
-        );
-
-        // First call succeeds
-        Order first = orderService.placeOrder(request);
-        assertEquals(OrderStatus.NEW, first.getStatus());
-
-        // Second call with same key throws
-        assertThrows(DuplicateOrderException.class, () -> orderService.placeOrder(request));
     }
 
     /**
@@ -304,9 +275,7 @@ class OrderPlacementCharacterizationTest {
             TEST_ACCOUNT_ID,
             TEST_SYMBOL,
             OrderSide.BUY,
-            10L,
-            new BigDecimal("50.00"),
-            "char-test-inactive-001"
+            10L
         );
 
         Order result = orderService.placeOrder(request);
@@ -328,9 +297,7 @@ class OrderPlacementCharacterizationTest {
             TEST_ACCOUNT_ID,
             TEST_SYMBOL,
             OrderSide.BUY,
-            50L,
-            new BigDecimal("25.00"),
-            "char-test-fields-001"
+            50L
         );
 
         Order result = orderService.placeOrder(request);

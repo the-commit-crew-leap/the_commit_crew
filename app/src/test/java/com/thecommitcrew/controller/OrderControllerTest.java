@@ -94,9 +94,7 @@ class OrderControllerTest {
             ACCOUNT_ID,
             SYMBOL,
             OrderSide.BUY,
-            QUANTITY,
-            new BigDecimal(PRICE),
-            IDEMPOTENCY_KEY
+            QUANTITY
         );
     }
 
@@ -278,9 +276,7 @@ class OrderControllerTest {
             ACCOUNT_ID,
             SYMBOL,
             OrderSide.SELL,
-            QUANTITY,
-            new BigDecimal(PRICE),
-            IDEMPOTENCY_KEY
+            QUANTITY
         );
         
         when(orderService.placeOrder(any(PlaceOrderRequestDTO.class)))

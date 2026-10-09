@@ -36,16 +36,18 @@ public class OrderService {
     private final InstrumentRepository instrumentRepository;
     private final AccountMapper accountMapper;
     private final InstrumentMapper instrumentMapper;
+    private final PriceService priceService;
 
     public OrderService(OrderMapper orderMapper, AccountRepository accountRepository,
                         PositionMapper positionMapper, InstrumentRepository instrumentRepository,
-                        AccountMapper accountMapper, InstrumentMapper instrumentMapper) {
+                        AccountMapper accountMapper, InstrumentMapper instrumentMapper, PriceService priceService) {
         this.orderMapper = orderMapper;
         this.accountRepository = accountRepository;
         this.positionMapper = positionMapper;
         this.instrumentRepository = instrumentRepository;
         this.accountMapper = accountMapper;
         this.instrumentMapper = instrumentMapper;
+        this.priceService = priceService;
     }
 
     @Transactional
@@ -53,25 +55,28 @@ public class OrderService {
         Account account = getAccount(request.accountId());
         long availableHoldings = getAvailableHoldings(request.accountId(), request.symbol());
 
+        BigDecimal marketPrice = priceService.getCurrentPrice(request.symbol());
+        String idempotencyKey = UUID.randomUUID().toString();
+
         Order order = new Order(
             UUID.randomUUID(),
             request.accountId(),
             request.symbol(),
             request.side(),
             request.quantity(),
-            request.price(),
+            marketPrice,
             OrderStatus.NEW,
             LocalDateTime.now(ZoneId.of("UTC")),
-            request.idempotencyKey()
+            idempotencyKey
         );
 
-        validateOrder(request);
+        validateOrder(order);
 
         OrderStatus status = determineStatus(
             account,
             request.side(),
             request.quantity(),
-            request.price(),
+            marketPrice,
             availableHoldings
         );
         order.setStatus(status);
@@ -89,20 +94,6 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         orderMapper.save(order);
-    }
-
-    public void validateOrder(PlaceOrderRequestDTO request) {
-        validateOrder(new Order(
-            UUID.randomUUID(),
-            request.accountId(),
-            request.symbol(),
-            request.side(),
-            request.quantity(),
-            request.price(),
-            OrderStatus.NEW,
-            LocalDateTime.now(ZoneId.of("UTC")),
-            request.idempotencyKey()
-        ));
     }
 
     private void validateOrder(Order order) {
