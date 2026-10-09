@@ -18,6 +18,7 @@ import com.thecommitcrew.domain.exception.AccountNotFoundException;
 import com.thecommitcrew.domain.exception.DuplicateOrderException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
+import com.thecommitcrew.domain.exception.PriceNotFoundException;
 import com.thecommitcrew.domain.model.Account;
 import com.thecommitcrew.domain.model.Instrument;
 import com.thecommitcrew.domain.model.Money;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -118,7 +120,7 @@ class OrderServiceTest {
             true
         );
 
-        when(priceService.getCurrentPrice(SYMBOL))
+        lenient().when(priceService.getCurrentPrice(SYMBOL))
             .thenReturn(new BigDecimal("100.00"));
     }
 
@@ -146,7 +148,7 @@ class OrderServiceTest {
 
     @Test
     void placeOrder_buyWithoutFunds_rejectsOrder() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 100L);
+        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 101L);
 
         when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
         when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
@@ -170,6 +172,25 @@ class OrderServiceTest {
         when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.empty());
 
         assertThrows(AccountNotFoundException.class, () -> orderService.placeOrder(request));
+    }
+
+    @Test
+    void placeOrder_priceNotFound_throwsException() {
+        PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
+            ACCOUNT_ID,
+            SYMBOL,
+            OrderSide.BUY,
+            10L
+        );
+
+        when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
+        when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
+        when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.of(tradableInstrumentEntity));
+        when(instrumentMapper.toDomain(tradableInstrumentEntity)).thenReturn(tradableInstrument);
+        when(priceService.getCurrentPrice(SYMBOL))
+            .thenThrow(new PriceNotFoundException("No price found for symbol: " + SYMBOL));
+
+        assertThrows(PriceNotFoundException.class, () -> orderService.placeOrder(request));
     }
 
     @Test
