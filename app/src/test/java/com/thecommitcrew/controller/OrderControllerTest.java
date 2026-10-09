@@ -408,6 +408,7 @@ class OrderControllerTest {
                         throws ServletException, IOException {
                     // For testing: always set a username so @CheckAuth passes
                     request.setAttribute("username", "test-user");
+                    request.setAttribute("accountId", ACCOUNT_ID);
                     filterChain.doFilter(request, response);
                 }
             };
