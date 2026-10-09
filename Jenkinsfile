@@ -224,13 +224,13 @@ pipeline {
                                 -e SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB} \
                                 -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
                                 -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
-                                -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
-                                -e SPRING_KAFKA_PROPERTIES_CONNECTIONS_MAX_IDLE_MS=5000 \
+                                -e SPRING_KAFKA_AUTO_STARTUP=false \
+                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=5000 \
                                 -e SERVER_SHUTDOWN=graceful \
                                 the-commit-crew:${BUILD_NUMBER})
                             
                             echo "Waiting for Spring Boot to start..."
-                            sleep 55
+                            sleep 30
                             
                             for i in {1..30}; do
                                 if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
