@@ -106,6 +106,39 @@ paths:
         '401':
           description: Invalid or expired token
 
+  /delete/{id}:
+    delete:
+      summary: Delete a user account
+      tags:
+        - Authentication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID to delete
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User successfully deleted and associated trading account closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserResponse'
+        '400':
+          description: Bad request - user not found or deletion failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /health:
     get:
       summary: Health check endpoint
@@ -202,6 +235,47 @@ components:
           type: integer
           minimum: 1
           description: Token expiration time in seconds
+
+    SuccessResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          example: 'SUCCESS'
+        data:
+          type: object
+
+    DeleteUserResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          example: 'SUCCESS'
+        data:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              example: 'User john_doe deleted and account ACC-12345678 closed'
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - message
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
 
 tags:
   - name: Authentication

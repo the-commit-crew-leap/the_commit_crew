@@ -217,4 +217,42 @@ export class AuthService implements OnModuleInit {
       valid: true,
     };
   }
+
+  async deleteUser(userId: number): Promise<{ message: string }> {
+    // Find the user and their trading account
+    const user = await this.userRepository.findOne({
+      where: { userId },
+      relations: { tradingAccounts: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Get the associated account ID before deletion
+    const accountId = user.tradingAccounts?.[0]?.accountId;
+
+    try {
+      // Delete credential record (cascades to user if configured)
+      await this.credentialRepository.delete({ userId });
+
+      // Delete user trading accounts (or they cascade)
+      await this.userTradingAccountRepository.delete({ userId });
+
+      // Delete the user
+      await this.userRepository.delete({ userId });
+
+      // Close the associated trading account (don't delete it)
+      if (accountId) {
+        await this.databaseService.closeAccount(accountId);
+      }
+
+      this.logger.log(`User deleted: ${user.username}, account closed: ${accountId}`);
+
+      return { message: `User ${user.username} deleted and account ${accountId} closed` };
+    } catch (error: unknown) {
+      this.logger.error(`Failed to delete user ${userId}:`, error);
+      throw new BadRequestException('Failed to delete user');
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { 
   ApiTags, 
   ApiOperation, 
@@ -77,6 +77,29 @@ export class AuthController {
     return {
       status: 'SUCCESS',
       data: await this.authService.validate(validateDto.token),
+    };
+  }
+
+  @Delete(':userId')
+  @ApiOperation({ summary: 'Delete a user account' })
+  @ApiOkResponse({ 
+    description: 'User successfully deleted and trading account closed',
+    schema: {
+      properties: {
+        status: { type: 'string', example: 'SUCCESS' },
+        data: { 
+          properties: {
+            message: { type: 'string' }
+          }
+        }
+      }
+    }
+  })
+  @ApiBadRequestResponse({ description: 'User not found or deletion failed' })
+  async deleteUser(@Param('userId', ParseIntPipe) userId: number) {
+    return {
+      status: 'SUCCESS',
+      data: await this.authService.deleteUser(userId),
     };
   }
 

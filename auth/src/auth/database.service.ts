@@ -45,6 +45,32 @@ export class DatabaseService {
     }
   }
 
+  async closeAccount(accountId: string): Promise<boolean> {
+    const client = await this.tradingDbPool.connect();
+    try {
+      const query = `
+        UPDATE accounts 
+        SET status = $1
+        WHERE account_id = $2
+      `;
+      
+      const result = await client.query(query, ['CLOSED', accountId]);
+      
+      if (result.rowCount === 0) {
+        throw new Error(`Account not found: ${accountId}`);
+      }
+      
+      this.logger.log(`Account closed in trading-db: ${accountId}`);
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to close account in trading-db: ${errorMessage}`);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getConnection() {
     return this.tradingDbPool;
   }
