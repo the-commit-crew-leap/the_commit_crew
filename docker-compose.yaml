@@ -9,6 +9,11 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       NODE_ENV: ${NODE_ENV:-development}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTH_DB: ${AUTH_DB:?}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/health"]
       interval: 10s

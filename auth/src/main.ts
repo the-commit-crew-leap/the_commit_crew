@@ -48,8 +48,9 @@ async function bootstrap() {
 
 bootstrap();
 
+// TODO: Re-enable logging to file once file permissions are fixed in Docker
 // Ensure logs directory exists
-const logsDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir);
-}
+// const logsDir = path.join(process.cwd(), 'logs');
+// if (!fs.existsSync(logsDir)) {
+//   fs.mkdirSync(logsDir);
+// }
