@@ -23,7 +23,7 @@ import { RequestSanitizerMiddleware } from '../common/middleware/request-sanitiz
       signOptions: { expiresIn: '15m' },
     }),
   ],
-  providers: [AuthService, TokenService, JwtStrategy, DatabaseService],
+  providers: [AuthService, TokenService, JwtStrategy, DatabaseService, UsersRepository, SecureLoggerService],
   controllers: [AuthController],
   exports: [AuthService, TokenService, SecureLoggerService],
 })

@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne } from 'typeorm';
 import { UserTradingAccount } from './user-trading-account.entity';
+import { Credential } from './credential.entity';
 
 @Entity('users')
 export class User {
@@ -29,6 +30,9 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToOne(() => Credential, credential => credential.user, { eager: true })
+  credential: Credential;
 
   @OneToMany(() => UserTradingAccount, uta => uta.user)
   tradingAccounts: UserTradingAccount[];

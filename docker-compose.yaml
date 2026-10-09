@@ -10,17 +10,17 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       NODE_ENV: ${NODE_ENV:-development}
       # Auth Database
-      AUTH_DB_HOST: ${AUTH_DB_HOST:-db}
-      AUTH_DB_PORT: ${AUTH_DB_PORT:-5432}
-      AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
-      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
-      AUTH_DB_NAME: ${AUTH_DB_NAME:-auth_db-dev}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTH_DB: ${AUTH_DB:?}
       # Trading Database
-      TRADING_DB_HOST: ${TRADING_DB_HOST:-db}
-      TRADING_DB_PORT: ${TRADING_DB_PORT:-5432}
-      TRADING_DB_USER: ${TRADING_DB_USER:-postgres}
-      TRADING_DB_PASSWORD: ${TRADING_DB_PASSWORD}
-      TRADING_DB_NAME: ${TRADING_DB_NAME:-the-commit-crew-dev}
+      TRADING_DB_HOST: db
+      TRADING_DB_PORT: 5432
+      TRADING_DB_USER: postgres
+      TRADING_DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      TRADING_DB_NAME: ${POSTGRES_DB:?}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/health"]
       interval: 10s

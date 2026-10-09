@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Credential } from '../entities/credential.entity';
+import { UserTradingAccount } from '../entities/user-trading-account.entity';
 
 @Injectable()
 export class UsersRepository {
@@ -11,6 +12,8 @@ export class UsersRepository {
     private userRepository: Repository<User>,
     @InjectRepository(Credential)
     private credentialRepository: Repository<Credential>,
+    @InjectRepository(UserTradingAccount)
+    private userTradingAccountRepository: Repository<UserTradingAccount>,
   ) {}
 
   async findByUsername(username: string): Promise<User | null> {
@@ -26,9 +29,16 @@ export class UsersRepository {
     });
   }
 
+  async findByUsernameWithCredentialAndTradingAccounts(username: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { username },
+      relations: { credential: true, tradingAccounts: true },
+    });
+  }
+
   async findById(userId: number): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { user_id: userId },
+      where: { userId },
       relations: { credential: true },
     });
   }
@@ -36,12 +46,14 @@ export class UsersRepository {
   async createUser(data: {
     username: string;
     email: string;
+    fullName?: string;
     passwordHash: string;
   }): Promise<User> {
     // Create user
     const user = this.userRepository.create({
       username: data.username,
       email: data.email,
+      fullName: data.fullName,
       status: 'ACTIVE',
     });
 
@@ -49,10 +61,10 @@ export class UsersRepository {
 
     // Create credential
     const credential = this.credentialRepository.create({
-      user_id: savedUser.user_id,
-      password_hash: data.passwordHash,
+      userId: savedUser.userId,
+      passwordHash: data.passwordHash,
       algorithm: 'bcrypt',
-      failed_login_attempts: 0,
+      failedLoginAttempts: 0,
     });
 
     await this.credentialRepository.save(credential);
@@ -61,43 +73,69 @@ export class UsersRepository {
     return (await this.findByUsernameWithCredential(data.username)) as User;
   }
 
+  async linkUserToTradingAccount(userId: number, accountId: string, role: 'CLIENT' | 'ADVISOR'): Promise<void> {
+    const userTradingAccount = this.userTradingAccountRepository.create({
+      userId,
+      accountId,
+      role,
+    });
+
+    await this.userTradingAccountRepository.save(userTradingAccount);
+  }
+
+  async findTradingAccountByUserId(userId: number): Promise<UserTradingAccount | null> {
+    return this.userTradingAccountRepository.findOne({
+      where: { userId },
+    });
+  }
+
   async updateLastLogin(userId: number): Promise<void> {
     await this.credentialRepository.update(
-      { user_id: userId },
-      { last_login: new Date() },
+      { userId },
+      { lastLogin: new Date() },
     );
   }
 
   async incrementFailedLoginAttempts(userId: number): Promise<void> {
     await this.credentialRepository.increment(
-      { user_id: userId },
-      'failed_login_attempts',
+      { userId },
+      'failedLoginAttempts',
       1,
     );
 
     // Lock account after 5 failed attempts for 15 minutes
     const credential = await this.credentialRepository.findOne({
-      where: { user_id: userId },
+      where: { userId },
     });
 
-    if (credential && credential.failed_login_attempts >= 5) {
+    if (credential && credential.failedLoginAttempts >= 5) {
       const lockedUntil = new Date();
       lockedUntil.setMinutes(lockedUntil.getMinutes() + 15);
 
       await this.credentialRepository.update(
-        { user_id: userId },
-        { locked_until: lockedUntil },
+        { userId },
+        { lockedUntil },
+      );
+
+      await this.userRepository.update(
+        { userId },
+        { status: 'SUSPENDED' },
       );
     }
   }
 
   async resetFailedLoginAttempts(userId: number): Promise<void> {
     await this.credentialRepository.update(
-      { user_id: userId },
+      { userId },
       { 
-        failed_login_attempts: 0, 
-        locked_until: null as any,
+        failedLoginAttempts: 0, 
+        lockedUntil: null as any,
       },
+    );
+
+    await this.userRepository.update(
+      { userId, status: 'SUSPENDED' },
+      { status: 'ACTIVE' },
     );
   }
 }

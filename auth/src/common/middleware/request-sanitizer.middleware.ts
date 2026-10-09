@@ -21,16 +21,8 @@ export class RequestSanitizerMiddleware implements NestMiddleware {
       `Incoming ${method} request to ${path} | ${JSON.stringify(sanitizedBody)}`,
     );
 
-    // Optionally override res.json to sanitize outgoing responses
-    const originalJson = res.json.bind(res);
-    res.json = function(data: any) {
-      // Only sanitize if response status is not an error (errors may need full details)
-      if (res.statusCode >= 400) {
-        return originalJson(data);
-      }
-      const sanitized = DataSanitizer.sanitize(data);
-      return originalJson(sanitized);
-    };
+    // Do NOT sanitize outgoing responses - they need to include tokens for the client
+    // Sanitization is only for logging, not API responses
 
     next();
   }
