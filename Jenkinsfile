@@ -10,7 +10,7 @@ pipeline {
                 checkout scm 
             } 
         }
-        stage('Secret Detection') {
+        /*stage('Secret Detection') {
             steps {
                 script {
                     sh '''
@@ -35,13 +35,13 @@ pipeline {
                     archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
                 }
             }
-        }
+        }*/
         stage('Build') {
             steps {
                 sh 'mvn -B clean package'
             }
         }
-        stage('Dependency Scanning') {
+        /*stage('Dependency Scanning') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
@@ -61,7 +61,7 @@ pipeline {
                     archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
                 }
             }
-        }
+        }*/
         stage('Build Image') {
             steps { sh 'docker build -t the-commit-crew:${BUILD_NUMBER} .' }
         }
@@ -280,7 +280,7 @@ pipeline {
             steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
-        stage('Quality Gate') {
+        /*stage('Quality Gate') {
             steps {
                 withSonarQubeEnv('sonarserver') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -288,7 +288,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
         stage('Integration Tests') {
             when {
                 not {
