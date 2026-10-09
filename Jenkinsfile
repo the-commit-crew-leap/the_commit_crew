@@ -10,58 +10,11 @@ pipeline {
                 checkout scm 
             } 
         }
-        /*stage('Secret Detection') {
-            steps {
-                script {
-                    sh '''
-                        docker run --rm \
-                            -v "\$(pwd)":/repo \
-                            zricethezav/gitleaks:latest \
-                            detect \
-                            --source /repo \
-                            --report-path /repo/gitleaks-report.json \
-                            --report-format json || EXIT_CODE=$?
-                        
-                        if [ "\${EXIT_CODE:-0}" -eq 1 ]; then
-                            echo "Secrets detected!"
-                            exit 1
-                        fi
-                        exit 0
-                    '''
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
-                }
-            }
-        }*/
         stage('Build') {
             steps {
                 sh 'mvn -B clean package'
             }
         }
-        /*stage('Dependency Scanning') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                        sh '''
-                            mvn -B dependency-check:check \
-                                -DnvdApiKey="\$NVD_API_KEY" \
-                                -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
-                            
-                            # Always pass to allow pipeline to continue
-                            exit 0
-                        '''
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
-                }
-            }
-        }*/
         stage('Build Image') {
             steps { sh 'docker build -t the-commit-crew:${BUILD_NUMBER} .' }
         }
@@ -280,15 +233,6 @@ pipeline {
             steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
-        /*stage('Quality Gate') {
-            steps {
-                withSonarQubeEnv('sonarserver') {
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                        sh 'mvn -B sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.qualitygate.wait=true'
-                    }
-                }
-            }
-        }*/
         stage('Integration Tests') {
             when {
                 not {
