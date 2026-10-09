@@ -64,6 +64,8 @@ class OrderServiceTest {
     private AccountMapper accountMapper;
     @Mock
     private InstrumentMapper instrumentMapper;
+    @Mock
+    private PriceService priceService;
 
     private OrderService orderService;
     private Account activeAccount;
@@ -75,7 +77,7 @@ class OrderServiceTest {
     void setUp() {
         // Removed PositionService from constructor
         orderService = new OrderService(orderMapper, accountRepository, positionMapper, 
-                                       instrumentRepository, accountMapper, instrumentMapper);
+                                       instrumentRepository, accountMapper, instrumentMapper, priceService);
         
         activeAccount = new Account(
             ACCOUNT_ID,
@@ -115,11 +117,14 @@ class OrderServiceTest {
             "USD",
             true
         );
+
+        when(priceService.getCurrentPrice(SYMBOL))
+            .thenReturn(new BigDecimal("100.00"));
     }
 
     @Test
     void placeOrder_buyWithFunds_createsNewOrder() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
+        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L);
 
         when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
         when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
@@ -141,7 +146,7 @@ class OrderServiceTest {
 
     @Test
     void placeOrder_buyWithoutFunds_rejectsOrder() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 100L, "1000.00", IDEMPOTENCY_KEY);
+        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 100L);
 
         when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.of(activeAccountEntity));
         when(accountMapper.toDomain(activeAccountEntity)).thenReturn(activeAccount);
@@ -160,7 +165,7 @@ class OrderServiceTest {
 
     @Test
     void placeOrder_missingAccount_throwsException() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
+        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L);
 
         when(accountRepository.findByAccountId(ACCOUNT_ID)).thenReturn(Optional.empty());
 
@@ -190,54 +195,12 @@ class OrderServiceTest {
         assertThrows(IllegalStateException.class, () -> orderService.cancelOrder(orderId));
     }
 
-    @Test
-    void validateOrder_validRequest_doesNotThrow() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
-
-        when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.of(tradableInstrumentEntity));
-        when(instrumentMapper.toDomain(tradableInstrumentEntity)).thenReturn(tradableInstrument);
-        when(orderMapper.findByAccountId(ACCOUNT_ID)).thenReturn(List.of());
-
-        assertDoesNotThrow(() -> orderService.validateOrder(request));
-    }
-
-    @Test
-    void validateOrder_duplicateIdempotency_throwsException() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
-        Order existingOrder = existingOrder(UUID.randomUUID(), OrderSide.BUY, OrderStatus.NEW, 5L, "99.00", IDEMPOTENCY_KEY);
-
-        when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.of(tradableInstrumentEntity));
-        when(instrumentMapper.toDomain(tradableInstrumentEntity)).thenReturn(tradableInstrument);
-        when(orderMapper.findByAccountId(ACCOUNT_ID)).thenReturn(List.of(existingOrder));
-
-        assertThrows(DuplicateOrderException.class, () -> orderService.validateOrder(request));
-    }
-
-    @Test
-    void validateOrder_missingInstrument_throwsException() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "100.00", IDEMPOTENCY_KEY);
-
-        when(instrumentRepository.findBySymbol(SYMBOL)).thenReturn(Optional.empty());
-
-        assertThrows(InstrumentNotFoundException.class, () -> orderService.validateOrder(request));
-    }
-
-    @Test
-    void validateOrder_negativePrice_throwsException() {
-        PlaceOrderRequestDTO request = request(ACCOUNT_ID, SYMBOL, OrderSide.BUY, 10L, "-100.00", IDEMPOTENCY_KEY);
-
-        assertThrows(NegativePriceException.class, () -> orderService.validateOrder(request));
-    }
-
-    private PlaceOrderRequestDTO request(String accountId, String symbol, OrderSide side, long quantity,
-                                         String price, String idempotencyKey) {
+    private PlaceOrderRequestDTO request(String accountId, String symbol, OrderSide side, long quantity) {
         return new PlaceOrderRequestDTO(
             accountId,
             symbol,
             side,
-            quantity,
-            new BigDecimal(price),
-            idempotencyKey
+            quantity
         );
     }
 
