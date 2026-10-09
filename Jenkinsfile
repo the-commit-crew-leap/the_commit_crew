@@ -204,6 +204,9 @@ pipeline {
                     CONTAINER_ID=$(docker run -d \
                         -p 8081:8081 \
                         --network=the-commit-crew_default \
+                        -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
+                        -e SPRING_KAFKA_PROPERTIES_CONNECTIONS_MAX_IDLE_MS=5000 \
+                        -e SERVER_SHUTDOWN=graceful \
                         the-commit-crew:${BUILD_NUMBER})
                     
                     echo "Waiting for Spring Boot to start..."
