@@ -73,7 +73,7 @@ export class AuthService implements OnModuleInit {
   }
 
   async register(registerDto: RegisterDto): Promise<any> {
-    const { username, email, password } = registerDto;
+    const { username, email, password, fullName } = registerDto;
 
     // Check if user exists
     const existingUser = await this.userRepository.findOne({
@@ -98,6 +98,7 @@ export class AuthService implements OnModuleInit {
       const user = this.userRepository.create({
         username,
         email,
+        fullName,
         status: 'ACTIVE',
       });
 
@@ -219,40 +220,28 @@ export class AuthService implements OnModuleInit {
   }
 
   async deleteUser(userId: number): Promise<{ message: string }> {
-    // Find the user and their trading account
+    // Find the user
     const user = await this.userRepository.findOne({
       where: { userId },
-      relations: { tradingAccounts: true },
     });
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
-    // Get the associated account ID before deletion
-    const accountId = user.tradingAccounts?.[0]?.accountId;
-
     try {
-      // Delete credential record (cascades to user if configured)
-      await this.credentialRepository.delete({ userId });
+      // Mark user as DELETED instead of deleting the record
+      await this.userRepository.update(
+        { userId },
+        { status: 'DELETED' }
+      );
 
-      // Delete user trading accounts (or they cascade)
-      await this.userTradingAccountRepository.delete({ userId });
+      this.logger.log(`User marked as deleted: ${user.username}`);
 
-      // Delete the user
-      await this.userRepository.delete({ userId });
-
-      // Close the associated trading account (don't delete it)
-      if (accountId) {
-        await this.databaseService.closeAccount(accountId);
-      }
-
-      this.logger.log(`User deleted: ${user.username}, account closed: ${accountId}`);
-
-      return { message: `User ${user.username} deleted and account ${accountId} closed` };
+      return { message: `User ${user.username} marked as deleted` };
     } catch (error: unknown) {
-      this.logger.error(`Failed to delete user ${userId}:`, error);
-      throw new BadRequestException('Failed to delete user');
+      this.logger.error(`Failed to mark user as deleted ${userId}:`, error);
+      throw new BadRequestException('Failed to mark user as deleted');
     }
   }
 }

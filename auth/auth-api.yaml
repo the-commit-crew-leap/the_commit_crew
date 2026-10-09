@@ -108,26 +108,26 @@ paths:
 
   /delete/{id}:
     delete:
-      summary: Delete a user account
+      summary: Mark a user account as deleted
       tags:
         - Authentication
       parameters:
         - name: id
           in: path
           required: true
-          description: User ID to delete
+          description: User ID to mark as deleted
           schema:
             type: integer
             format: int64
       responses:
         '200':
-          description: User successfully deleted and associated trading account closed
+          description: User successfully marked as deleted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteUserResponse'
         '400':
-          description: Bad request - user not found or deletion failed
+          description: Bad request - user not found or marking failed
           content:
             application/json:
               schema:
@@ -163,6 +163,7 @@ components:
       required:
         - username
         - email
+        - fullName
         - password
       properties:
         username:
@@ -175,6 +176,11 @@ components:
           type: string
           format: email
           description: User email address
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: User full name
         password:
           type: string
           minLength: 8
@@ -264,7 +270,7 @@ components:
           properties:
             message:
               type: string
-              example: 'User john_doe deleted and account ACC-12345678 closed'
+              example: 'User john_doe marked as deleted'
 
     ErrorResponse:
       type: object
