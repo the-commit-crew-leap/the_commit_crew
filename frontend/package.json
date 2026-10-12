@@ -31,6 +31,13 @@
     "@angular/compiler-cli": "^22.2.2",
     "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.5",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "@types/jasmine": "~5.1.0",
+    "jasmine-core": "~5.1.0",
+    "karma": "^6.4.4",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "^4.0.2",
+    "karma-jasmine-html-reporter": "^1.7.0"
   }
 }
