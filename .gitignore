@@ -20,3 +20,11 @@ yarn-error.log*
 .eslintcache
 coverage/
 .nyc_output/
+
+# Frontend
+.angular/
+.angular/cache
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
