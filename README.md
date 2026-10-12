@@ -30,6 +30,8 @@ JWT_SECRET=<generate-a-real-random-jwt-secret-online-and-paste-here>
 POSTGRES_DB=the-commit-crew-dev
 AUTH_DB=auth_db-dev
 POSTGRES_PASSWORD=<paste-db-password>
+AUTH_DB_PASSWORD=<paste-db-password>
+TRADING_DB_PASSWORD=<paste-db-password>
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
 ENVIRONMENT=dev
@@ -39,6 +41,9 @@ KAFKA_UI_PORT=8090
 ENGINE_MIN_DELAY=500ms
 ENGINE_MAX_DELAY=2000ms
 ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
+
+ANGULAR_API_URL=http://app:8081
+ANGULAR_AUTH_URL=http://auth:3000
 ```
 
 .env.prod:
@@ -47,6 +52,8 @@ JWT_SECRET=<generate-a-real-random-jwt-secret-online-and-paste-here>
 POSTGRES_DB=the-commit-crew-prod
 AUTH_DB=auth_db-dev
 POSTGRES_PASSWORD=<paste-db-password>
+AUTH_DB_PASSWORD=<paste-db-password>
+TRADING_DB_PASSWORD=<paste-db-password>
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
 ENVIRONMENT=dev
@@ -56,6 +63,9 @@ KAFKA_UI_PORT=8090
 ENGINE_MIN_DELAY=500ms
 ENGINE_MAX_DELAY=2000ms
 ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
+
+ANGULAR_API_URL=http://app:8081
+ANGULAR_AUTH_URL=http://auth:3000
 ```  
 
 2.2 Run docker-compose:<br />
@@ -80,6 +90,27 @@ prod:
 docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres -d the-commit-crew-prod -c "\dt"
 ```
 You should see the list of tables for each database.
+
+## Frontend:
+
+Angular 22 standalone components with routing infrastructure.
+
+### Quick Start
+
+#### Local Development
+```bash
+cd frontend
+npm install --legacy-peer-deps
+ng serve
+```
+Access at [http://localhost:4200](http://localhost:4200) (Angular dev server)
+
+If run as part of docker-compose, access at [http://localhost:4300](http://localhost:4300) (nginx production build)
+
+### Current pages:
+
+- [http://localhost:4300/](http://localhost:4300) Routes to "dashboard"
+- [http://localhost:4300/anything-else](http://localhost:4300) Routes to "page not found"
 
 ## Using auth:
 
