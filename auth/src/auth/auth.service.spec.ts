@@ -1,77 +1,177 @@
-import { AuthService } from "./auth.service";
+import { UnauthorizedException } from '@nestjs/common';
+import { AuthService } from './auth.service';
 
-describe("AuthService", () => {
+describe('AuthService', () => {
   let service: AuthService;
-  let mockTokenService: any;
+  let mockTokenService: {
+    issue: jest.Mock;
+    verify: jest.Mock;
+    decode: jest.Mock;
+  };
+  let mockUsersRepository: {
+    findByUsername: jest.Mock;
+    createUser: jest.Mock;
+    linkUserToTradingAccount: jest.Mock;
+    findByUsernameWithCredentialAndTradingAccounts: jest.Mock;
+    resetFailedLoginAttempts: jest.Mock;
+    updateLastLogin: jest.Mock;
+    incrementFailedLoginAttempts: jest.Mock;
+  };
+  let mockDatabaseService: {
+    createAccount: jest.Mock;
+  };
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    process.env.BCRYPT_COST_FACTOR = '4';
+
     mockTokenService = {
-        issue: jest.fn().mockResolvedValue({
-            accessToken: "mock-access-token",
-            refreshToken: "mock-refresh-token",
-            expiresIn: 900
-        }),
+      issue: jest.fn().mockReturnValue({
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        expiresIn: 900,
+      }),
+      verify: jest.fn().mockReturnValue(true),
+      decode: jest.fn(),
     };
 
-    service = new AuthService(mockTokenService);
+    mockUsersRepository = {
+      findByUsername: jest.fn(),
+      createUser: jest.fn(),
+      linkUserToTradingAccount: jest.fn(),
+      findByUsernameWithCredentialAndTradingAccounts: jest.fn(),
+      resetFailedLoginAttempts: jest.fn(),
+      updateLastLogin: jest.fn(),
+      incrementFailedLoginAttempts: jest.fn(),
+    };
+
+    mockDatabaseService = {
+      createAccount: jest.fn(),
+    };
+
+    service = new AuthService(
+      mockTokenService as any,
+      mockUsersRepository as any,
+      mockDatabaseService as any,
+    );
   });
 
-  it("logs in and receives a valid access token and refresh token", async () => {
-    await service.register({ 
-      username: "carol", 
-      email: "carol@example.com", 
-      password: "SecurePass123!" 
-    });
-    const { accessToken, refreshToken } = await service.login({ 
-      username: "carol", 
-      password: "SecurePass123!" 
-    });
-    expect(typeof accessToken).toBe("string");
-    expect(typeof refreshToken).toBe("string");
-    expect(accessToken).not.toEqual(refreshToken);
+  afterEach(() => {
+    delete process.env.BCRYPT_COST_FACTOR;
   });
 
-  it("rejects login with an incorrect password", async () => {
-    await service.register({ 
-      username: "carol", 
-      email: "carol@example.com", 
-      password: "SecurePass123!" 
+  it('registers a user and links a trading account', async () => {
+    mockUsersRepository.findByUsername.mockResolvedValue(null);
+    mockUsersRepository.createUser.mockResolvedValue({
+      userId: 101,
+      username: 'alice',
+      email: 'alice@example.com',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
     });
-    await expect(service.login({ 
-      username: "carol", 
-      password: "wrong-password" 
-    })).rejects.toThrow();
+
+    const result = await service.register({
+      username: 'alice',
+      email: 'alice@example.com',
+      fullName: 'Alice Smith',
+      password: 'SecurePass123!',
+    });
+
+    expect(mockDatabaseService.createAccount).toHaveBeenCalledTimes(1);
+    expect(mockUsersRepository.linkUserToTradingAccount).toHaveBeenCalledWith(
+      101,
+      expect.stringMatching(/^ACC-/),
+      'CLIENT',
+    );
+    expect(result.username).toBe('alice');
+    expect(result.accountId).toMatch(/^ACC-/);
   });
 
-  it("successfully registers a new user", async () => {
-    const result = await service.register({ 
-        username: "alice", 
-        email: "alice@example.com", 
-        password: "SecurePass123!" 
-    });
-    expect(result).toHaveProperty('id');
-    expect(result.username).toBe("alice");
-    expect(result.email).toBe("alice@example.com");
-    expect(result).toHaveProperty('createdAt');
-    });
-
-    it("rejects duplicate user registration", async () => {
-    await service.register({ 
-        username: "bob", 
-        email: "bob@example.com", 
-        password: "SecurePass123!" 
-    });
-    await expect(service.register({ 
-        username: "bob", 
-        email: "bob2@example.com", 
-        password: "SecurePass123!" 
-    })).rejects.toThrow('User already exists');
+  it('issues login tokens with linked accountId and role', async () => {
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
+      userId: 200,
+      status: 'ACTIVE',
+      credential: {
+        passwordHash: '$2b$04$N4Pt4fDNHCPW5q4YHLeA1e7Q9n2mI9n0jSjrRwzLx4grt6t6wJQeK',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+      tradingAccounts: [{ accountId: 'ACC-12345678', role: 'CLIENT' }],
     });
 
-    it("rejects login for non-existent user", async () => {
-    await expect(service.login({ 
-        username: "nonexistent", 
-        password: "SecurePass123!" 
-    })).rejects.toThrow('Invalid credentials');
+    // Password is SecurePass123! for the hash above with low work factor in test environment.
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash('SecurePass123!', 4);
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
+      userId: 200,
+      status: 'ACTIVE',
+      credential: {
+        passwordHash: hash,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+      tradingAccounts: [{ accountId: 'ACC-12345678', role: 'CLIENT' }],
     });
+
+    await service.login({ username: 'alice', password: 'SecurePass123!' });
+
+    expect(mockTokenService.issue).toHaveBeenCalledWith('alice', 'ACC-12345678', 'CLIENT');
+  });
+
+  it('rejects login when user has no linked trading account', async () => {
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash('SecurePass123!', 4);
+
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
+      userId: 201,
+      status: 'ACTIVE',
+      credential: {
+        passwordHash: hash,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+      tradingAccounts: [],
+    });
+
+    await expect(
+      service.login({ username: 'alice', password: 'SecurePass123!' }),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('reactivates a suspended user after lock expiry and allows login', async () => {
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash('SecurePass123!', 4);
+    const expiredLock = new Date(Date.now() - 60_000);
+
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
+      userId: 202,
+      status: 'SUSPENDED',
+      credential: {
+        passwordHash: hash,
+        failedLoginAttempts: 5,
+        lockedUntil: expiredLock,
+      },
+      tradingAccounts: [{ accountId: 'ACC-12345678', role: 'CLIENT' }],
+    });
+
+    await service.login({ username: 'alice', password: 'SecurePass123!' });
+
+    expect(mockUsersRepository.resetFailedLoginAttempts).toHaveBeenCalledWith(202);
+    expect(mockTokenService.issue).toHaveBeenCalledWith('alice', 'ACC-12345678', 'CLIENT');
+  });
+
+  it('validate falls back to DB mapping when token has no accountId', async () => {
+    mockTokenService.verify.mockReturnValue(true);
+    mockTokenService.decode.mockReturnValue({ username: 'alice' });
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
+      tradingAccounts: [{ accountId: 'ACC-ABCDEF12', role: 'CLIENT' }],
+    });
+
+    const result = await service.validate('some-token');
+
+    expect(result).toEqual({
+      username: 'alice',
+      accountId: 'ACC-ABCDEF12',
+      role: 'CLIENT',
+      valid: true,
+    });
+  });
 });

@@ -1,3 +1,23 @@
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+import * as fs from 'fs';
+
+// Load environment variables BEFORE importing anything else
+const envFile = process.env.NODE_ENV === 'prod' ? '.env.prod' : '.env.dev';
+const envPath = path.resolve(process.cwd(), '..', envFile);
+console.log(`Loading environment variables from: ${envPath}`);
+const result = dotenv.config({
+  path: envPath,
+});
+if (result.error) {
+  console.warn(`Warning: Could not load .env file from ${envPath}`);
+} else {
+  console.log(`Successfully loaded .env file from ${envPath}`);
+  console.log(`Database host: ${process.env.POSTGRES_HOST}`);
+  console.log(`Database port: ${process.env.POSTGRES_PORT}`);
+  console.log(`Auth DB: ${process.env.AUTH_DB}`);
+}
+
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -27,3 +47,10 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+// TODO: Re-enable logging to file once file permissions are fixed in Docker
+// Ensure logs directory exists
+// const logsDir = path.join(process.cwd(), 'logs');
+// if (!fs.existsSync(logsDir)) {
+//   fs.mkdirSync(logsDir);
+// }
