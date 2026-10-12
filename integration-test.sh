@@ -130,6 +130,12 @@ echo "$POSITIONS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: position
 echo "$POSITIONS_RESPONSE" | grep -q '"averageCost"' || { echo "FAIL: averageCost not in response"; exit 1; }
 echo "PASS: positions endpoint returns position"
 
+echo "== Stage: Test Get Instruments =="
+INSTRUMENTS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/instruments")
+echo "Instruments response: $INSTRUMENTS_RESPONSE"
+echo "$INSTRUMENTS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: instrument not in response"; exit 1; }
+echo "PASS: instruments endpoint returns instrument"
+
 echo "== Stage: Test Position Price and PnL Fields =="
 if echo "$POSITIONS_RESPONSE" | grep -q '"currentPrice"'; then
   echo "PASS: currentPrice field present"
