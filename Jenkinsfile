@@ -225,20 +225,22 @@ pipeline {
                                 -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
                                 -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
                                 -e SPRING_KAFKA_AUTO_STARTUP=false \
-                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=5000 \
+                                -e SPRING_KAFKA_ADMIN_PROPERTIES_BOOTSTRAP_SERVERS=localhost:9999 \
+                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=3000 \
+                                -e SPRING_KAFKA_PROPERTIES_CONNECTIONS_MAX_IDLE_MS=3000 \
                                 -e SERVER_SHUTDOWN=graceful \
                                 the-commit-crew:${BUILD_NUMBER})
                             
                             echo "Waiting for Spring Boot to start..."
-                            sleep 30
+                            sleep 15
                             
-                            for i in {1..30}; do
+                            for i in {1..45}; do
                                 if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
                                     echo "Health check passed"
                                     docker rm -f $CONTAINER_ID
                                     exit 0
                                 fi
-                                echo "Attempt $i/30: Waiting for application to be ready..."
+                                echo "Attempt $i/45: Waiting for application to be ready..."
                                 sleep 1
                             done
                             
