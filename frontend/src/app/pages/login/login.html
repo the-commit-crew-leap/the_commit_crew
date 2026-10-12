@@ -1,0 +1,30 @@
+<section class="auth-shell">
+  <div class="auth-card">
+    <h1>Sign in</h1>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="username">Username</label>
+      <input id="username" type="text" formControlName="username" autocomplete="username" />
+      <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+        Username is required.
+      </p>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+      <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+        Password is required.
+      </p>
+
+      <p class="api-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+      <button type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </form>
+
+    <p class="hint">
+      New here?
+      <a routerLink="/register">Create an account</a>
+    </p>
+  </div>
+</section>
