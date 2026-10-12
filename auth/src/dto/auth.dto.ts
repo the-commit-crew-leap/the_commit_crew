@@ -125,4 +125,22 @@ export class AuthResponseDto {
   @IsNumber()
   @IsPositive()
   expiresIn: number;
+
+  @ApiProperty({
+    description: 'Linked trading account ID (included in login responses)',
+    example: 'ACC-1A2B3C4D',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiProperty({
+    description: 'Role on the linked trading account (included in login responses)',
+    example: 'CLIENT',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  role?: string;
 }
