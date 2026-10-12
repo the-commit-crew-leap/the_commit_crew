@@ -225,9 +225,9 @@ pipeline {
                                 -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
                                 -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
                                 -e SPRING_KAFKA_AUTO_STARTUP=false \
-                                -e SPRING_KAFKA_ADMIN_PROPERTIES_BOOTSTRAP_SERVERS=localhost:9999 \
+                                -e SPRING_KAFKA_ADMIN_FAIL_FAST=false \
+                                -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
                                 -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=3000 \
-                                -e SPRING_KAFKA_PROPERTIES_CONNECTIONS_MAX_IDLE_MS=3000 \
                                 -e SERVER_SHUTDOWN=graceful \
                                 the-commit-crew:${BUILD_NUMBER})
                             
