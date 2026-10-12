@@ -67,7 +67,7 @@ class AccountServiceTests {
         );
 
         testAccountEntity = new AccountEntity(
-            TEST_ACCOUNT_ID.toString(),
+            TEST_ACCOUNT_ID,
             "John Doe",
             new BigDecimal("10000.00"),
             AccountStatus.ACTIVE,

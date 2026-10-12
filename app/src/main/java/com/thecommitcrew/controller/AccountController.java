@@ -22,6 +22,7 @@ import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,8 @@ public class AccountController {
     private final PriceService priceService;
     private final PositionService positionService;
 
+    private static final String ACCOUNT_ID_ATTRIBUTE = "accountId";
+
     public AccountController(AccountService accountService, PriceService priceService, PositionService positionService) {
         this.accountService = accountService;
         this.priceService = priceService;
@@ -51,7 +54,7 @@ public class AccountController {
         HttpServletRequest httpRequest) {
 
         // Get authenticated user's account from JWT
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         
         // Verify user can only access their own account
         if (!accountId.equals(userAccountId)) {
@@ -75,7 +78,7 @@ public class AccountController {
         @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
 
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         if (!accountId.equals(userAccountId)) {
             throw new UnauthorizedAccountException(
                 "Forbidden: You do not have access to account " + accountId
@@ -93,7 +96,7 @@ public class AccountController {
         @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
 
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         if (!accountId.equals(userAccountId)) {
             throw new UnauthorizedAccountException(
                 "Forbidden: You do not have access to account " + accountId
@@ -128,7 +131,7 @@ public class AccountController {
         @PathVariable("id") String accountId,
         HttpServletRequest httpRequest) {
 
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         if (!accountId.equals(userAccountId)) {
             throw new UnauthorizedAccountException(
                 "Forbidden: You do not have access to account " + accountId
@@ -158,7 +161,7 @@ public class AccountController {
         @Valid @RequestBody TransactionRequestDTO request,
         HttpServletRequest httpRequest) {
 
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         if (!accountId.equals(userAccountId)) {
             throw new UnauthorizedAccountException(
                 "Forbidden: You do not have access to account " + accountId
@@ -173,7 +176,7 @@ public class AccountController {
             "DEPOSIT",
             request.amount(),
             updated.getCashBalance(),
-            LocalDateTime.now()
+            LocalDateTime.now(ZoneId.of("UTC"))
         );
         return ResponseEntity.ok(response);
     }
@@ -185,7 +188,7 @@ public class AccountController {
         @Valid @RequestBody TransactionRequestDTO request,
         HttpServletRequest httpRequest) {
 
-        String userAccountId = (String) httpRequest.getAttribute("accountId");
+        String userAccountId = (String) httpRequest.getAttribute(ACCOUNT_ID_ATTRIBUTE);
         if (!accountId.equals(userAccountId)) {
             throw new UnauthorizedAccountException(
                 "Forbidden: You do not have access to account " + accountId
@@ -200,7 +203,7 @@ public class AccountController {
             "WITHDRAW",
             request.amount(),
             updated.getCashBalance(),
-            LocalDateTime.now()
+            LocalDateTime.now(ZoneId.of("UTC"))
         );
         return ResponseEntity.ok(response);
     }

@@ -3,6 +3,8 @@ package com.thecommitcrew.auth;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +16,8 @@ import java.util.Collections;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthServiceClient authServiceClient;
-
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    
     public JwtAuthenticationFilter(AuthServiceClient authServiceClient) {
         this.authServiceClient = authServiceClient;
     }
@@ -44,8 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Error: {}", e.getMessage());
             }
         }
         

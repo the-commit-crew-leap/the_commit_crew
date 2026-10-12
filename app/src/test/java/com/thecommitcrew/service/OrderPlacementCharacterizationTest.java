@@ -22,7 +22,6 @@ import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.validator.AccountStatusValidator;
 import com.thecommitcrew.domain.validator.InstrumentSymbolValidator;
 import com.thecommitcrew.domain.exception.AccountNotFoundException;
-import com.thecommitcrew.domain.exception.DuplicateOrderException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.persistence.entity.AccountEntity;
 import com.thecommitcrew.persistence.entity.InstrumentEntity;

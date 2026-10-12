@@ -61,7 +61,8 @@ public class OrderService {
                 "Instrument not found for symbol: " + request.symbol()
             ));
 
-        if (!instrument.isTradable()) {
+        boolean isInstrumentTradable = instrument.isTradable();
+        if (!isInstrumentTradable) {
             throw new IllegalStateException("Instrument is not tradable: " + request.symbol());
         }
 

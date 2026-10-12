@@ -13,6 +13,7 @@ public class PriceHistory {
     private final BigDecimal closePrice;
     private final long volume;
 
+    @SuppressWarnings("java:S107")
     public PriceHistory(UUID id, String symbol, LocalDate priceDate, BigDecimal openPrice, BigDecimal highPrice, BigDecimal lowPrice, BigDecimal closePrice, long volume) {
         this.id = validateNotNull(id, "ID cannot be null");
         this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");

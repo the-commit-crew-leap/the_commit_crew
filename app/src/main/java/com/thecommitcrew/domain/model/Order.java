@@ -18,6 +18,7 @@ public class Order {
     private final LocalDateTime createdOn;
     private final String idempotencyKey;
 
+    @SuppressWarnings("java:S107")
     public Order(UUID id, String accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
         this.id = validateNotNull(id, "Order ID cannot be null");
         this.accountId = validateNotBlank(accountId, "Account ID cannot be blank");

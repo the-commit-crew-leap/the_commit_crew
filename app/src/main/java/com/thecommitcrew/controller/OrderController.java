@@ -90,7 +90,7 @@ public ResponseEntity<OrderResponseDTO> submitOrder(
     }
 
     // Verify the order's accountId matches the authenticated user's account
-    if (!request.accountId().toString().equals(userAccountId)) {
+    if (!request.accountId().equals(userAccountId)) {
         throw new UnauthorizedAccountException(
             "Forbidden: You cannot place orders for account " + request.accountId()
         );

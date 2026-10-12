@@ -150,7 +150,7 @@ class AccountMapperTest {
             AccountEntity result = mapper.toEntity(domain);
 
             assertNotNull(result);
-            assertEquals(TEST_ACCOUNT_ID.toString(), result.getAccountId());
+            assertEquals(TEST_ACCOUNT_ID, result.getAccountId());
             assertEquals(TEST_HOLDER_NAME, result.getHolderName());
             assertEquals(TEST_BALANCE, result.getCashBalance());
             assertEquals(TEST_STATUS, result.getStatus());
