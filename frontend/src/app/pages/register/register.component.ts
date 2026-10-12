@@ -3,13 +3,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   standalone: true,
   selector: 'app-register',
   templateUrl: './register.html',
   styleUrl: './register.css',
-  imports: [ReactiveFormsModule, RouterLink]
+  imports: [CommonModule, ReactiveFormsModule, RouterLink]
 })
 export class RegisterComponent {
   isSubmitting = false;
