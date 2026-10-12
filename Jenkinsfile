@@ -247,28 +247,57 @@ pipeline {
         }
         stage('Smoke Test') {
             steps {
-                sh '''
-                    CONTAINER_ID=$(docker run -d \
-                        -p 8081:8081 \
-                        --network=the-commit-crew_default \
-                        the-commit-crew:${BUILD_NUMBER})
+                script {
+                    def environment = 'dev'
+                    if (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main') {
+                        environment = 'prod'
+                    }
+                    def credentialsId = (environment == 'prod') ? 'env-prod-file' : 'env-dev-file'
                     
-                    echo "Waiting for Spring Boot to start..."
-                    for i in {1..60}; do
-                        if curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
-                            echo "Health check passed"
+                    withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
+                        sh '''
+                            # Extract credentials from env file
+                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
+                            AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs || echo "$POSTGRES_PASSWORD")
+                            
+                            CONTAINER_ID=$(docker run -d \
+                                -p 8081:8081 \
+                                --network=the-commit-crew_default \
+                                -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB} \
+                                -e SPRING_DATASOURCE_USERNAME=postgres \
+                                -e SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD} \
+                                -e SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB} \
+                                -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
+                                -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
+                                -e SPRING_KAFKA_AUTO_STARTUP=false \
+                                -e SPRING_KAFKA_ADMIN_FAIL_FAST=false \
+                                -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
+                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=3000 \
+                                -e SERVER_SHUTDOWN=graceful \
+                                the-commit-crew:${BUILD_NUMBER})
+                            
+                            echo "Waiting for Spring Boot to start..."
+                            sleep 15
+                            
+                            for i in {1..45}; do
+                                if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
+                                    echo "Health check passed"
+                                    docker rm -f $CONTAINER_ID
+                                    exit 0
+                                fi
+                                echo "Attempt $i/45: Waiting for application to be ready..."
+                                sleep 1
+                            done
+                            
+                            echo "Health check failed"
+                            docker logs $CONTAINER_ID
                             docker rm -f $CONTAINER_ID
-                            exit 0
-                        fi
-                        echo "Attempt $i/60: Waiting for application to be ready..."
-                        sleep 1
-                    done
-                    
-                    echo "Health check failed"
-                    docker logs $CONTAINER_ID
-                    docker rm -f $CONTAINER_ID
-                    exit 1
-                '''
+                            exit 1
+                        '''
+                    }
+                }
             }
         }
         stage('Archive') {

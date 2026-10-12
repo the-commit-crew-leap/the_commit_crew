@@ -1,7 +1,5 @@
 package com.thecommitcrew.domain.dto;
 
-import java.math.BigDecimal;
-
 import com.thecommitcrew.domain.enums.OrderSide;
 
 import jakarta.validation.constraints.NotBlank;
@@ -23,13 +21,6 @@ public record PlaceOrderRequestDTO (
     
     @NotNull(message = "Quantity cannot be null")
     @Positive(message = "Quantity must be positive")
-    long quantity,
-    
-    @NotNull(message = "Price cannot be null")
-    @Positive(message = "Price must be positive")
-    BigDecimal price,
-    
-    @NotBlank(message = "Idempotency key cannot be blank")
-    String idempotencyKey
+    long quantity
 
 ) {}

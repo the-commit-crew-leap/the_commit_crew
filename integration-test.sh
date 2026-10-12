@@ -101,7 +101,7 @@ echo "PASS: account balance retrieved"
 echo "== Stage: Test Place Order - Validation =="
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d '{"symbol":"","quantity":-10,"price":0}')
+  -d '{"symbol":"","quantity":-10'})
 if [ "$CODE" != "400" ]; then
   echo "FAIL: expected 400 for invalid data, got $CODE"
   exit 1
@@ -111,7 +111,7 @@ echo "PASS: bean validation caught invalid request (400)"
 echo "== Stage: Test Place Order - Success =="
 ORDER_RESPONSE=$(curl -s -X POST "http://localhost:$APP_PORT/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10,\"price\":150.00,\"idempotencyKey\":\"order-$(date +%s%N)\"}")
+  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10}")
 echo "Order response: $ORDER_RESPONSE"
 
 echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
