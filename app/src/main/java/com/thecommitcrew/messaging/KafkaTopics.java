@@ -13,16 +13,32 @@ import org.springframework.kafka.config.TopicBuilder;
  */
 @Configuration
 public class KafkaTopics {
-
+    
     @Bean
     public NewTopic ordersTopic(@Value("${trading.kafka.topics.orders}") String name,
-                                @Value("${trading.kafka.partitions}") int partitions) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+                                @Value("${trading.kafka.partitions}") int partitions,
+                                @Value("${trading.kafka.replicas:1}") int replicas) {
+        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
     }
 
     @Bean
     public NewTopic executionsTopic(@Value("${trading.kafka.topics.executions}") String name,
-                                    @Value("${trading.kafka.partitions}") int partitions) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+                                    @Value("${trading.kafka.partitions}") int partitions,
+                                    @Value("${trading.kafka.replicas:1}") int replicas) {
+        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
+    }
+    
+    @Bean
+    public NewTopic deadLettersTopic(@Value("${trading.kafka.topics.dead-letters:dead-letters}") String name,
+                                    @Value("${trading.kafka.partitions}") int partitions,
+                                    @Value("${trading.kafka.replicas:1}") int replicas) {
+        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
+    }
+
+    @Bean
+    public NewTopic deadLettersRetryTopic(@Value("${trading.kafka.topics.dead-letters-retry:dead-letters-retry}") String name,
+                                        @Value("${trading.kafka.partitions}") int partitions,
+                                        @Value("${trading.kafka.replicas:1}") int replicas) {
+        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
     }
 }
