@@ -47,7 +47,31 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       AUTH_SERVICE_URL: http://auth:3000
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "4300:80"
+    environment:
+      - ANGULAR_API_URL=http://app:8081
+    depends_on:
+      app:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
   db:
     build: 
       context: .
