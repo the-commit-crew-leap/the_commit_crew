@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS orders (
     quantity         INT NOT NULL CHECK (quantity > 0),
     price            NUMERIC(18,2) NOT NULL CHECK (price > 0),
     status           VARCHAR(20) NOT NULL CHECK (status IN ('NEW', 'FILLED', 'REJECTED', 'CANCELLED')),
-    idempotencyKey   VARCHAR(32) NOT NULL UNIQUE,
+    idempotencyKey   VARCHAR(36) NOT NULL UNIQUE,
     created_on       TIMESTAMP DEFAULT NOW(),
     FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
     FOREIGN KEY (symbol) REFERENCES instruments(symbol) ON DELETE RESTRICT ON UPDATE CASCADE

@@ -38,6 +38,16 @@ export class RegisterDto {
   email: string;
 
   @ApiProperty({
+    description: 'User full name',
+    example: 'John Doe'
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(255)
+  fullName: string;
+
+  @ApiProperty({
     description: 'Password (must contain uppercase, lowercase, number, and special character)',
     example: 'SecurePass123!'
   })

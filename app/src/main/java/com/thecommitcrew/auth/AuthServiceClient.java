@@ -59,19 +59,34 @@ public class AuthServiceClient {
             var data = root.get("data");
             return new ValidateResponse(
                 data.get("valid").asBoolean(),
-                data.get("username").asText()
+                data.get("username").asText(),
+                data.get("accountId") != null ? data.get("accountId").asText() : null,
+                data.get("role") != null ? data.get("role").asText() : null
             );
         }
         return new ValidateResponse(false, null);
     }
 
+
     public static class ValidateResponse {
+
         public final boolean valid;
         public final String username;
+        public final String accountId;
+        public final String role;
 
         public ValidateResponse(boolean valid, String username) {
             this.valid = valid;
             this.username = username;
+            this.accountId = null;
+            this.role = null;
+        }
+
+        public ValidateResponse(boolean valid, String username, String accountId, String role) {
+            this.valid = valid;
+            this.username = username;
+            this.accountId = accountId;
+            this.role = role;
         }
     }
 }

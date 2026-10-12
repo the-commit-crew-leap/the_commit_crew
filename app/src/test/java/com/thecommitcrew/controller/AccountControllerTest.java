@@ -3,6 +3,7 @@ package com.thecommitcrew.controller;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
@@ -18,6 +19,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -277,6 +279,150 @@ class AccountControllerTest {
         }
     }
 
+    @Nested
+    @DisplayName("POST /accounts/{id}/deposit")
+    class DepositEndpoint {
+        @BeforeEach
+        void setup() {
+            reset(accountService);
+        }
+
+        @Test
+        @DisplayName("Successfully deposits money and returns updated balance")
+        void successfullyDeposits() throws Exception {
+            Money newBalance = new Money(new BigDecimal("11000.00"));
+            Account updatedAccount = new Account(
+                TEST_ACCOUNT_ID,
+                TEST_ACCOUNT_HOLDER,
+                newBalance,
+                AccountStatus.ACTIVE,
+                2,
+                LocalDateTime.now(),
+                new com.thecommitcrew.domain.validator.DefaultAccountStatusValidator()
+            );
+
+            when(accountService.deposit(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00")))).thenReturn(updatedAccount);
+
+            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 1000.00}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value(TEST_ACCOUNT_ID))
+                .andExpect(jsonPath("$.transactionType").value("DEPOSIT"))
+                .andExpect(jsonPath("$.amount").value(1000.00))
+                .andExpect(jsonPath("$.newBalance.amount").value(11000.00));
+        }
+
+        @Test
+        @DisplayName("Returns 400 when amount is not positive")
+        void returns400WhenAmountNotPositive() throws Exception {
+            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": -100.00}"))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Returns 400 when amount is null")
+        void returns400WhenAmountIsNull() throws Exception {
+            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": null}"))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Returns 404 when account not found")
+        void returns404WhenAccountNotFound() throws Exception {
+            when(accountService.deposit(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00"))))
+                .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
+
+            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 1000.00}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /accounts/{id}/withdraw")
+    class WithdrawEndpoint {
+        @BeforeEach
+        void setup() {
+            reset(accountService);
+        }
+
+        @Test
+        @DisplayName("Successfully withdraws money and returns updated balance")
+        void successfullyWithdraws() throws Exception {
+            Money newBalance = new Money(new BigDecimal("9000.00"));
+            Account updatedAccount = new Account(
+                TEST_ACCOUNT_ID,
+                TEST_ACCOUNT_HOLDER,
+                newBalance,
+                AccountStatus.ACTIVE,
+                2,
+                LocalDateTime.now(),
+                new com.thecommitcrew.domain.validator.DefaultAccountStatusValidator()
+            );
+
+            when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00")))).thenReturn(updatedAccount);
+
+            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 1000.00}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value(TEST_ACCOUNT_ID))
+                .andExpect(jsonPath("$.transactionType").value("WITHDRAW"))
+                .andExpect(jsonPath("$.amount").value(1000.00))
+                .andExpect(jsonPath("$.newBalance.amount").value(9000.00));
+        }
+
+        @Test
+        @DisplayName("Returns 400 when amount is not positive")
+        void returns400WhenAmountNotPositive() throws Exception {
+            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 0}"))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Returns 400 when amount is null")
+        void returns400WhenAmountIsNull() throws Exception {
+            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": null}"))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Returns 400 when insufficient funds")
+        void returns400WhenInsufficientFunds() throws Exception {
+            when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("20000.00"))))
+                .thenThrow(new IllegalArgumentException("Insufficient funds"));
+
+            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 20000.00}"))
+                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Returns 404 when account not found")
+        void returns404WhenAccountNotFound() throws Exception {
+            when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00"))))
+                .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
+
+            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"amount\": 1000.00}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
+        }
+    }
+
     /**
      * Test-only security configuration that disables authentication for all requests.
      */
@@ -301,6 +447,7 @@ class AccountControllerTest {
                 protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
                         throws ServletException, IOException {
                     request.setAttribute("username", "test-user");
+                    request.setAttribute("accountId", TEST_ACCOUNT_ID);
                     filterChain.doFilter(request, response);
                 }
             };
