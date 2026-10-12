@@ -1,6 +1,5 @@
 package com.thecommitcrew.service;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,9 +14,6 @@ import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
 import com.thecommitcrew.domain.exception.AccountNotFoundException;
-import com.thecommitcrew.domain.exception.DuplicateOrderException;
-import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
-import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.exception.PriceNotFoundException;
 import com.thecommitcrew.domain.model.Account;
 import com.thecommitcrew.domain.model.Instrument;
@@ -92,7 +88,7 @@ class OrderServiceTest {
         );
         
         activeAccountEntity = new AccountEntity(
-            ACCOUNT_ID.toString(),
+            ACCOUNT_ID,
             "Jane Doe",
             new BigDecimal("10000.00"),
             AccountStatus.ACTIVE,

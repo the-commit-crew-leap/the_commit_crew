@@ -61,7 +61,7 @@ public class OrderListener {
         pauser.pause(market.nextDelay());
         ExecutionEvent fill = market.execute(order);
 
-        kafkaTemplate.send(executionsTopic, fill.accountId().toString(), objectMapper.writeValueAsString(fill))
+        kafkaTemplate.send(executionsTopic, fill.accountId(), objectMapper.writeValueAsString(fill))
                 .get(10, TimeUnit.SECONDS);
         log.info("Filled order {} at {} on {}", fill.orderId(), fill.price(), fill.venue());
     }

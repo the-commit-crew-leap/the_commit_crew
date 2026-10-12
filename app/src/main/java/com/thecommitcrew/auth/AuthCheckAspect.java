@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @Aspect
 @Component
 public class AuthCheckAspect {
+
+    private static final String ERROR = "ERROR";
     
     @Around("@annotation(com.thecommitcrew.auth.CheckAuth)")
     public Object checkAuth(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -21,7 +23,7 @@ public class AuthCheckAspect {
         
         if (attributes == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("ERROR", "Unauthorized - No request context", null));
+                .body(new ErrorResponse(ERROR, "Unauthorized - No request context", null));
         }
         
         HttpServletRequest request = attributes.getRequest();
@@ -31,12 +33,12 @@ public class AuthCheckAspect {
         
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("ERROR", "Unauthorized - Invalid or missing token", null));
+                .body(new ErrorResponse(ERROR, "Unauthorized - Invalid or missing token", null));
         }
 
         if (accountId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("ERROR", "Unauthorized - No account linked to user", null));
+                .body(new ErrorResponse(ERROR, "Unauthorized - No account linked to user", null));
         }
         
         return joinPoint.proceed();
