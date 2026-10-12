@@ -59,7 +59,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "4300:80"
+      - "0.0.0.0:4300:80"
     environment:
       - ANGULAR_API_URL=http://app:8081
     depends_on:
