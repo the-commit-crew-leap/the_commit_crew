@@ -83,7 +83,8 @@ export class AuthService implements OnModuleInit {
         passwordHash: hashedPassword,
       });
 
-      await this.usersRepository.linkUserToTradingAccount(user.userId, accountId, 'CLIENT');
+      const linkedRole = 'CLIENT';
+      await this.usersRepository.linkUserToTradingAccount(user.userId, accountId, linkedRole);
 
       this.logger.logAuthEvent('REGISTER_SUCCESS', username);
 
@@ -92,6 +93,7 @@ export class AuthService implements OnModuleInit {
         username: user.username,
         email: user.email,
         accountId,
+        role: linkedRole,
         createdAt: user.createdAt,
       };
     } catch (error: unknown) {
@@ -157,8 +159,13 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('No trading account linked to user');
     }
 
-    // Generate tokens
-    return this.tokenService.issue(username, linkedAccount.accountId, linkedAccount.role);
+    // Generate tokens and include account metadata in response body.
+    const tokens = this.tokenService.issue(username, linkedAccount.accountId, linkedAccount.role);
+    return {
+      ...tokens,
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
+    };
   }
 
   async refresh(refreshToken: string): Promise<any> {
