@@ -50,13 +50,13 @@ ANGULAR_AUTH_URL=http://auth:3000
 ```bash
 JWT_SECRET=<generate-a-real-random-jwt-secret-online-and-paste-here>
 POSTGRES_DB=the-commit-crew-prod
-AUTH_DB=auth_db-dev
+AUTH_DB=auth_db-prod
 POSTGRES_PASSWORD=<paste-db-password>
 AUTH_DB_PASSWORD=<paste-db-password>
 TRADING_DB_PASSWORD=<paste-db-password>
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
-ENVIRONMENT=dev
+ENVIRONMENT=prod
 
 KAFKA_PORT=9094
 KAFKA_UI_PORT=8090
@@ -103,14 +103,22 @@ cd frontend
 npm install --legacy-peer-deps
 ng serve
 ```
-Access at [http://localhost:4200](http://localhost:4200) (Angular dev server)
-
-If run as part of docker-compose, access at [http://localhost:4300](http://localhost:4300) (nginx production build)
+Access at: [http://localhost:8086](http://localhost:8086)<br />
+When run as part of docker-compose: [http://your-linux-ip:8086](http://your-linux-ip:8086)
 
 ### Current pages:
 
-- [http://localhost:4300/](http://localhost:4300) Routes to "dashboard"
-- [http://localhost:4300/anything-else](http://localhost:4300) Routes to "page not found"
+- [http://localhost:8086/](http://localhost:8086) Routes to "dashboard"
+- [http://localhost:8086/orders](http://localhost:8086) Routes to "order history"
+- [http://localhost:8086/anything-else](http://localhost:8086) Routes to "page not found"
+
+## Playwright tests
+
+To run playwright (only on windows):
+```bash
+cd frontend
+npm test
+```
 
 ## Using auth:
 
@@ -215,7 +223,3 @@ docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
 ## Jira backlog:
 
 [The Commit Crew](https://thecommitcrew.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
-
-## TEMP
-
-npx ng serve --host 0.0.0.0 --port 8085

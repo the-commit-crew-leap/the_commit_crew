@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Order, OrderStatus } from '../../models/order.model';
 import { OrderHistoryService } from '../../services/order-history.service';
@@ -15,7 +15,9 @@ export class OrderHistoryComponent implements OnInit {
   error = '';
   orders: Order[] = [];
 
-  constructor(private readonly orderHistoryService: OrderHistoryService) {}
+  constructor(
+    private readonly orderHistoryService: OrderHistoryService, 
+    private readonly changeDetectorRef: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadOrders();
@@ -29,6 +31,7 @@ export class OrderHistoryComponent implements OnInit {
     if (!accountId) {
       this.error = 'No account found in session. Please log in again.';
       this.loading = false;
+      this.changeDetectorRef.detectChanges();
       return;
     }
 
@@ -38,10 +41,12 @@ export class OrderHistoryComponent implements OnInit {
           new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime()
         );
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       },
-      error: () => {
+      error: (error) => {
         this.error = 'Could not load order history.';
         this.loading = false;
+        this.changeDetectorRef.detectChanges();
       }
     });
   }

@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+const ordersUrl = '**/accounts/ACC-F92249B8/orders';
+
 test('shows order history rows and statuses', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('auth.accountId', 'ACC-F92249B8');
   });
 
-  await page.route('**/api/accounts/*/orders', async (route) => {
+  await page.route(ordersUrl, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -48,7 +50,7 @@ test('shows error state when API fails', async ({ page }) => {
     localStorage.setItem('auth.accountId', 'ACC-F92249B8');
   });
 
-  await page.route('**/api/accounts/*/orders', async (route) => {
+  await page.route(ordersUrl, async (route) => {
     await route.fulfill({ status: 500, body: 'error' });
   });
 
