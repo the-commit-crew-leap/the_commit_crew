@@ -215,3 +215,7 @@ docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
 ## Jira backlog:
 
 [The Commit Crew](https://thecommitcrew.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog)
+
+## TEMP
+
+npx ng serve --host 0.0.0.0 --port 8085
