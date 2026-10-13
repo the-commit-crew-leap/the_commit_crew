@@ -10,11 +10,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       NODE_ENV: ${NODE_ENV:-development}
       # Auth Database
-      AUTH_DB_HOST: ${AUTH_DB_HOST:-db}
-      AUTH_DB_PORT: ${AUTH_DB_PORT:-5432}
-      AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
-      AUTH_DB_PASSWORD: ${POSTGRES_PASSWORD:?}
-      AUTH_DB_NAME: ${AUTH_DB:?}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTH_DB: ${AUTH_DB:?}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4300,http://127.0.0.1:4300}
       # Trading Database
       TRADING_DB_HOST: db
