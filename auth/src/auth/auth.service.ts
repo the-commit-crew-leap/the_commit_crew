@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { TokenService } from './token.service';
@@ -62,7 +62,7 @@ export class AuthService implements OnModuleInit {
     const existingUser = await this.usersRepository.findByUsername(username);
     if (existingUser) {
       this.logger.warn(`Registration failed: user already exists`, undefined, { username });
-      throw new BadRequestException('User already exists');
+      throw new ConflictException('User already exists');
     }
 
     // Hash password with configured cost factor
