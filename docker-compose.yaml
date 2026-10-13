@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       AUTH_DB: ${AUTH_DB:?}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4300,http://127.0.0.1:4300}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
       # Trading Database
       TRADING_DB_HOST: db
       TRADING_DB_PORT: 5432
