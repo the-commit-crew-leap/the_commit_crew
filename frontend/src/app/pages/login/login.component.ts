@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
+import { getAuthErrorMessage } from '../../auth/auth-error.util';
 
 @Component({
   standalone: true,
@@ -53,7 +54,7 @@ export class LoginComponent {
           void this.router.navigateByUrl(returnUrl);
         },
         error: (err) => {
-          this.errorMessage = err?.error?.message || 'Login failed. Please try again.';
+          this.errorMessage = getAuthErrorMessage(err, 'Login failed. Please try again.');
         }
       });
   }
