@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { EMPTY, finalize, catchError, timeout } from 'rxjs';
@@ -43,7 +43,8 @@ export class RegisterComponent {
   constructor(
     private readonly fb: FormBuilder,
     private readonly authSession: AuthSessionService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef,
   ) {}
 
   submit(): void {
@@ -62,6 +63,7 @@ export class RegisterComponent {
         finalize(() => {
           this.isSubmitting = false;
           console.log('Finalize executed. isSubmitting:', this.isSubmitting);
+          this.cdr.detectChanges();
         }),
       )
       .subscribe({
@@ -73,6 +75,7 @@ export class RegisterComponent {
         error: (err) => {
           this.hasSubmitError = true;
           this.errorMessage = getAuthErrorMessage(err, 'Could not register. Please try again.');
+          this.cdr.detectChanges();
 
           console.log('Error message:', this.errorMessage);
           console.log('Has submit error:', this.hasSubmitError);
