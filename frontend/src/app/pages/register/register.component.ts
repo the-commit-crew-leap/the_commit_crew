@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { EMPTY, finalize, catchError, timeout } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
 import { getAuthErrorMessage } from '../../auth/auth-error.util';
@@ -15,6 +15,7 @@ import { getAuthErrorMessage } from '../../auth/auth-error.util';
 })
 export class RegisterComponent {
   isSubmitting = false;
+  hasSubmitError = false;
   errorMessage = '';
 
   form = this.fb.nonNullable.group({
@@ -52,19 +53,31 @@ export class RegisterComponent {
     }
 
     this.errorMessage = '';
+    this.hasSubmitError = false;
     this.isSubmitting = true;
 
     this.authSession.register(this.form.getRawValue())
-      .pipe(finalize(() => (this.isSubmitting = false)))
+      .pipe(
+        timeout(15000),
+        finalize(() => {
+          this.isSubmitting = false;
+          console.log('Finalize executed. isSubmitting:', this.isSubmitting);
+        }),
+      )
       .subscribe({
         next: () => {
           void this.router.navigate(['/login'], {
-            queryParams: { registered: '1' }
+            queryParams: { registered: '1' },
           });
         },
         error: (err) => {
-          this.errorMessage = getAuthErrorMessage(err, 'Registration failed. Please try again.');
-        }
+          this.hasSubmitError = true;
+          this.errorMessage = getAuthErrorMessage(err, 'Could not register. Please try again.');
+
+          console.log('Error message:', this.errorMessage);
+          console.log('Has submit error:', this.hasSubmitError);
+          console.log('Is submitting before finalize:', this.isSubmitting);
+        },
       });
   }
 }
