@@ -1,5 +1,5 @@
 package com.thecommitcrew.controller;
-
+import com.thecommitcrew.auth.AuthServiceClient;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,6 +43,9 @@ class InstrumentControllerTest {
 
     @MockBean
     private InstrumentService instrumentService;
+
+    @MockBean
+    private AuthServiceClient authServiceClient;
 
     private InstrumentResponseDTO tradableInstrument;
     private InstrumentResponseDTO untradableInstrument;
