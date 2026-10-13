@@ -48,7 +48,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authorizedReq).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
+      if (error instanceof HttpErrorResponse && error.status === 401 && !isPublicAuthEndpoint(req.url)) {
         authSession.logout();
         void router.navigate(['/login'], {
           queryParams: { expired: '1', returnUrl: router.url }
