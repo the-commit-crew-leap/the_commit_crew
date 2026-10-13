@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -27,7 +27,8 @@ export class LoginComponent {
     private readonly fb: FormBuilder,
     private readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly cdr: ChangeDetectorRef
   ) {
     const query = this.route.snapshot.queryParamMap;
     if (query.get('registered') === '1') {
@@ -47,7 +48,12 @@ export class LoginComponent {
     this.isSubmitting = true;
 
     this.authSession.login(this.form.getRawValue())
-      .pipe(finalize(() => (this.isSubmitting = false)))
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
@@ -55,6 +61,7 @@ export class LoginComponent {
         },
         error: (err) => {
           this.errorMessage = getAuthErrorMessage(err, 'Login failed. Please try again.');
+          this.cdr.detectChanges();
         }
       });
   }
