@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
+import { getAuthErrorMessage } from '../../auth/auth-error.util';
 
 @Component({
   standalone: true,
@@ -62,7 +63,7 @@ export class RegisterComponent {
           });
         },
         error: (err) => {
-          this.errorMessage = err?.error?.message || 'Registration failed. Please try again.';
+          this.errorMessage = getAuthErrorMessage(err, 'Registration failed. Please try again.');
         }
       });
   }
