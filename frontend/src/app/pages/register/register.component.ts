@@ -62,7 +62,6 @@ export class RegisterComponent {
         timeout(15000),
         finalize(() => {
           this.isSubmitting = false;
-          console.log('Finalize executed. isSubmitting:', this.isSubmitting);
           this.cdr.detectChanges();
         }),
       )
@@ -76,10 +75,6 @@ export class RegisterComponent {
           this.hasSubmitError = true;
           this.errorMessage = getAuthErrorMessage(err, 'Could not register. Please try again.');
           this.cdr.detectChanges();
-
-          console.log('Error message:', this.errorMessage);
-          console.log('Has submit error:', this.hasSubmitError);
-          console.log('Is submitting before finalize:', this.isSubmitting);
         },
       });
   }
