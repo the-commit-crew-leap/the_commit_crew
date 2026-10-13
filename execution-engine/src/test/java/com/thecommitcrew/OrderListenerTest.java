@@ -32,11 +32,29 @@ class OrderListenerTest {
     private final KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
     private Duration paused;
 
-    private OrderListener listener() {
-        EngineProperties props = new EngineProperties(Duration.ofMillis(750), Duration.ofMillis(750), 0, "SIM");
-        SimulatedMarket market = new SimulatedMarket(props, new Random(1), Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
-        return new OrderListener(market, d -> paused = d, kafka, mapper, "executions");
-    }
+private OrderListener listener() {
+    // Create full EngineProperties with all nested records
+    EngineProperties.Topics topics = new EngineProperties.Topics(
+        "orders", "executions", "dead-letters", "dead-letters-retry", 3, 1
+    );
+    EngineProperties.Failure failure = new EngineProperties.Failure(3, 100, 2.0, 30000);
+    EngineProperties props = new EngineProperties(
+        Duration.ofMillis(750), 
+        Duration.ofMillis(750), 
+        0, 
+        "SIM", 
+        topics,
+        failure
+    );
+    
+    SimulatedMarket market = new SimulatedMarket(props, new Random(1), 
+                                                  Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+    
+    FailureStrategy strategy = new FailureStrategy(failure);
+    Pauser pauser = d -> paused = Duration.ofMillis(d); 
+    
+    return new OrderListener(market, pauser, kafka, mapper, props, strategy);
+}
 
     @Test
     void testOnOrder_WaitsForMarketThenPublishesFillKeyedByAccount() throws Exception {
@@ -62,8 +80,13 @@ class OrderListenerTest {
 
     @Test
     void testOnOrder_UnreadableMessage_SkippedWithoutPublishing() throws Exception {
+        // Mock the dead-letter send
+        when(kafka.send(eq("dead-letters"), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        
         listener().onOrder("not json");
 
-        verifyNoInteractions(kafka);
+        // Should dead-letter the invalid JSON, not skip silently
+        verify(kafka).send(eq("dead-letters"), anyString());
     }
 }
