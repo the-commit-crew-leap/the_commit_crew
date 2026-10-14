@@ -1,0 +1,44 @@
+<section class="auth-shell">
+  <div class="auth-card">
+    <h1>Create account</h1>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="username">Username</label>
+      <input id="username" type="text" formControlName="username" autocomplete="username" />
+      <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+        Username must be 3-30 chars and contain only letters, numbers, underscore, or hyphen.
+      </p>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" autocomplete="email" />
+      <p class="field-error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+        Enter a valid email.
+      </p>
+
+      <label for="fullName">Full name</label>
+      <input id="fullName" type="text" formControlName="fullName" autocomplete="name" />
+      <p class="field-error" *ngIf="form.controls.fullName.touched && form.controls.fullName.invalid">
+        Full name is required.
+      </p>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+      <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+        Password must be at least 8 chars and include uppercase, lowercase, number, and special character.
+      </p>
+
+      <p class="api-error" *ngIf="hasSubmitError">
+        {{ errorMessage || 'Could not register. Please try again.' }}
+      </p>
+
+      <button type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Creating account...' : 'Create account' }}
+      </button>
+    </form>
+
+    <p class="hint">
+      Already have an account?
+      <a routerLink="/login">Sign in</a>
+    </p>
+  </div>
+</section>

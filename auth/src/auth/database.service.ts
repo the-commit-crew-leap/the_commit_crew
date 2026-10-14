@@ -71,6 +71,32 @@ export class DatabaseService {
     }
   }
 
+  // compensation method
+  async deleteAccount(accountId: string): Promise<boolean> {
+    const client = await this.tradingDbPool.connect();
+    try {
+      const query = `
+        DELETE FROM accounts
+        WHERE account_id = $1
+      `;
+
+      const result = await client.query(query, [accountId]);
+
+      if (result.rowCount === 0) {
+        throw new Error(`Account not found for delete: ${accountId}`);
+      }
+
+      this.logger.log(`Account deleted in trading-db: ${accountId}`);
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to delete account in trading-db: ${errorMessage}`);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getConnection() {
     return this.tradingDbPool;
   }

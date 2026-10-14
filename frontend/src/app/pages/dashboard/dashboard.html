@@ -1,1 +1,7 @@
-<p>dashboard works!</p>
+<section class="dash-shell">
+  <div class="dash-card">
+    <h1>Dashboard</h1>
+    <p *ngIf="user">Signed in as <strong>{{ user.username }}</strong> ({{ user.role }})</p>
+    <button type="button" (click)="logout()">Log out</button>
+  </div>
+</section>
