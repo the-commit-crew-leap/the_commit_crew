@@ -175,6 +175,16 @@ For testing, copy the access token and navigate to swagger:
 
 Click the green Authorize button and paste your JWT token.
 
+### Refresh tokens and revocation
+
+- Access tokens expire after 15 minutes.
+- Refresh tokens expire after 7 days.
+- Refreshing a session issues a new access token and refresh token.
+- Rotated refresh tokens are not revoked or tracked server-side.
+- If a refresh token is stolen, it may be replayed until it expires.
+- Token revocation is currently out of scope.
+- Users should log out and administrators should rotate authentication secrets if token compromise is suspected.
+
 ## SonarCube
 
 ```bash
