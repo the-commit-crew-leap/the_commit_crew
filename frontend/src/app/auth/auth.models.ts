@@ -35,6 +35,13 @@ export interface RegisterResponse {
   createdAt: string;
 }
 
+export interface ValidateResponse {
+  valid: boolean;
+  username: string;
+  accountId: string | null;
+  role: string | null;
+}
+
 export interface ApiSuccess<T> {
   status: 'SUCCESS';
   data: T;

@@ -17,10 +17,12 @@ function isPublicAuthEndpoint(url: string): boolean {
     normalized.startsWith(`${authBase}/register`) ||
     normalized.startsWith(`${authBase}/refresh`) ||
     normalized.startsWith(`${authBase}/health`) ||
+    normalized.startsWith(`${authBase}/validate`) ||
     normalized.endsWith('/api/auth/login') ||
     normalized.endsWith('/api/auth/register') ||
     normalized.endsWith('/api/auth/refresh') ||
-    normalized.endsWith('/api/auth/health')
+    normalized.endsWith('/api/auth/health') ||
+    normalized.endsWith('/api/auth/validate')
   );
 }
 

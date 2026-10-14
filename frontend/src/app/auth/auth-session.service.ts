@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthApiService } from './auth-api.service';
 import { AuthUser, LoginRequest, RegisterRequest, RegisterResponse } from './auth.models';
 import { TokenStorageService } from './token-storage.service';
@@ -27,6 +27,28 @@ export class AuthSessionService {
         });
       }),
       map(() => void 0)
+    );
+  }
+
+  validateSession(): Observable<void> {
+    const token = this.tokenStorage.getAccessToken();
+
+    if (!token || this.isSessionExpired()) {
+      this.logout();
+      return of(void 0);
+    }
+
+    return this.authApi.validate(token).pipe(
+      tap((response) => {
+        if (!response.valid) {
+          this.logout();
+        }
+      }),
+      map(() => void 0),
+      catchError(() => {
+        this.logout();
+        return of(void 0);
+      })
     );
   }
 
