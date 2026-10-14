@@ -2,5 +2,5 @@ export const environment = {
   production: true,
   bypassAuth: false,
   authApiBaseUrl: '/api/auth',
-  appApiBaseUrl: '/api'
+  appApiBaseUrl: '/api/v1'
 };
