@@ -12,7 +12,8 @@
     "test": "playwright test",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "api:generate": "openapi-generator-cli generate -i ../auth/auth-api.yaml -g typescript-angular -o src/app/generated/auth --additional-properties=providedIn=root,serviceSuffix=Service"
   },
   "private": true,
   "dependencies": {
@@ -32,6 +33,7 @@
     "@angular-devkit/build-angular": "^22.2.2",
     "@angular/cli": "^22.2.2",
     "@angular/compiler-cli": "^22.2.2",
+    "@openapitools/openapi-generator-cli": "^2.41.0",
     "@playwright/test": "^1.64.0",
     "@types/jasmine": "~5.1.0",
     "@types/jest": "^30.0.0",
