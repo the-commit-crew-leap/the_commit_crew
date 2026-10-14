@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Raw, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { Credential } from '../entities/credential.entity';
 import { UserTradingAccount } from '../entities/user-trading-account.entity';
@@ -41,6 +41,14 @@ export class UsersRepository {
     return this.userRepository.findOne({
       where: { userId },
       relations: { credential: true },
+    });
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: {
+        email: Raw((column) => `LOWER(${column}) = LOWER(:email)`, { email }),
+      },
     });
   }
 
