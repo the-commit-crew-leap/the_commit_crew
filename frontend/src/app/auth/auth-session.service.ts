@@ -16,6 +16,7 @@ export class AuthSessionService {
   login(payload: LoginRequest): Observable<void> {
     return this.authApi.login(payload).pipe(
       tap((response) => {
+        localStorage.setItem('auth.accountId', response.accountId);
         const expiresAt = Date.now() + response.expiresIn * 1000;
         this.tokenStorage.saveSession({
           accessToken: response.accessToken,
@@ -35,6 +36,7 @@ export class AuthSessionService {
 
   logout(): void {
     this.tokenStorage.clearSession();
+    localStorage.removeItem('auth.accountId');
   }
 
   getAccessToken(): string | null {

@@ -24,6 +24,7 @@ export interface LoginResponse {
   expiresIn: number;
   accountId: string;
   role: string;
+  user: AuthUser;
 }
 
 export interface RegisterResponse {

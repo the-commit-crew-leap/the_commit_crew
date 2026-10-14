@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import {
   ContainerComponent,
@@ -23,6 +23,7 @@ import {
   templateUrl: './header.html',
   imports: [
     RouterLink,
+    RouterLinkActive,
     ContainerComponent,
     DropdownComponent,
     DropdownDividerDirective,
