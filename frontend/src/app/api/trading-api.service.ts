@@ -12,7 +12,6 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TradingApiService {
     private readonly baseUrl = environment.appApiBaseUrl;
-    private readonly orderBaseUrl = environment.orderApiBaseUrl;
 
     constructor(private readonly http: HttpClient) {}
 
@@ -25,6 +24,6 @@ export class TradingApiService {
     }
 
     placeOrder(request: PlaceOrderRequest): Observable<OrderResponse> {
-        return this.http.post<OrderResponse>(`${this.orderBaseUrl}/orders`, request);
+        return this.http.post<OrderResponse>(`${this.baseUrl}/orders`, request);
     }
 }

@@ -90,7 +90,7 @@ class AccountControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /accounts/{id}")
+    @DisplayName("GET /api/v1/accounts/{id}")
     class GetAccountEndpoint {
         @BeforeEach
         void setup() {
@@ -102,7 +102,7 @@ class AccountControllerTest {
         void returnsAccountWhenFound() throws Exception {
             when(accountService.getAccount(TEST_ACCOUNT_ID)).thenReturn(testAccount);
 
-            mockMvc.perform(get("/accounts/{id}", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accountId").value(TEST_ACCOUNT_ID))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
@@ -114,14 +114,14 @@ class AccountControllerTest {
             when(accountService.getAccount(TEST_ACCOUNT_ID))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(get("/accounts/{id}", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}", TEST_ACCOUNT_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
         }
     }
 
     @Nested
-    @DisplayName("GET /accounts/{id}/balance")
+    @DisplayName("GET /api/v1/accounts/{id}/balance")
     class GetAccountBalanceEndpoint {
         @BeforeEach
         void setup() {
@@ -133,7 +133,7 @@ class AccountControllerTest {
         void returnsBalanceWhenAccountFound() throws Exception {
             when(accountService.getBalance(TEST_ACCOUNT_ID)).thenReturn(testBalance);
 
-            mockMvc.perform(get("/accounts/{id}/balance", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/balance", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accountId").value(TEST_ACCOUNT_ID))
                 .andExpect(jsonPath("$.cashBalance.amount").value("10000.0"));
@@ -146,14 +146,14 @@ class AccountControllerTest {
             when(accountService.getBalance(TEST_ACCOUNT_ID))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(get("/accounts/{id}/balance", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/balance", TEST_ACCOUNT_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
         }
     }
 
     @Nested
-    @DisplayName("GET /accounts/{id}/positions")
+    @DisplayName("GET /api/v1/accounts/{id}/positions")
     class GetAccountPositionsEndpoint {
         @BeforeEach
         void setup() {
@@ -177,7 +177,7 @@ class AccountControllerTest {
             when(positionService.unrealizedProfitLoss(position, currentPrice)).thenReturn(unrealizedPnL);
             when(positionService.unrealizedPnLPercent(position, currentPrice)).thenReturn(unrealizedPnLPercent);
 
-            mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value("AAPL"))
                 .andExpect(jsonPath("$[0].quantity").value(100))
@@ -198,7 +198,7 @@ class AccountControllerTest {
             when(priceService.getCurrentPrice("UNKNOWN"))
                 .thenThrow(new com.thecommitcrew.domain.exception.PriceNotFoundException("No price found for symbol: UNKNOWN"));
 
-            mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
                 .andExpect(status().isNotFound());
         }
 
@@ -208,7 +208,7 @@ class AccountControllerTest {
             when(accountService.getPositions(TEST_ACCOUNT_ID))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
         }
@@ -218,14 +218,14 @@ class AccountControllerTest {
         void returnsEmptyListWhenNoPositionsExist() throws Exception {
             when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(List.of());
 
-            mockMvc.perform(get("/accounts/{id}/positions", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.empty()));
         }
     }
 
     @Nested
-    @DisplayName("GET /accounts/{id}/orders")
+    @DisplayName("GET /api/v1/accounts/{id}/orders")
     class GetAccountOrdersEndpoint {
         @BeforeEach
         void setup() {
@@ -250,7 +250,7 @@ class AccountControllerTest {
 
             when(accountService.getOrders(TEST_ACCOUNT_ID)).thenReturn(orders);
 
-            mockMvc.perform(get("/accounts/{id}/orders", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/orders", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value("AAPL"))
                 .andExpect(jsonPath("$[0].quantity").value(100))
@@ -263,7 +263,7 @@ class AccountControllerTest {
             when(accountService.getOrders(TEST_ACCOUNT_ID))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(get("/accounts/{id}/orders", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/orders", TEST_ACCOUNT_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"));
         }
@@ -273,14 +273,14 @@ class AccountControllerTest {
         void returnsEmptyListWhenNoOrdersExist() throws Exception {
             when(accountService.getOrders(TEST_ACCOUNT_ID)).thenReturn(List.of());
 
-            mockMvc.perform(get("/accounts/{id}/orders", TEST_ACCOUNT_ID))
+            mockMvc.perform(get("/api/v1/accounts/{id}/orders", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.empty()));
         }
     }
 
     @Nested
-    @DisplayName("POST /accounts/{id}/deposit")
+    @DisplayName("POST /api/v1/accounts/{id}/deposit")
     class DepositEndpoint {
         @BeforeEach
         void setup() {
@@ -303,7 +303,7 @@ class AccountControllerTest {
 
             when(accountService.deposit(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00")))).thenReturn(updatedAccount);
 
-            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/deposit", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 1000.00}"))
                 .andExpect(status().isOk())
@@ -316,7 +316,7 @@ class AccountControllerTest {
         @Test
         @DisplayName("Returns 400 when amount is not positive")
         void returns400WhenAmountNotPositive() throws Exception {
-            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/deposit", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": -100.00}"))
                 .andExpect(status().isBadRequest());
@@ -325,7 +325,7 @@ class AccountControllerTest {
         @Test
         @DisplayName("Returns 400 when amount is null")
         void returns400WhenAmountIsNull() throws Exception {
-            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/deposit", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": null}"))
                 .andExpect(status().isBadRequest());
@@ -337,7 +337,7 @@ class AccountControllerTest {
             when(accountService.deposit(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00"))))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(post("/accounts/{id}/deposit", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/deposit", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 1000.00}"))
                 .andExpect(status().isNotFound())
@@ -346,7 +346,7 @@ class AccountControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /accounts/{id}/withdraw")
+    @DisplayName("POST /api/v1/accounts/{id}/withdraw")
     class WithdrawEndpoint {
         @BeforeEach
         void setup() {
@@ -369,7 +369,7 @@ class AccountControllerTest {
 
             when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00")))).thenReturn(updatedAccount);
 
-            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 1000.00}"))
                 .andExpect(status().isOk())
@@ -382,7 +382,7 @@ class AccountControllerTest {
         @Test
         @DisplayName("Returns 400 when amount is not positive")
         void returns400WhenAmountNotPositive() throws Exception {
-            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 0}"))
                 .andExpect(status().isBadRequest());
@@ -391,7 +391,7 @@ class AccountControllerTest {
         @Test
         @DisplayName("Returns 400 when amount is null")
         void returns400WhenAmountIsNull() throws Exception {
-            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": null}"))
                 .andExpect(status().isBadRequest());
@@ -403,7 +403,7 @@ class AccountControllerTest {
             when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("20000.00"))))
                 .thenThrow(new IllegalArgumentException("Insufficient funds"));
 
-            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 20000.00}"))
                 .andExpect(status().isBadRequest());
@@ -415,7 +415,7 @@ class AccountControllerTest {
             when(accountService.withdraw(TEST_ACCOUNT_ID, new Money(new BigDecimal("1000.00"))))
                 .thenThrow(new AccountNotFoundException("Account not found: " + TEST_ACCOUNT_ID));
 
-            mockMvc.perform(post("/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/{id}/withdraw", TEST_ACCOUNT_ID)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"amount\": 1000.00}"))
                 .andExpect(status().isNotFound())
