@@ -2,12 +2,12 @@
   <div class="dash-card">
     <h1>Dashboard</h1>
 
-    <p *ngIf="balance">
-      Account: <strong>{{ balance.accountId }}</strong>
-    </p>
-
     <section class="account-summary">
       <h2>Account Overview</h2>
+
+      <p *ngIf="balance">
+        Account: <strong>{{ balance.accountId }}</strong>
+      </p>
 
       <p *ngIf="balance">
         Cash balance:
