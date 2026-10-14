@@ -1,7 +1,7 @@
 .dash-shell {
   min-height: 100vh;
-  padding: 24px;
-  background: #f7fafc;
+  padding: 24px 32px;
+  background: #0b0e12;
 }
 
 .workspace {
@@ -9,17 +9,54 @@
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
   width: 100%;
-  max-width: 1440px;
+  max-width: 1600px;
   box-sizing: border-box;
   margin: 0 auto;
   align-items: start;
 }
 
+.portfolio-column {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+app-order-ticket {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+
 .dash-card {
-  background: #fff;
-  border: 1px solid #d9e3ef;
+  background: transparent;
+  border: 0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 4px 0 0;
+  color: #e8ebf0;
+}
+
+.welcome-message {
+  margin: 4px 0 0;
+  color: #8993a3;
+}
+
+.dash-card nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.dash-card nav a {
+  color: #a7b6ff;
+}
+
+.dash-card nav button {
+  margin-top: 0;
+  background: #29313c;
+  color: #e8ebf0;
 }
 
 button {
@@ -36,5 +73,16 @@ button {
 @media (max-width: 760px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .dash-card,
+  .portfolio-column {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  app-order-ticket {
+    grid-column: 1;
+    grid-row: auto;
   }
 }

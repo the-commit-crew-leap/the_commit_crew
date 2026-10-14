@@ -1,28 +1,17 @@
 <section class="dash-shell">
   <div class="workspace">
-    <div class="dash-card">
-      <h1>Dashboard</h1>
+    <div class="portfolio-column">
+      <div class="dash-card">
+        <h1>Trading overview</h1>
+        <p class="welcome-message">Welcome back. Here's what's in your account.</p>
 
-      <section class="account-summary">
-        <h2>Account Overview</h2>
+        <nav aria-label="Dashboard actions">
+          <a routerLink="/orders">My Orders</a>
+          <button type="button" (click)="logout()">Log out</button>
+        </nav>
+      </div>
 
-        <p *ngIf="balance()">
-          Account: <strong>{{ balance()?.accountId }}</strong>
-        </p>
-
-        <p *ngIf="balance()">
-          Cash balance:
-          <strong>{{ balance()?.cashBalance?.amount }}</strong>
-          {{ balance()?.cashBalance?.currency || '' }}
-        </p>
-
-        <p *ngIf="!balance() && !balanceError">Loading account balance...</p>
-        <p *ngIf="balanceError">Unable to load account balance.</p>
-      </section>
-
-      <nav aria-label="Dashboard actions">
-        <button type="button" (click)="logout()">Log out</button>
-      </nav>
+      <app-assets></app-assets>
     </div>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>

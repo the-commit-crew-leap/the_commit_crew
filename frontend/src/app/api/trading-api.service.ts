@@ -6,6 +6,7 @@ import {
     AccountResponse,
     BalanceResponse,
     OrderResponse,
+    PositionResponse,
     PlaceOrderRequest
 } from './trading.models';
 
@@ -21,6 +22,10 @@ export class TradingApiService {
 
     getBalance(accountId: string): Observable<BalanceResponse> {
         return this.http.get<BalanceResponse>(`${this.baseUrl}/accounts/${accountId}/balance`);
+    }
+
+    getPositions(accountId: string): Observable<PositionResponse[]> {
+        return this.http.get<PositionResponse[]>(`${this.baseUrl}/accounts/${accountId}/positions`);
     }
 
     placeOrder(request: PlaceOrderRequest): Observable<OrderResponse> {

@@ -4,9 +4,10 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { DepositService } from '../../services/deposit.service';
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
+import { AssetsComponent } from './assets/assets.component';
 
 @Component({
-  imports: [CommonModule, RouterLink, OrderTicketComponent],
+  imports: [CommonModule, RouterLink, OrderTicketComponent, AssetsComponent],
   selector: 'app-dashboard',
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',
