@@ -39,4 +39,30 @@ describe('TokenService', () => {
 
     expect(tokenService.verify(token)).toBe(false);
   });
+
+  it('rejects an expired token', () => {
+    const token = jwtService.sign(
+      { username: 'alice', sub: 'alice' },
+      {
+        issuer: JWT_ISSUER,
+        expiresIn: '-1s',
+      },
+    );
+
+    expect(tokenService.verify(token)).toBe(false);
+  });
+
+  it('rejects a token signed with the wrong secret', () => {
+    const tokenWithWrongSecret = new JwtService({
+      secret: 'wrong-secret',
+    }).sign(
+      { username: 'alice', sub: 'alice' },
+      {
+        issuer: JWT_ISSUER,
+        expiresIn: '15m',
+      },
+    );
+
+    expect(tokenService.verify(tokenWithWrongSecret)).toBe(false);
+  });
 });
