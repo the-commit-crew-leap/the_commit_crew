@@ -185,6 +185,21 @@ Click the green Authorize button and paste your JWT token.
 - Token revocation is currently out of scope.
 - Users should log out and administrators should rotate authentication secrets if token compromise is suspected.
 
+
+### JWT claims
+
+Access and refresh tokens contain these claims:
+
+- `username`
+- `sub`
+- `accountId`
+- `role`
+- `iss`
+- `iat`
+- `exp`
+
+The issuer is configured as `the-commit-crew-auth`.
+
 ## SonarCube
 
 ```bash

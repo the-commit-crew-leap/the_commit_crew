@@ -86,6 +86,26 @@ describe('TokenService', () => {
     expect(Object.keys(refreshPayload).sort()).toEqual(expectedClaims);
   });
 
+  it('supports tokens without optional account metadata', () => {
+    const result = tokenService.issue('alice');
+
+    const payload = jwtService.decode(result.accessToken) as Record<string, unknown>;
+
+    expect(payload.username).toBe('alice');
+    expect(payload.sub).toBe('alice');
+    expect(payload.accountId).toBeUndefined();
+    expect(payload.role).toBeUndefined();
+  });
+
+  it('supports an account ID without a role', () => {
+    const result = tokenService.issue('alice', 'ACC-123');
+
+    const payload = jwtService.decode(result.accessToken) as Record<string, unknown>;
+
+    expect(payload.accountId).toBe('ACC-123');
+    expect(payload.role).toBeUndefined();
+  });
+
   it('sets the refresh token expiry to seven days', () => {
     const result = tokenService.issue('alice', 'ACC-123', 'CLIENT');
 

@@ -520,6 +520,37 @@ describe('AuthService', () => {
     expect(mockDatabaseService.closeAccount).not.toHaveBeenCalled();
   });
 
+  it('refreshes with undefined account metadata when no linked account exists', async () => {
+    mockTokenService.verify.mockReturnValue(true);
+    mockTokenService.decode.mockReturnValue({ username: 'alice' });
+
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts
+      .mockResolvedValue(null);
+
+    await service.refresh('refresh-token');
+
+    expect(mockTokenService.issue).toHaveBeenCalledWith(
+      'alice',
+      undefined,
+      undefined,
+    );
+  });
+
+  it('rejects validation when the user does not exist', async () => {
+    mockTokenService.verify.mockReturnValue(true);
+    mockTokenService.decode.mockReturnValue({
+      username: 'missing-user',
+      accountId: 'ACC-MISSING',
+    });
+
+    mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts
+      .mockResolvedValue(null);
+
+    await expect(
+      service.validate('token'),
+    ).rejects.toThrow('Session is no longer valid');
+  });
+
   it('validates an active user with a linked trading account', async () => {
     mockTokenService.verify.mockReturnValue(true);
     mockTokenService.decode.mockReturnValue({
