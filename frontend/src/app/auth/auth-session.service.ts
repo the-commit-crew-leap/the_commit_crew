@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthApiService } from './auth-api.service';
 import { AuthUser, LoginRequest, RegisterRequest, RegisterResponse } from './auth.models';
 import { TokenStorageService } from './token-storage.service';
@@ -16,6 +16,7 @@ export class AuthSessionService {
   login(payload: LoginRequest): Observable<void> {
     return this.authApi.login(payload).pipe(
       tap((response) => {
+        localStorage.setItem('auth.accountId', response.accountId);
         const expiresAt = Date.now() + response.expiresIn * 1000;
         this.tokenStorage.saveSession({
           accessToken: response.accessToken,
@@ -29,12 +30,35 @@ export class AuthSessionService {
     );
   }
 
+  validateSession(): Observable<void> {
+    const token = this.tokenStorage.getAccessToken();
+
+    if (!token || this.isSessionExpired()) {
+      this.logout();
+      return of(void 0);
+    }
+
+    return this.authApi.validate(token).pipe(
+      tap((response) => {
+        if (!response.valid) {
+          this.logout();
+        }
+      }),
+      map(() => void 0),
+      catchError(() => {
+        this.logout();
+        return of(void 0);
+      })
+    );
+  }
+
   register(payload: RegisterRequest): Observable<RegisterResponse> {
     return this.authApi.register(payload);
   }
 
   logout(): void {
     this.tokenStorage.clearSession();
+    localStorage.removeItem('auth.accountId');
   }
 
   getAccessToken(): string | null {

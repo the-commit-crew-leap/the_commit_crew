@@ -205,25 +205,28 @@ export class AuthService implements OnModuleInit {
       | { username?: string; accountId?: string; role?: string }
       | null;
 
-    if (!decoded?.username) {
+    if (!decoded?.username || !decoded.accountId) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    let accountId = decoded.accountId;
-    let role = decoded.role;
+    const user =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(
+        decoded.username
+      );
 
-    if (!accountId) {
-      const user = await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(decoded.username);
-      const linkedAccount = user?.tradingAccounts?.[0];
-      accountId = linkedAccount?.accountId;
-      role = linkedAccount?.role;
+    const linkedAccount = user?.tradingAccounts?.find(
+      account => account.accountId === decoded.accountId
+    );
+
+    if (!user || user.status !== 'ACTIVE' || !linkedAccount) {
+      throw new UnauthorizedException('Session is no longer valid');
     }
 
     return {
-      username: decoded.username,
-      accountId: accountId ?? null,
-      role: role ?? null,
-      valid: true,
+      username: user.username,
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
+      valid: true
     };
   }
 

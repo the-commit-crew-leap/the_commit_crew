@@ -7,7 +7,8 @@ import {
   LoginRequest,
   LoginResponse,
   RegisterRequest,
-  RegisterResponse
+  RegisterResponse,
+  ValidateResponse
 } from './auth.models';
 
 @Injectable({
@@ -28,5 +29,14 @@ export class AuthApiService {
     return this.http
       .post<ApiSuccess<RegisterResponse>>(`${this.baseUrl}/register`, payload)
       .pipe(map((res) => res.data));
+  }
+
+  validate(token: string): Observable<ValidateResponse> {
+    return this.http
+      .post<ApiSuccess<ValidateResponse>>(
+        `${this.baseUrl}/validate`,
+        { token }
+      )
+      .pipe(map((response) => response.data));
   }
 }
