@@ -447,7 +447,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /instruments:
+  /api/v1/instruments:
     get:
       summary: Retrieve available instruments
       operationId: getInstruments
@@ -467,7 +467,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/InstrumentResponse'
 
-  /instruments/{symbol}:
+  /api/v1/instruments/{symbol}:
     get:
       summary: Retrieve an instrument
       operationId: getInstrument
