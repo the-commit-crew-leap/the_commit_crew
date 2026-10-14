@@ -32,7 +32,8 @@ export function getAuthErrorMessage(error: unknown, fallback: string): string {
     }
   }
 
-  if (typeof maybeHttpError.message === 'string' && maybeHttpError.message.trim().length > 0) {
+  if (typeof maybeHttpError.message === 'string' && typeof maybeHttpError.status === 'number' &&
+    maybeHttpError.message.trim().length > 0) {
     return maybeHttpError.message;
   }
 
