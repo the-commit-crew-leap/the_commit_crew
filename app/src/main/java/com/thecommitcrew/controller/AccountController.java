@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController 
-@RequestMapping("/accounts/{id}") 
+@RequestMapping("/api/v1/accounts/{id}") 
 public class AccountController {
     private final AccountService accountService;
     private final PriceService priceService;
