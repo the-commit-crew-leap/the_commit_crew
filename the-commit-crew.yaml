@@ -9,8 +9,8 @@ info:
     url: https://example.com/license
 
 servers:
-  - url: /api/v1
-  - url: /api/v2
+  - url: /
+    description: Trading service base URL
 
 paths:
   /orders:
@@ -30,8 +30,6 @@ paths:
               symbol: AAPL
               side: BUY
               quantity: 100
-              price: 150.00
-              idempotencyKey: uuid-string-123
       responses:
         '201':
           description: Order accepted for processing
@@ -59,7 +57,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderResponse'
+                $ref: '#/components/schemas/ErrorResponse'
   /orders/{id}:
     delete:
       summary: Cancel a working order
@@ -228,7 +226,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   
-    /accounts/{id}/deposit:
+  /accounts/{id}/deposit:
     post:
       summary: Deposit money into account
       operationId: depositFunds
@@ -324,6 +322,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /instruments:
+    get:
+      summary: Retrieve available instruments
+      operationId: getInstruments
+      parameters:
+        - name: tradable
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Instruments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentResponse'
+
+  /instruments/{symbol}:
+    get:
+      summary: Retrieve an instrument
+      operationId: getInstrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Instrument retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentResponse'
+        '404':
+          description: Instrument not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 
 components:
   securitySchemes:
@@ -335,7 +377,7 @@ components:
   schemas:
     OrderRequest:
       type: object
-      required: [accountId, symbol, side, quantity, price, idempotencyKey]
+      required: [accountId, symbol, side, quantity]
       properties:
         accountId:
           type: string
@@ -346,17 +388,9 @@ components:
           type: string
           enum: [BUY, SELL]
         quantity:
-          type: number
-          format: double
-          minimum: 0
-          exclusiveMinimum: true
-        price:
-          type: number
-          format: double
-          minimum: 0
-          exclusiveMinimum: true
-        idempotencyKey:
-          type: string
+          type: integer
+          format: int64
+          minimum: 1
 
     OrderResponse:
       type: object
@@ -454,7 +488,7 @@ components:
         message:
           type: string
 
-        TransactionRequest:
+    TransactionRequest:
       type: object
       required: [amount]
       properties:
@@ -481,3 +515,18 @@ components:
         timestamp:
           type: string
           format: date-time
+
+    InstrumentResponse:
+      type: object
+      required: [symbol, name, assetClass, currency, tradable]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        assetClass:
+          type: string
+        currency:
+          type: string
+        tradable:
+          type: boolean
