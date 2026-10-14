@@ -4,8 +4,9 @@ import { AuthUser } from './auth.models';
 interface StoredSession {
   accessToken: string;
   refreshToken: string;
-  expiresAt: number; // epoch ms
-  user: AuthUser;
+  expiresAt: number; //epoch ms
+  accountId: string;
+  role: string;
 }
 
 @Injectable({
@@ -40,12 +41,16 @@ export class TokenStorageService {
     return this.getSession()?.accessToken ?? null;
   }
 
-  getUser(): AuthUser | null {
-    return this.getSession()?.user ?? null;
-  }
-
   getExpiresAt(): number | null {
     return this.getSession()?.expiresAt ?? null;
+  }
+
+  getAccountId(): string | null {
+    return this.getSession()?.accountId ?? null;
+  }
+
+  getRole(): string | null {
+    return this.getSession()?.role ?? null;
   }
 
   isExpired(nowMs = Date.now()): boolean {
