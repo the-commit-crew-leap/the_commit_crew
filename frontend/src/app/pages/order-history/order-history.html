@@ -1,0 +1,37 @@
+<section class="history">
+  <h1>Order History</h1>
+
+  <p *ngIf="loading">Loading order history...</p>
+
+  <div *ngIf="!loading && error" class="error">
+    <p>{{ error }}</p>
+    <button type="button" (click)="loadOrders()">Retry</button>
+  </div>
+
+  <p *ngIf="!loading && !error && orders.length === 0">No orders yet.</p>
+
+  <table *ngIf="!loading && !error && orders.length > 0">
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th>Status</th>
+        <th>Created Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let order of orders">
+        <td>{{ order.symbol }}</td>
+        <td>{{ order.side }}</td>
+        <td>{{ order.quantity }}</td>
+        <td>{{ order.price }}</td>
+        <td>
+          <span [class]="statusClass(order.status)">{{ order.status }}</span>
+        </td>
+        <td>{{ formatCreatedOn(order.createdOn) }}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

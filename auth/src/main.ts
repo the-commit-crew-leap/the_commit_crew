@@ -1,6 +1,5 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import * as fs from 'fs';
 
 // Load environment variables BEFORE importing anything else
 const envFile = process.env.NODE_ENV === 'prod' ? '.env.prod' : '.env.dev';
@@ -26,6 +25,18 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:4300,http://127.0.0.1:4300')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: corsOrigins,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

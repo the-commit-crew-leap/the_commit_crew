@@ -22,69 +22,75 @@ export class AuthService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Create default test user for development if it doesn't exist
     const testUserExists = await this.usersRepository.findByUsername('testuser');
 
     if (!testUserExists) {
       const hashedPassword = await bcrypt.hash('testpass', this.bcryptCostFactor);
       const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+      let accountCreated = false;
 
       try {
-        // Create account in trading database first
         await this.databaseService.createAccount(accountId, 'Test User');
+        accountCreated = true;
 
-        // Create user with credentials in auth database
-        const user = await this.usersRepository.createUser({
+        await this.usersRepository.createUserWithCredentialAndTradingLink({
           username: 'testuser',
           email: 'test@example.com',
           passwordHash: hashedPassword,
+          accountId,
+          role: 'CLIENT',
         });
 
-        await this.usersRepository.linkUserToTradingAccount(user.userId, accountId, 'CLIENT');
-
-        // Note: Trading account linking would be done separately if needed
         this.logger.log('Default test user created: testuser/testpass', undefined, {
           username: 'testuser',
           accountId,
         });
       } catch (error) {
         this.logger.error('Failed to create default test user', String(error));
+        if (accountCreated) {
+          await this.compensateCreatedAccount(accountId);
+        }
       }
     }
   }
 
   async register(registerDto: RegisterDto): Promise<any> {
     const { username, email, password, fullName } = registerDto;
+    const normalizedEmail = email.trim().toLowerCase();
 
-    this.logger.log(`Attempting to register user`, undefined, { username, email });
+    this.logger.log('Attempting to register user', undefined, { username, email });
 
-    // Check if user already exists
     const existingUser = await this.usersRepository.findByUsername(username);
     if (existingUser) {
       this.logger.warn(`Registration failed: user already exists`, undefined, { username });
-      throw new ConflictException('User already exists');
+      throw new ConflictException('Username or email already exists');
     }
 
-    // Hash password with configured cost factor
-    const hashedPassword = await bcrypt.hash(password, this.bcryptCostFactor);
+    const existingEmail = await this.usersRepository.findByEmail(normalizedEmail);
+    if (existingEmail) {
+      this.logger.warn('Registration failed: email already exists', undefined, {
+        email: normalizedEmail,
+      });
+      throw new ConflictException('Username or email already exists');
+    }
 
-    // Generate unique account ID
+    const hashedPassword = await bcrypt.hash(password, this.bcryptCostFactor);
     const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const linkedRole: 'CLIENT' = 'CLIENT';
+    let accountCreated = false;
 
     try {
-      // Create account in trading database FIRST
       await this.databaseService.createAccount(accountId, fullName || username);
+      accountCreated = true;
 
-      // Create user with credentials in auth database
-      const user = await this.usersRepository.createUser({
+      const user = await this.usersRepository.createUserWithCredentialAndTradingLink({
         username,
-        email,
+        email: normalizedEmail,
         fullName,
         passwordHash: hashedPassword,
+        accountId,
+        role: linkedRole,
       });
-
-      const linkedRole = 'CLIENT';
-      await this.usersRepository.linkUserToTradingAccount(user.userId, accountId, linkedRole);
 
       this.logger.logAuthEvent('REGISTER_SUCCESS', username);
 
@@ -98,6 +104,11 @@ export class AuthService implements OnModuleInit {
       };
     } catch (error: unknown) {
       this.logger.error(`Registration failed for user ${username}:`, String(error));
+
+      if (accountCreated) {
+        await this.compensateCreatedAccount(accountId);
+      }
+
       throw new BadRequestException('Registration failed. Please try again.');
     }
   }
@@ -227,5 +238,20 @@ export class AuthService implements OnModuleInit {
 
   async deleteUser(userId: number): Promise<{ message: string }> {
     throw new BadRequestException('User deletion is not implemented yet');
+  }
+
+  private async compensateCreatedAccount(accountId: string): Promise<void> {
+    try {
+      await this.databaseService.deleteAccount(accountId);
+      this.logger.warn('Compensation succeeded: deleted dangling trading account', undefined, { accountId });
+    } catch (deleteError) {
+      this.logger.error('Compensation delete failed, attempting closeAccount fallback', String(deleteError), accountId);
+      try {
+        await this.databaseService.closeAccount(accountId);
+        this.logger.warn('Compensation fallback succeeded: account closed', undefined, { accountId });
+      } catch (closeError) {
+        this.logger.error('Compensation fallback failed: account may remain dangling', String(closeError), accountId);
+      }
+    }
   }
 }

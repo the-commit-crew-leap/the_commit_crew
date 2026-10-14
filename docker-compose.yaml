@@ -15,6 +15,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       AUTH_DB: ${AUTH_DB:?}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
       # Trading Database
       TRADING_DB_HOST: db
       TRADING_DB_PORT: 5432
@@ -59,7 +60,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "4300:80"
+      - "0.0.0.0:8086:80"
     environment:
       - ANGULAR_API_URL=http://app:8081
     depends_on:

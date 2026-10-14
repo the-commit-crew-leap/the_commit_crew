@@ -1,0 +1,25 @@
+.dash-shell {
+  min-height: 100vh;
+  padding: 24px;
+  background: #f7fafc;
+}
+
+.dash-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #d9e3ef;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+button {
+  margin-top: 12px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #2d6cdf;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
