@@ -173,19 +173,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Authenticated user cannot access the requested account
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Missing or invalid authentication token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/accounts/{id}/positions:
     get:
       summary: Retrieve account holdings
@@ -221,19 +220,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Authenticated user cannot access the requested account
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Missing or invalid authentication token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /api/v1/accounts/{id}/orders:
     get:
       summary: Retrieve account order history
@@ -398,50 +389,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Missing or invalid authentication token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/v1/instruments:
-    get:
-      summary: Retrieve available instruments
-      operationId: getInstruments
-      parameters:
-        - name: tradable
-          in: query
-          required: false
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: Instruments retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/InstrumentResponse'
-
-  /api/v1/instruments/{symbol}:
-    get:
-      summary: Retrieve an instrument
-      operationId: getInstrument
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Instrument retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InstrumentResponse'
-        '404':
-          description: Instrument not found
           content:
             application/json:
               schema:
