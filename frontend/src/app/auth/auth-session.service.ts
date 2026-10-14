@@ -21,7 +21,8 @@ export class AuthSessionService {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           expiresAt,
-          user: response.user
+          accountId: response.accountId,
+          role: response.role
         });
       }),
       map(() => void 0)
@@ -44,12 +45,22 @@ export class AuthSessionService {
     return this.tokenStorage.getAccessToken();
   }
 
-  getCurrentUser(): AuthUser | null {
+  getAccountId(): string | null {
     if (this.isSessionExpired()) {
       this.logout();
       return null;
     }
-    return this.tokenStorage.getUser();
+
+    return this.tokenStorage.getAccountId();
+  }
+
+  getRole(): string | null {
+    if (this.isSessionExpired()) {
+      this.logout();
+      return null;
+    }
+
+    return this.tokenStorage.getRole();
   }
 
   isAuthenticated(): boolean {

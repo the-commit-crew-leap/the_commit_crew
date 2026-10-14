@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Order, OrderStatus } from '../../models/order.model';
 import { OrderHistoryService } from '../../services/order-history.service';
+import { AuthSessionService } from '../../auth/auth-session.service';
 
 @Component({
   selector: 'app-order-history',
@@ -16,7 +17,8 @@ export class OrderHistoryComponent implements OnInit {
   orders: Order[] = [];
 
   constructor(
-    private readonly orderHistoryService: OrderHistoryService, 
+    private readonly orderHistoryService: OrderHistoryService,
+    private readonly authSession: AuthSessionService,
     private readonly changeDetectorRef: ChangeDetectorRef) {}
 
   ngOnInit(): void {
@@ -71,6 +73,6 @@ export class OrderHistoryComponent implements OnInit {
   }
 
   private getAccountId(): string | null {
-    return localStorage.getItem('auth.accountId');
+    return this.authSession.getAccountId();
   }
 }

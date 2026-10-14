@@ -27,7 +27,7 @@ describe('authGuard', () => {
     });
   });
 
-  function runGuard(url = '/protected-page') {
+  function runGuard(url = '/dashboard') {
     return TestBed.runInInjectionContext(() =>
       authGuard(
         {} as never,
@@ -50,6 +50,24 @@ describe('authGuard', () => {
     authSession.isSessionExpired.mockReturnValue(false);
     router.createUrlTree.mockReturnValue(loginTree);
 
+    expect(runGuard('/dashboard')).toBe(loginTree);
+
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/login'], {
+      queryParams: {
+        returnUrl: '/dashboard'
+      }
+    });
+
+    expect(authSession.logout).not.toHaveBeenCalled();
+  });
+
+  it('protects the orders route for unauthenticated users', () => {
+    const loginTree = {} as UrlTree;
+
+    authSession.isAuthenticated.mockReturnValue(false);
+    authSession.isSessionExpired.mockReturnValue(false);
+    router.createUrlTree.mockReturnValue(loginTree);
+
     expect(runGuard('/orders')).toBe(loginTree);
 
     expect(router.createUrlTree).toHaveBeenCalledWith(['/login'], {
@@ -57,8 +75,6 @@ describe('authGuard', () => {
         returnUrl: '/orders'
       }
     });
-
-    expect(authSession.logout).not.toHaveBeenCalled();
   });
 
   it('clears expired sessions and redirects to login', () => {

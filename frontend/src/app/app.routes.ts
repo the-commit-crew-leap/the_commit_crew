@@ -9,7 +9,8 @@ import { OrderHistoryComponent } from './pages/order-history/order-history.compo
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'orders', component: OrderHistoryComponent },
-  { path: '', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'orders', component: OrderHistoryComponent, canActivate: [authGuard] },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '**', component: NotFoundComponent }
 ];

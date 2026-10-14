@@ -22,7 +22,8 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-  user: AuthUser;
+  accountId: string;
+  role: string;
 }
 
 export interface RegisterResponse {
