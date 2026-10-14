@@ -12,7 +12,6 @@ import { AuthSessionService } from '../../auth/auth-session.service';
   styleUrl: './order-history.css'
 })
 export class OrderHistoryComponent implements OnInit {
-  user = this.authSession.getCurrentUser();
   loading = true;
   error = '';
   orders: Order[] = [];
