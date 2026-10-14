@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../auth/auth-session.service';
-import { TradingApiService } from '../../api/trading-api.service';
-import { BalanceResponse } from '../../api/trading.models';
+import { DepositService } from '../../services/deposit.service';
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 
 @Component({
@@ -14,29 +13,21 @@ import { OrderTicketComponent } from './order-ticket/order-ticket.component';
   standalone: true
 })
 export class DashboardComponent {
-  balance: BalanceResponse | null = null;
-  balanceError: boolean = false;
+  private readonly depositService = inject(DepositService);
+  readonly balance = this.depositService.balance;
+  balanceError = false;
 
   constructor(
     private readonly authSession: AuthSessionService,
     private readonly router: Router,
-    private readonly tradingApi: TradingApiService,
-    private readonly cdr: ChangeDetectorRef
   ) {
     const accountId = this.authSession.getAccountId();
 
     if (accountId) {
-      this.tradingApi.getBalance(accountId).subscribe({
-        next: (balance) => {
-          console.log('Balance response:', balance);
-          this.balance = balance;
-          this.cdr.detectChanges();
-        },
-        error: (error) => {
-          console.error('Failed to load account balance', error);
+      this.depositService.getBalance(accountId).subscribe({
+        error: () => {
           this.balanceError = true;
-          this.cdr.detectChanges();
-        }
+        },
       });
     }
   }

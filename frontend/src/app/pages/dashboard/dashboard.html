@@ -6,17 +6,17 @@
       <section class="account-summary">
         <h2>Account Overview</h2>
 
-        <p *ngIf="balance">
-          Account: <strong>{{ balance.accountId }}</strong>
+        <p *ngIf="balance()">
+          Account: <strong>{{ balance()?.accountId }}</strong>
         </p>
 
-        <p *ngIf="balance">
+        <p *ngIf="balance()">
           Cash balance:
-          <strong>{{ balance.cashBalance.amount }}</strong>
-          {{ balance.cashBalance.currency || '' }}
+          <strong>{{ balance()?.cashBalance?.amount }}</strong>
+          {{ balance()?.cashBalance?.currency || '' }}
         </p>
 
-        <p *ngIf="!balance && !balanceError">Loading account balance...</p>
+        <p *ngIf="!balance() && !balanceError">Loading account balance...</p>
         <p *ngIf="balanceError">Unable to load account balance.</p>
       </section>
 
@@ -26,6 +26,6 @@
       </nav>
     </div>
 
-    <app-order-ticket [balance]="balance"></app-order-ticket>
+    <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
 </section>

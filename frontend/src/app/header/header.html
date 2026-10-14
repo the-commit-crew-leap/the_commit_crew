@@ -17,9 +17,12 @@
       <span aria-hidden="true">⌄</span>
     </button>
 
-    <button class="tcc-action-button" type="button">
+    <button class="tcc-action-button" type="button" (click)="openDeposit()">
       <span aria-hidden="true">+</span>
       Deposit
     </button>
   </div>
 </header>
+
+<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId"
+  (closed)="closeDeposit()" (deposited)="onDepositSuccess()"/>
