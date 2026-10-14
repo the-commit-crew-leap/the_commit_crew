@@ -65,4 +65,17 @@ describe('TokenService', () => {
 
     expect(tokenService.verify(tokenWithWrongSecret)).toBe(false);
   });
+
+  it('sets the refresh token expiry to seven days', () => {
+    const result = tokenService.issue('alice', 'ACC-123', 'CLIENT');
+
+    const refreshPayload = jwtService.decode(result.refreshToken) as {
+      iat: number;
+      exp: number;
+    };
+
+    const sevenDaysInSeconds = 7 * 24 * 60 * 60;
+
+    expect(refreshPayload.exp - refreshPayload.iat).toBe(sevenDaysInSeconds);
+  });
 });

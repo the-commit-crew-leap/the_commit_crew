@@ -7,6 +7,9 @@ import { RegisterDto, LoginDto } from '../dto/auth.dto';
 import { UsersRepository } from './repositories/users.repository';
 import { SecureLoggerService } from '../common/services/secure-logger.service';
 
+const DUMMY_PASSWORD_HASH =
+  '$2b$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly bcryptCostFactor: number;
@@ -119,8 +122,12 @@ export class AuthService implements OnModuleInit {
     this.logger.log(`Login attempt`, undefined, { username });
 
     // Find user in database with credential
-    const user = await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(username);
+    const user =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(username);
+
     if (!user) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+
       this.logger.warn(`Login failed: user not found`, undefined, { username });
       throw new UnauthorizedException('Invalid credentials');
     }
