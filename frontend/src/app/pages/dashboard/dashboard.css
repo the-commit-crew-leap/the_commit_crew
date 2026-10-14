@@ -4,9 +4,18 @@
   background: #f7fafc;
 }
 
-.dash-card {
-  max-width: 720px;
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  width: 100%;
+  max-width: 1440px;
+  box-sizing: border-box;
   margin: 0 auto;
+  align-items: start;
+}
+
+.dash-card {
   background: #fff;
   border: 1px solid #d9e3ef;
   border-radius: 12px;
@@ -22,4 +31,10 @@ button {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
 }

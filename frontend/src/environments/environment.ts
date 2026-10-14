@@ -1,6 +1,9 @@
+const apiHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname;
+
 export const environment = {
   production: false,
   bypassAuth: true,
-  authApiBaseUrl: 'http://localhost:8082/api/auth',
-  appApiBaseUrl: 'http://localhost:8081'
+  authApiBaseUrl: `http://${apiHost}:8082/api/auth`,
+  appApiBaseUrl: `http://${apiHost}:8081`,
+  orderApiBaseUrl: `http://${apiHost}:8081/api/v1`
 };
