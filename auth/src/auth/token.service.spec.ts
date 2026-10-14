@@ -66,6 +66,26 @@ describe('TokenService', () => {
     expect(tokenService.verify(tokenWithWrongSecret)).toBe(false);
   });
 
+  it('includes exactly the approved JWT claims', () => {
+    const result = tokenService.issue('alice', 'ACC-123', 'CLIENT');
+
+    const accessPayload = jwtService.decode(result.accessToken) as Record<string, unknown>;
+    const refreshPayload = jwtService.decode(result.refreshToken) as Record<string, unknown>;
+
+    const expectedClaims = [
+      'username',
+      'sub',
+      'accountId',
+      'role',
+      'iss',
+      'iat',
+      'exp',
+    ].sort();
+
+    expect(Object.keys(accessPayload).sort()).toEqual(expectedClaims);
+    expect(Object.keys(refreshPayload).sort()).toEqual(expectedClaims);
+  });
+
   it('sets the refresh token expiry to seven days', () => {
     const result = tokenService.issue('alice', 'ACC-123', 'CLIENT');
 
