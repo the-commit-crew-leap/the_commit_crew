@@ -1,20 +1,23 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Order, OrderStatus } from '../../models/order.model';
 import { OrderHistoryService } from '../../services/order-history.service';
 import { AuthSessionService } from '../../auth/auth-session.service';
+import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-order-history',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './order-history.html',
   styleUrl: './order-history.css'
 })
-export class OrderHistoryComponent implements OnInit {
+export class OrderHistoryComponent implements OnDestroy, OnInit {
   loading = true;
   error = '';
   orders: Order[] = [];
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly orderHistoryService: OrderHistoryService,
@@ -37,7 +40,11 @@ export class OrderHistoryComponent implements OnInit {
       return;
     }
 
-    this.orderHistoryService.getOrderHistory(accountId).subscribe({
+    interval(30000).pipe(
+      startWith(0),
+      switchMap(() => this.orderHistoryService.getOrderHistory(accountId)),
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (orders) => {
         this.orders = [...orders].sort((a, b) =>
           new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime()
@@ -46,11 +53,17 @@ export class OrderHistoryComponent implements OnInit {
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
+        console.error('Failed to refresh order history', error);
         this.error = 'Could not load order history.';
         this.loading = false;
         this.changeDetectorRef.detectChanges();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   statusClass(status: OrderStatus): string {

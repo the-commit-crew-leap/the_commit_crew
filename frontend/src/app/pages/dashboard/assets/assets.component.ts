@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { PositionResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-assets',
@@ -12,10 +13,11 @@ import { TradingApiService } from '../../../api/trading-api.service';
   templateUrl: './assets.component.html',
   styleUrl: './assets.component.css'
 })
-export class AssetsComponent implements OnInit {
+export class AssetsComponent implements OnDestroy, OnInit {
   positions: PositionResponse[] = [];
   loading = true;
   error = '';
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly authSession: AuthSessionService,
@@ -32,7 +34,11 @@ export class AssetsComponent implements OnInit {
       return;
     }
 
-    this.tradingApi.getPositions(accountId).subscribe({
+    interval(30000).pipe(
+      startWith(0),
+      switchMap(() => this.tradingApi.getPositions(accountId)),
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (positions) => {
         this.positions = positions;
         this.loading = false;
@@ -45,6 +51,11 @@ export class AssetsComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   formatCurrency(value: number | null): string {

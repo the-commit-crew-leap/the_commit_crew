@@ -17,7 +17,7 @@
 
 .portfolio-column {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 3;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -25,16 +25,58 @@
 
 app-order-ticket {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 3;
   align-self: start;
 }
 
 .dash-card {
+  grid-column: 1 / -1;
+  grid-row: 1;
   background: transparent;
   border: 0;
   border-radius: 12px;
-  padding: 4px 0 0;
+  padding: 4px 0 0 4px;
   color: #e8ebf0;
+}
+
+.portfolio-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: 16px;
+}
+
+.overview-card {
+  display: flex;
+  min-height: 110px;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 28px;
+  border: 1px solid #29313c;
+  border-radius: 12px;
+  background: #151920;
+  color: #8993a3;
+}
+
+.overview-card strong {
+  color: #e8ebf0;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.overview-card small {
+  font-size: 13px;
+}
+
+.positive {
+  color: #53d5ad !important;
+}
+
+.negative {
+  color: #ed7181 !important;
 }
 
 .welcome-message {
@@ -76,6 +118,7 @@ button {
   }
 
   .dash-card,
+  .portfolio-overview,
   .portfolio-column {
     grid-column: 1;
     grid-row: auto;
@@ -84,5 +127,15 @@ button {
   app-order-ticket {
     grid-column: 1;
     grid-row: auto;
+  }
+
+  .portfolio-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .portfolio-overview {
+    grid-template-columns: 1fr;
   }
 }

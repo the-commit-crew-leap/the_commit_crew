@@ -7,6 +7,7 @@
   <div class="assets-table" role="table" aria-label="Your assets">
     <div class="assets-row assets-row-header" role="row">
       <span role="columnheader">Asset</span>
+      <span role="columnheader">Current price</span>
       <span role="columnheader">Value</span>
       <span role="columnheader">Today's P&amp;L</span>
     </div>
@@ -20,6 +21,7 @@
         <strong>{{ position.symbol }}</strong>
         <small>{{ formatQuantity(position.quantity) }}</small>
       </div>
+      <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span
         role="cell"

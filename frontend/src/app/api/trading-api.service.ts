@@ -28,6 +28,10 @@ export class TradingApiService {
         return this.http.get<PositionResponse[]>(`${this.baseUrl}/accounts/${accountId}/positions`);
     }
 
+    getAccountOrders(accountId: string): Observable<OrderResponse[]> {
+        return this.http.get<OrderResponse[]>(`${this.baseUrl}/accounts/${accountId}/orders`);
+    }
+
     placeOrder(request: PlaceOrderRequest): Observable<OrderResponse> {
         return this.http.post<OrderResponse>(`${this.baseUrl}/orders`, request);
     }

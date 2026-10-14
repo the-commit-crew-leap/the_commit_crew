@@ -1,14 +1,16 @@
 import { Component, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DepositModalComponent } from '../deposit/deposit.component';
 import { AuthSessionService } from '../auth/auth-session.service';
 import { DepositService } from '../services/deposit.service';
+import { NgIf } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-header',
   styleUrl: './header.css',
   templateUrl: './header.html',
   imports: [
+    NgIf,
     RouterLink,
     RouterLinkActive,
     DepositModalComponent
@@ -21,6 +23,7 @@ export class TCC_HeaderComponent {
     constructor( 
       private readonly authSession: AuthSessionService, 
       private readonly depositService: DepositService,
+      private readonly router: Router
     ) {
       this.accountId = this.authSession.getAccountId() ?? '';
     }
@@ -45,4 +48,17 @@ export class TCC_HeaderComponent {
         this.depositService.getBalance(this.accountId).subscribe();
       }
     }
+  accountMenuOpen = false;
+
+  toggleAccountMenu(): void {
+    this.accountMenuOpen = !this.accountMenuOpen;
+  }
+
+  logout(): void {
+    this.authSession.logout();
+    this.accountMenuOpen = false;
+    void this.router.navigate(['/login']);
+  }
+
 }
+
