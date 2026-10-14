@@ -13,7 +13,7 @@ import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
 import com.thecommitcrew.service.InstrumentService;
 
 @RestController
-@RequestMapping("/instruments")
+@RequestMapping("/api/v1/instruments")
 public class InstrumentController {
 
 	private final InstrumentService instrumentService;

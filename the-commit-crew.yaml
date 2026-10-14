@@ -13,7 +13,7 @@ servers:
     description: Trading service base URL
 
 paths:
-  /orders:
+  /api/v1/orders:
     post:
       summary: Submit an order for processing
       operationId: submitOrder
@@ -58,7 +58,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /orders/{id}:
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot use the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/orders/{id}:
     delete:
       summary: Cancel a working order
       operationId: cancelOrder
@@ -86,7 +98,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /accounts/{id}:
+  /api/v1/accounts/{id}:
     get:
       summary: Retrieve account details
       operationId: getAccount
@@ -97,8 +109,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Account details retrieved successfully
@@ -118,8 +129,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /accounts/{id}/balance:
+  /api/v1/accounts/{id}/balance:
     get:
       summary: Retrieve account cash balance
       operationId: getAccountBalance
@@ -130,8 +153,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Cash balance retrieved successfully
@@ -150,8 +172,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /accounts/{id}/positions:
+  /api/v1/accounts/{id}/positions:
     get:
       summary: Retrieve account holdings
       operationId: getAccountPositions
@@ -162,8 +196,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Holdings retrieved successfully
@@ -187,8 +220,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /accounts/{id}/orders:
+  /api/v1/accounts/{id}/orders:
     get:
       summary: Retrieve account order history
       operationId: getAccountOrders
@@ -199,8 +244,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Order history retrieved successfully
@@ -225,8 +269,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   
-  /accounts/{id}/deposit:
+  /api/v1/accounts/{id}/deposit:
     post:
       summary: Deposit money into account
       operationId: depositFunds
@@ -273,8 +329,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /accounts/{id}/withdraw:
+  /api/v1/accounts/{id}/withdraw:
     post:
       summary: Withdraw money from account
       operationId: withdrawFunds
@@ -321,8 +389,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /instruments:
+  /api/v1/instruments:
     get:
       summary: Retrieve available instruments
       operationId: getInstruments
@@ -342,7 +422,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/InstrumentResponse'
 
-  /instruments/{symbol}:
+  /api/v1/instruments/{symbol}:
     get:
       summary: Retrieve an instrument
       operationId: getInstrument
@@ -373,7 +453,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT authentication - to be implemented
+      description: JWT authentication required by the service
   schemas:
     OrderRequest:
       type: object
@@ -407,8 +487,8 @@ components:
           type: string
           enum: [BUY, SELL]
         quantity:
-          type: number
-          format: double
+          type: integer
+          format: int64
         price:
           type: number
           format: double
@@ -526,6 +606,7 @@ components:
           type: string
         assetClass:
           type: string
+          enum: [EQUITY, BOND, FUND, CASH]
         currency:
           type: string
         tradable:

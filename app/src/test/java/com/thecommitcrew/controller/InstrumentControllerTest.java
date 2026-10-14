@@ -69,7 +69,7 @@ class InstrumentControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /instruments")
+    @DisplayName("GET /api/v1/instruments")
     class GetInstrumentsEndpoint {
         @BeforeEach
         void setup() {
@@ -82,7 +82,7 @@ class InstrumentControllerTest {
             when(instrumentService.getInstruments(null))
                 .thenReturn(List.of(tradableInstrument, untradableInstrument));
 
-            mockMvc.perform(get("/instruments"))
+            mockMvc.perform(get("/api/v1/instruments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value(TEST_SYMBOL))
                 .andExpect(jsonPath("$[0].tradable").value(true))
@@ -95,7 +95,7 @@ class InstrumentControllerTest {
         void returnsEmptyListWhenNoInstrumentsExist() throws Exception {
             when(instrumentService.getInstruments(null)).thenReturn(List.of());
 
-            mockMvc.perform(get("/instruments"))
+            mockMvc.perform(get("/api/v1/instruments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.empty()));
         }
@@ -106,7 +106,7 @@ class InstrumentControllerTest {
             when(instrumentService.getInstruments(true))
                 .thenReturn(List.of(tradableInstrument));
 
-            mockMvc.perform(get("/instruments?tradable=true"))
+            mockMvc.perform(get("/api/v1/instruments?tradable=true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value(TEST_SYMBOL))
                 .andExpect(jsonPath("$[0].tradable").value(true));
@@ -118,7 +118,7 @@ class InstrumentControllerTest {
             when(instrumentService.getInstruments(false))
                 .thenReturn(List.of(untradableInstrument));
 
-            mockMvc.perform(get("/instruments?tradable=false"))
+            mockMvc.perform(get("/api/v1/instruments?tradable=false"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value("OLD_SYMBOL"))
                 .andExpect(jsonPath("$[0].tradable").value(false));
@@ -126,7 +126,7 @@ class InstrumentControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /instruments/{symbol}")
+    @DisplayName("GET /api/v1/instruments/{symbol}")
     class GetInstrumentEndpoint {
         @BeforeEach
         void setup() {
@@ -138,7 +138,7 @@ class InstrumentControllerTest {
         void returnsInstrumentWhenFound() throws Exception {
             when(instrumentService.getInstrument(TEST_SYMBOL)).thenReturn(tradableInstrument);
 
-            mockMvc.perform(get("/instruments/{symbol}", TEST_SYMBOL))
+            mockMvc.perform(get("/api/v1/instruments/{symbol}", TEST_SYMBOL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value(TEST_SYMBOL))
                 .andExpect(jsonPath("$.name").value("Apple Inc."))
@@ -153,7 +153,7 @@ class InstrumentControllerTest {
             when(instrumentService.getInstrument(TEST_SYMBOL))
                 .thenThrow(new InstrumentNotFoundException("Instrument not found for symbol: " + TEST_SYMBOL));
 
-            mockMvc.perform(get("/instruments/{symbol}", TEST_SYMBOL))
+            mockMvc.perform(get("/api/v1/instruments/{symbol}", TEST_SYMBOL))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("INSTRUMENT_NOT_FOUND"));
         }
