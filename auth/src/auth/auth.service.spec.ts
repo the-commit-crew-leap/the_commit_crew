@@ -107,7 +107,7 @@ describe('AuthService', () => {
         fullName: 'New User',
         password: 'SecurePass123!',
       }),
-    ).rejects.toThrow('Email address already exists');
+    ).rejects.toThrow('Username or email already exists');
 
     await expect(
       service.register({
@@ -194,11 +194,22 @@ describe('AuthService', () => {
     expect(mockTokenService.issue).toHaveBeenCalledWith('alice', 'ACC-12345678', 'CLIENT');
   });
 
-  it('validate falls back to DB mapping when token has no accountId', async () => {
+  it('validates an active user with a linked trading account', async () => {
     mockTokenService.verify.mockReturnValue(true);
-    mockTokenService.decode.mockReturnValue({ username: 'alice' });
+    mockTokenService.decode.mockReturnValue({
+      username: 'alice',
+      accountId: 'ACC-ABCDEF12',
+    });
+
     mockUsersRepository.findByUsernameWithCredentialAndTradingAccounts.mockResolvedValue({
-      tradingAccounts: [{ accountId: 'ACC-ABCDEF12', role: 'CLIENT' }],
+      username: 'alice',
+      status: 'ACTIVE',
+      tradingAccounts: [
+        {
+          accountId: 'ACC-ABCDEF12',
+          role: 'CLIENT',
+        },
+      ],
     });
 
     const result = await service.validate('some-token');
