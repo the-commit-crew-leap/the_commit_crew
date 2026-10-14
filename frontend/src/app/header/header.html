@@ -1,0 +1,24 @@
+<c-header>
+  <c-container fluid>
+    <c-header-brand [routerLink]>The Commit Crew</c-header-brand>
+    <c-header-nav class="ms-auto">
+      <c-nav-item>
+        <a [active]="true" routerLink="/" cNavLink>Dashboard</a>
+      </c-nav-item>
+      <c-nav-item>
+        <a cNavLink routerLink="/orders">Orders</a>
+      </c-nav-item>
+      <c-dropdown alignment="end">
+        <a cDropdownToggle cNavLink href="#">Dropdown</a>
+        <ul cDropdownMenu>
+          <li><a [routerLink]="[]" cDropdownItem>My Account</a></li>
+          <li><a [routerLink]="[]" cDropdownItem>Submit Order</a></li>
+          <li>
+            <hr cDropdownDivider>
+          </li>
+          <li><a [routerLink]="[]" cDropdownItem>Log out</a></li>
+        </ul>
+      </c-dropdown>
+    </c-header-nav>
+  </c-container>
+</c-header>
