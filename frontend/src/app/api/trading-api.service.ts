@@ -11,10 +11,10 @@ export class TradingApiService {
     constructor(private readonly http: HttpClient) {}
 
     getAccount(accountId: string): Observable<AccountResponse> {
-    return this.http.get<AccountResponse>(`${this.baseUrl}/accounts/${accountId}`);
+        return this.http.get<AccountResponse>(`${this.baseUrl}/accounts/${accountId}`);
     }
 
     getBalance(accountId: string): Observable<BalanceResponse> {
-    return this.http.get<BalanceResponse>(`${this.baseUrl}/accounts/${accountId}/balance`);
+        return this.http.get<BalanceResponse>(`${this.baseUrl}/accounts/${accountId}/balance`);
     }
 }
