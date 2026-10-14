@@ -19,6 +19,8 @@ describe('AuthService', () => {
   };
   let mockDatabaseService: {
     createAccount: jest.Mock;
+    deleteAccount: jest.Mock;
+    closeAccount: jest.Mock;
   };
 
   beforeEach(() => {
@@ -46,6 +48,8 @@ describe('AuthService', () => {
 
     mockDatabaseService = {
       createAccount: jest.fn(),
+      deleteAccount: jest.fn(),
+      closeAccount: jest.fn(),
     };
 
     service = new AuthService(

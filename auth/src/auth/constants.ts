@@ -1,0 +1,1 @@
+export const JWT_ISSUER = 'the-commit-crew-auth';
