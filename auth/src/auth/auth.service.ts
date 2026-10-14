@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { TokenService } from './token.service';
@@ -56,13 +56,22 @@ export class AuthService implements OnModuleInit {
 
   async register(registerDto: RegisterDto): Promise<any> {
     const { username, email, password, fullName } = registerDto;
+    const normalizedEmail = email.trim().toLowerCase();
 
     this.logger.log('Attempting to register user', undefined, { username, email });
 
     const existingUser = await this.usersRepository.findByUsername(username);
     if (existingUser) {
-      this.logger.warn('Registration failed: user already exists', undefined, { username });
-      throw new BadRequestException('User already exists');
+      this.logger.warn(`Registration failed: user already exists`, undefined, { username });
+      throw new ConflictException('Username or email already exists');
+    }
+
+    const existingEmail = await this.usersRepository.findByEmail(normalizedEmail);
+    if (existingEmail) {
+      this.logger.warn('Registration failed: email already exists', undefined, {
+        email: normalizedEmail,
+      });
+      throw new ConflictException('Username or email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(password, this.bcryptCostFactor);
@@ -76,7 +85,7 @@ export class AuthService implements OnModuleInit {
 
       const user = await this.usersRepository.createUserWithCredentialAndTradingLink({
         username,
-        email,
+        email: normalizedEmail,
         fullName,
         passwordHash: hashedPassword,
         accountId,

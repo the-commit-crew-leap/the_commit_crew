@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -10,8 +10,8 @@ describe('AuthService', () => {
   };
   let mockUsersRepository: {
     findByUsername: jest.Mock;
-    createUser: jest.Mock;
-    linkUserToTradingAccount: jest.Mock;
+    findByEmail: jest.Mock;
+    createUserWithCredentialAndTradingLink: jest.Mock;
     findByUsernameWithCredentialAndTradingAccounts: jest.Mock;
     resetFailedLoginAttempts: jest.Mock;
     updateLastLogin: jest.Mock;
@@ -36,8 +36,8 @@ describe('AuthService', () => {
 
     mockUsersRepository = {
       findByUsername: jest.fn(),
-      createUser: jest.fn(),
-      linkUserToTradingAccount: jest.fn(),
+      findByEmail: jest.fn(),
+      createUserWithCredentialAndTradingLink: jest.fn(),
       findByUsernameWithCredentialAndTradingAccounts: jest.fn(),
       resetFailedLoginAttempts: jest.fn(),
       updateLastLogin: jest.fn(),
@@ -61,7 +61,8 @@ describe('AuthService', () => {
 
   it('registers a user and links a trading account', async () => {
     mockUsersRepository.findByUsername.mockResolvedValue(null);
-    mockUsersRepository.createUser.mockResolvedValue({
+    mockUsersRepository.findByEmail.mockResolvedValue(null);
+    mockUsersRepository.createUserWithCredentialAndTradingLink.mockResolvedValue({
       userId: 101,
       username: 'alice',
       email: 'alice@example.com',
@@ -76,13 +77,44 @@ describe('AuthService', () => {
     });
 
     expect(mockDatabaseService.createAccount).toHaveBeenCalledTimes(1);
-    expect(mockUsersRepository.linkUserToTradingAccount).toHaveBeenCalledWith(
-      101,
-      expect.stringMatching(/^ACC-/),
-      'CLIENT',
+    expect(mockUsersRepository.createUserWithCredentialAndTradingLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: 'alice',
+        email: 'alice@example.com',
+        role: 'CLIENT',
+      }),
     );
     expect(result.username).toBe('alice');
     expect(result.accountId).toMatch(/^ACC-/);
+  });
+
+  it('rejects an email that already exists with different casing', async () => {
+    mockUsersRepository.findByUsername.mockResolvedValue(null);
+    mockUsersRepository.findByEmail.mockResolvedValue({
+      userId: 100,
+      username: 'existinguser',
+      email: 'TeSt@gmail.com',
+    });
+
+    await expect(
+      service.register({
+        username: 'newuser',
+        email: 'test@gmail.com',
+        fullName: 'New User',
+        password: 'SecurePass123!',
+      }),
+    ).rejects.toThrow('Email address already exists');
+
+    await expect(
+      service.register({
+        username: 'anotheruser',
+        email: 'TEST@GMAIL.COM',
+        fullName: 'Another User',
+        password: 'SecurePass123!',
+      }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(mockDatabaseService.createAccount).not.toHaveBeenCalled();
   });
 
   it('issues login tokens with linked accountId and role', async () => {
