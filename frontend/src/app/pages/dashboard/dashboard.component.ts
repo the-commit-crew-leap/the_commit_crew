@@ -4,9 +4,10 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { TradingApiService } from '../../api/trading-api.service';
 import { BalanceResponse } from '../../api/trading.models';
+import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 
 @Component({
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, OrderTicketComponent],
   selector: 'app-dashboard',
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',

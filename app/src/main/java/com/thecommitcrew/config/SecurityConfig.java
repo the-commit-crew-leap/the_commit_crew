@@ -41,15 +41,15 @@ public class SecurityConfig {
         return (request, response, authException) -> response.sendError(401, "Unauthorized");
     }
 
-    @Value("${app.cors.allowed-origins}")
-    private String allowedOrigins;
+    @Value("${app.cors.allowed-origin-patterns}")
+    private String allowedOriginPatterns;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-            Arrays.stream(allowedOrigins.split(","))
+        configuration.setAllowedOriginPatterns(
+            Arrays.stream(allowedOriginPatterns.split(","))
                 .map(String::trim)
                 .toList()
         );
