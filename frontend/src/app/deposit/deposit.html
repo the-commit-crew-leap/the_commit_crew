@@ -22,7 +22,7 @@
       <div class="tcc-modal-header">
         <div>
           <h2 id="deposit-title">Deposit funds</h2>
-          <p>Add simulated funds to your trading account.</p>
+          <p>Add funds to your trading account.</p>
         </div>
 
         <button
@@ -39,7 +39,7 @@
       @if (success()) {
         <div class="tcc-success" role="status">
           <h3>Deposit successful!</h3>
-          <p>Your simulated funds have been added to your account.</p>
+          <p>Your funds have been added to your account.</p>
 
           @if (balanceRefreshFailed()) {
             <p>
@@ -98,10 +98,6 @@
               $1,000
             </button>
           </div>
-
-          <p class="tcc-demo-notice">
-            Demo only. No real money will be transferred.
-          </p>
 
           @if (errorMessage()) {
             <p class="tcc-error" role="alert">
