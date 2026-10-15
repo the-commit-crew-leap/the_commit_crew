@@ -67,8 +67,28 @@ test('shows order history rows and statuses', async ({ page }) => {
   await page.goto('/orders');
 
   await expect(page.getByRole('heading', { name: 'Order history' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'All orders' })).toBeVisible();
+  const overviewCards = page.locator('.overview-card');
+  await expect(overviewCards).toHaveCount(4);
+  await expect(overviewCards.nth(0)).toContainText('Total orders');
+  await expect(overviewCards.nth(0)).toContainText('2');
+  await expect(overviewCards.nth(1)).toContainText('Filled orders');
+  await expect(overviewCards.nth(1)).toContainText('1');
+  await expect(overviewCards.nth(1)).toContainText('50.0% completion rate');
+  await expect(overviewCards.nth(2)).toContainText('Open orders');
+  await expect(overviewCards.nth(2)).toContainText('1');
+  await expect(overviewCards.nth(3)).toContainText('Canceled orders');
+  await expect(overviewCards.nth(3)).toContainText('0');
+  await expect(page.getByText('Total value', { exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Order / Date' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Quantity' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Price (USD)' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Total (USD)' })).toBeVisible();
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('TSLA')).toBeVisible();
+  await expect(page.getByText('$1,502.50')).toBeVisible();
+  await expect(page.getByText('$1,225.50')).toBeVisible();
+  await expect(page.getByText('$2,728.00')).toBeVisible();
   await expect(page.getByText('FILLED')).toBeVisible();
   await expect(page.getByText('NEW')).toBeVisible();
 });
