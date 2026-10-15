@@ -2,16 +2,13 @@ package com.thecommitcrew.auth;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CheckAuthTest {
 
@@ -36,7 +33,7 @@ class CheckAuthTest {
         Retention retention = CheckAuth.class.getAnnotation(Retention.class);
 
         assertNotNull(retention);
-        assertTrue(retention.value() == RetentionPolicy.RUNTIME);
+        assertSame(RetentionPolicy.RUNTIME, retention.value());
     }
 
     @Test
@@ -49,16 +46,18 @@ class CheckAuthTest {
 
     @Test
     void annotation_hasNoDeclaredAttributes() {
-        assertTrue(CheckAuth.class.getDeclaredMethods().length == 0);
+        assertEquals(0, CheckAuth.class.getDeclaredMethods().length);
     }
 
     private static class TestController {
 
         @CheckAuth
         void securedMethod() {
+            // Intentionally empty: used to test @CheckAuth authorization behavior.
         }
 
         void publicMethod() {
+            // Intentionally empty: used as a control method without @CheckAuth.
         }
     }
 }
