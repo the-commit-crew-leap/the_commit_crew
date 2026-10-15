@@ -39,6 +39,10 @@
         Password is required.
       </p>
 
+      <label class="remember-me">
+        <input type="checkbox" formControlName="rememberMe" />
+        <span>Remember me</span>
+      </label>
       <p class="api-error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
       <button type="submit" [disabled]="isSubmitting">

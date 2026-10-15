@@ -21,7 +21,8 @@ export class LoginComponent {
 
   form = this.fb.nonNullable.group({
     username: ['', [Validators.required]],
-    password: ['', [Validators.required]]
+    password: ['', [Validators.required]],
+    rememberMe: [false]
   });
 
   constructor(
@@ -48,13 +49,13 @@ export class LoginComponent {
     this.errorMessage = '';
     this.isSubmitting = true;
 
-    this.authSession.login(this.form.getRawValue())
-      .pipe(
-        finalize(() => {
-          this.isSubmitting = false;
-          this.cdr.detectChanges();
-        })
-      )
+    this.authSession.login(
+      {
+        username: this.form.controls.username.value,
+        password: this.form.controls.password.value
+      },
+      this.form.controls.rememberMe.value
+    )
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
