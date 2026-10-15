@@ -60,3 +60,11 @@ export interface DepositResponse {
     newBalance: Money;
     timestamp: string;
 }
+
+export interface InstrumentResponse {
+    symbol: string;
+    name: string;
+    assetClass: string;
+    currency: string;
+    tradable: boolean;
+}
