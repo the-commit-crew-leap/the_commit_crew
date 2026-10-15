@@ -3,18 +3,13 @@ import yfinance as yf
 import logging
 
 from config import config
-from src.pipeline.database_loader import DatabaseLoader
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
 class MetadataPipeline:
-    """Self-contained pipeline for extracting and saving ticker metadata."""
-    
-    def __init__(self, db_loader: DatabaseLoader):
-        self.db_loader = db_loader
-        
+    """Self-contained pipeline for extracting and saving ticker metadata."""   
     
     def fetch_ticker_metadata(self, tickers: list[str]) -> pd.DataFrame:
         """
@@ -121,7 +116,7 @@ class MetadataPipeline:
             return {"saved": 0, "errors": [msg]}
     
     
-    def run(self, tickers: list[str] = None, sync_to_db: bool = True) -> dict:
+    def run(self, tickers: list[str] = None) -> dict:
         """
         Execute metadata extraction and saving.
         
@@ -139,9 +134,6 @@ class MetadataPipeline:
         try:
             metadata = self.fetch_ticker_metadata(tickers)
             result = self.save_ticker_metadata(metadata)
-            
-            if sync_to_db:
-                self.db_loader.load_instruments_from_csv(str(config.TICKER_METADATA_FILE))
             
             logger.info("Metadata pipeline complete")
             
@@ -163,7 +155,6 @@ class MetadataPipeline:
 
 
 if __name__ == "__main__":
-    db_loader = DatabaseLoader()
-    metadata_pipeline = MetadataPipeline(db_loader)
+    metadata_pipeline = MetadataPipeline()
     metadata_result = metadata_pipeline.run()
     print("Metadata:", metadata_result)

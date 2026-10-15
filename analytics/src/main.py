@@ -4,7 +4,6 @@ from src.pipeline.metadata_pipeline import MetadataPipeline
 from src.pipeline.extractor import Extractor
 from src.pipeline.transformer import Transformer
 from src.pipeline.loader import Loader
-from src.pipeline.database_loader import DatabaseLoader
 from src.analysis.analysis_helper import AnalysisHelper
 from src.analysis.data_loader import DataLoader
 from src.analysis.analysis_engine import AnalysisEngine
@@ -22,10 +21,9 @@ def main():
     extractor = Extractor()
     transformer = Transformer()
     etl_loader = Loader()
-    db_loader = DatabaseLoader()
     
-    etl_pipeline = ETLPipeline(extractor, transformer, etl_loader, db_loader)
-    metadata_pipeline = MetadataPipeline(db_loader)
+    etl_pipeline = ETLPipeline(extractor, transformer, etl_loader)
+    metadata_pipeline = MetadataPipeline()
     
     helper = AnalysisHelper()
     analysis_loader = DataLoader()
