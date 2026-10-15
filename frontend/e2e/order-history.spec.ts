@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const ordersUrl = '**/accounts/ACC-F92249B8/orders';
+const ordersUrl = '**/api/v1/accounts/ACC-F92249B8/orders';
 
 async function seedSession(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -13,6 +13,22 @@ async function seedSession(page: Page): Promise<void> {
     };
     localStorage.setItem('auth.accountId', 'ACC-F92249B8');
     sessionStorage.setItem('auth_session', JSON.stringify(session));
+  });
+
+  await page.route('**/api/auth/validate', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'SUCCESS',
+        data: {
+          valid: true,
+          username: 'playwright-user',
+          accountId: 'ACC-F92249B8',
+          role: 'USER'
+        }
+      })
+    });
   });
 }
 
