@@ -11,3 +11,11 @@
 # Test data in OrderControllerTest.java
 8f54634b2aa00fd10dbe543603876251a7fb34f9:app/src/test/java/com/thecommitcrew/controller/OrderControllerTest.java:jwt:71
 65227ae4958fe8712b94832bac2c97e30eded470:app/src/test/java/com/thecommitcrew/controller/OrderControllerTest.java:jwt:71
+6d848c67e2c05cad96450db8168569661a158fc9:app/src/test/java/com/thecommitcrew/controller/OrderControllerTest.java:jwt:164
+
+# Auth README (external)
+6d848c67e2c05cad96450db8168569661a158fc9:auth/README.md:generic-api-key:5
+
+# Logger Sanitazer (in no branch actually)
+dc111f4304a0ecb46c04850a8999300d8aebe125:auth/src/common/logger/sanitized.logger.spec.ts:generic-api-key:44
+dc111f4304a0ecb46c04850a8999300d8aebe125:auth/src/common/logger/sanitized.logger.spec.ts:generic-api-key:168
