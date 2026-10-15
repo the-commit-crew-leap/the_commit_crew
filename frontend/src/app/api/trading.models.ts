@@ -68,3 +68,8 @@ export interface InstrumentResponse {
     currency: string;
     tradable: boolean;
 }
+
+export interface PriceResponse {
+    symbol: string;
+    price: number;
+}

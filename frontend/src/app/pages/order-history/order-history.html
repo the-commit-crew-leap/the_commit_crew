@@ -58,8 +58,8 @@
             <th>Asset</th>
             <th>Side</th>
             <th>Quantity</th>
-            <th>Price (USD)</th>
-            <th>Total (USD)</th>
+            <th>Price</th>
+            <th>Total value</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -73,7 +73,7 @@
             <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
             <td>{{ order.quantity | number:'1.0-4' }}</td>
             <td>${{ order.price | number:'1.2-2' }}</td>
-            <td>${{ orderValue(order) | number:'1.2-2' }}</td>
+            <td>${{ orderTotal(order) | number:'1.2-2' }}</td>
             <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
           </tr>
         </tbody>

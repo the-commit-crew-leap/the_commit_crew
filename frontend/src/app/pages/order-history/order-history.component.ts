@@ -109,6 +109,10 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  orderTotal(order: Order): number {
+    return order.quantity * order.price;
+  }
+
   private getAccountId(): string | null {
     return this.authSession.getAccountId();
   }

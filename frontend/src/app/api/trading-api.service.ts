@@ -8,7 +8,8 @@ import {
     OrderResponse,
     PositionResponse,
     PlaceOrderRequest,
-    InstrumentResponse
+    InstrumentResponse,
+    PriceResponse
 } from './trading.models';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +42,12 @@ export class TradingApiService {
         return this.http.get<InstrumentResponse[]>(`${this.baseUrl}/instruments`, {
             params: { tradable }
         });
+    }
+
+    getInstrumentPrice(symbol: string): Observable<PriceResponse> {
+        return this.http.get<PriceResponse>(
+            `${this.baseUrl}/instruments/${encodeURIComponent(symbol)}/price`
+        );
     }
 
     getWatchlist(accountId: string): Observable<InstrumentResponse[]> {

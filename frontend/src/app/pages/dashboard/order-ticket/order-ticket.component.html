@@ -35,6 +35,8 @@
           placeholder="BTC"
           autocomplete="off"
           maxlength="20"
+          (ngModelChange)="onSymbolChange($event)"
+          (blur)="loadMarketPrice()"
           required>
         <span>Asset</span>
       </div>
@@ -53,6 +55,18 @@
         <span>Units</span>
       </div>
 
+      <div *ngIf="priceLoading" class="quote-row">
+        <span>Loading current price...</span>
+      </div>
+      <div *ngIf="!priceLoading && marketPrice !== null" class="quote-row">
+        <span>Estimated price</span>
+        <strong>${{ marketPrice | number:'1.2-2' }}</strong>
+      </div>
+      <div *ngIf="estimatedOrderValue !== null" class="total-row">
+        <span>Estimated total</span>
+        <strong>${{ estimatedOrderValue | number:'1.2-2' }}</strong>
+      </div>
+
       <button class="submit-order" type="submit" [disabled]="orderSubmitting || orderForm.invalid">
         {{ orderSubmitting ? 'Submitting...' : 'Submit order' }}
       </button>
@@ -60,8 +74,10 @@
 
     <p class="ticket-note">Your order will be reviewed before placing.</p>
     <p *ngIf="orderError" class="order-error" role="alert">{{ orderError }}</p>
+    <p *ngIf="priceError" class="order-error" role="alert">{{ priceError }}</p>
     <p *ngIf="submittedOrder" class="order-success" role="status">
       Order submitted: {{ submittedOrder.side }} {{ submittedOrder.quantity }} {{ submittedOrder.symbol }}.
+      Total: ${{ getOrderTotal(submittedOrder.quantity, submittedOrder.price) | number:'1.2-2' }}.
     </p>
   </section>
 </div>
