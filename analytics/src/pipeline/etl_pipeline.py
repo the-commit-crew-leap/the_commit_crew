@@ -1,4 +1,6 @@
+import csv
 import logging
+from pathlib import Path
 
 from config import config
 from src.pipeline.extractor import Extractor
@@ -18,29 +20,70 @@ class ETLPipeline:
         self.loader = loader
 
 
-    def run(self, tickers: list[str] = None):
+    def generate_price_history_seed(self, price_history_path: Path = None) -> None:
+        """Generate the database seed from the merged price-history CSV."""
+        price_history_path = price_history_path or config.PRICE_HISTORY_FILE
+        rows = []
+
+        with price_history_path.open(newline="") as price_file:
+            for row in csv.DictReader(price_file):
+                rows.append(
+                    (
+                        row["symbol"].upper(),
+                        row["date"],
+                        row["open"],
+                        row["high"],
+                        row["low"],
+                        row["close"],
+                        row["volume"],
+                    )
+                )
+
+        rows.sort(key=lambda row: (row[0], row[1]))
+        sql_lines = [
+            "-- Auto-generated from price_history.csv",
+            "-- Do not edit manually; regenerate by running the analytics pipeline.",
+            "",
+            "INSERT INTO price_history (symbol, price_date, open_price, high_price, low_price, close_price, volume) VALUES",
+        ]
+
+        for index, row in enumerate(rows):
+            comma = "," if index < len(rows) - 1 else ""
+            symbol, price_date, open_price, high_price, low_price, close_price, volume = row
+            sql_lines.append(
+                f"    ('{symbol}', '{price_date}', {open_price}, {high_price}, {low_price}, {close_price}, {volume}){comma}"
+            )
+
+        sql_lines.extend(["ON CONFLICT (symbol, price_date) DO NOTHING;", ""])
+        config.SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config.SEED_FILE.write_text("\n".join(sql_lines))
+        logger.info("Generated price-history seed at %s", config.SEED_FILE)
+
+    def run(self, symbols: list[str] = None):
         """
         Execute the complete ETL workflow.
         
         Args:
-            tickers: List of tickers to process. Defaults to config.INSTRUMENTS_LIST.
+            symbols: List of instrument symbols to process. Defaults to config.INSTRUMENTS_LIST.
             
         Returns:
             Dictionary with ETL status and results.
         """
-        if tickers is None:
-            tickers = config.INSTRUMENTS_LIST
+        if symbols is None:
+            symbols = config.INSTRUMENTS_LIST
         
         logger.info("Starting ETL pipeline")
         
         try:
-            raw = self.extractor.extract(tickers)
+            raw = self.extractor.extract(symbols)
             
             if raw.empty:
                 raise ValueError("Extraction returned no data")
             
             clean = self.transformer.transform(raw)
             result = self.loader.load(clean)
+            if not result["errors"]:
+                self.generate_price_history_seed()
 
             summary = {
                 "status": ("success" if not result["errors"] else "partial"),

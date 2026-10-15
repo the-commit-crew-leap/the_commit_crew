@@ -9,7 +9,7 @@ metadata_pipeline = MetadataPipeline()
 
 
 # METADATA
-def test_fetch_ticker_metadata_returns_expected_columns(monkeypatch):
+def test_fetch_symbol_metadata_returns_expected_columns(monkeypatch):
     """Includes all required metadata fields with asset class mapping."""
     class FakeTicker:
         def __init__(self, symbol):
@@ -24,14 +24,14 @@ def test_fetch_ticker_metadata_returns_expected_columns(monkeypatch):
 
     monkeypatch.setattr(yf, "Ticker", FakeTicker)
 
-    metadata = metadata_pipeline.fetch_ticker_metadata(["AAPL", "TLT"])
+    metadata = metadata_pipeline.fetch_symbol_metadata(["AAPL", "TLT"])
 
-    assert list(metadata.columns) == ["ticker", "asset_class", "long_name", "sector", "currency", "tradable"]
-    assert metadata.loc[metadata["ticker"] == "TLT", "asset_class"].item() == "bond"
+    assert list(metadata.columns) == ["symbol", "asset_class", "long_name", "sector", "currency", "tradable"]
+    assert metadata.loc[metadata["symbol"] == "TLT", "asset_class"].item() == "bond"
     assert metadata["tradable"].tolist() == [True, True]
 
 
-def test_fetch_ticker_metadata_raises_when_lookup_fails(monkeypatch):
+def test_fetch_symbol_metadata_raises_when_lookup_fails(monkeypatch):
     """Raises when upstream metadata lookup fails."""
     class FailingTicker:
         def __init__(self, symbol):
@@ -43,11 +43,11 @@ def test_fetch_ticker_metadata_raises_when_lookup_fails(monkeypatch):
     import yfinance as yf
     monkeypatch.setattr(yf, "Ticker", FailingTicker)
 
-    with pytest.raises(ValueError, match="Metadata lookup failed for tickers"):
-        metadata_pipeline.fetch_ticker_metadata(["AAPL"])
+    with pytest.raises(ValueError, match="Metadata lookup failed for symbols"):
+        metadata_pipeline.fetch_symbol_metadata(["AAPL"])
 
 
-def test_fetch_ticker_metadata_raises_when_required_fields_missing(monkeypatch):
+def test_fetch_symbol_metadata_raises_when_required_fields_missing(monkeypatch):
     """Raises when required metadata values are absent."""
     class IncompleteTicker:
         def __init__(self, symbol):
@@ -60,18 +60,18 @@ def test_fetch_ticker_metadata_raises_when_required_fields_missing(monkeypatch):
     monkeypatch.setattr(yf, "Ticker", IncompleteTicker)
 
     with pytest.raises(ValueError, match="Metadata is missing required values"):
-        metadata_pipeline.fetch_ticker_metadata(["AAPL"])
+        metadata_pipeline.fetch_symbol_metadata(["AAPL"])
         
     
-def test_save_ticker_metadata_writes_csv_without_touching_prices(tmp_path, monkeypatch):
+def test_save_symbol_metadata_writes_csv_without_touching_prices(tmp_path, monkeypatch):
     """Writes metadata independently from price history."""
-    metadata_file = tmp_path / "ticker_metadata.csv"
-    monkeypatch.setattr(config, "TICKER_METADATA_FILE", metadata_file)
+    metadata_file = tmp_path / "symbol_metadata.csv"
+    monkeypatch.setattr(config, "SYMBOL_METADATA_FILE", metadata_file)
 
     metadata = pd.DataFrame(
         [
             {
-                "ticker": "MSFT",
+                "symbol": "MSFT",
                 "asset_class": "equity",
                 "long_name": "Microsoft Corp.",
                 "sector": "Technology",
@@ -79,7 +79,7 @@ def test_save_ticker_metadata_writes_csv_without_touching_prices(tmp_path, monke
                 "tradable": True,
             },
             {
-                "ticker": "AAPL",
+                "symbol": "AAPL",
                 "asset_class": "equity",
                 "long_name": "Apple Inc.",
                 "sector": "Technology",
@@ -89,8 +89,8 @@ def test_save_ticker_metadata_writes_csv_without_touching_prices(tmp_path, monke
         ]
     )
 
-    metadata_pipeline.save_ticker_metadata(metadata)
+    metadata_pipeline.save_symbol_metadata(metadata)
 
     written = pd.read_csv(metadata_file)
-    assert written["ticker"].tolist() == ["AAPL", "MSFT"]
+    assert written["symbol"].tolist() == ["AAPL", "MSFT"]
     assert not (tmp_path / "price_history.csv").exists()

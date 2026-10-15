@@ -92,8 +92,8 @@ def test_extract_normalizes_columns(monkeypatch):
     assert "Open" not in df.columns
 
 
-def test_extract_renames_ticker_to_symbol(monkeypatch):
-    """Ticker column should be renamed to symbol."""
+def test_extract_returns_symbol_column(monkeypatch):
+    """Extraction should return the canonical symbol column."""
     raw = pd.DataFrame(
         {
             "Open": [10.0],
@@ -115,8 +115,8 @@ def test_extract_renames_ticker_to_symbol(monkeypatch):
     assert df["symbol"].iloc[0] == "AAPL"
 
 
-def test_extract_single_ticker(monkeypatch):
-    """Returns normalized columns for a single ticker response."""
+def test_extract_single_symbol(monkeypatch):
+    """Returns normalized columns for a single symbol response."""
     raw = pd.DataFrame(
         {
             "Open": [10.0],
@@ -177,8 +177,8 @@ def test_extract_groups_rows_by_symbol_then_date(monkeypatch):
     ]
 
 
-def test_extract_raises_when_ticker_missing(monkeypatch):
-    """Raises when the download result omits a requested ticker."""
+def test_extract_raises_when_symbol_missing(monkeypatch):
+    """Raises when the download result omits a requested symbol."""
     columns = pd.MultiIndex.from_tuples(
         [("Open", "AAPL"), ("High", "AAPL"), ("Low", "AAPL"), ("Close", "AAPL"), ("Volume", "AAPL"), ("Adj Close", "AAPL")]
     )
@@ -191,5 +191,5 @@ def test_extract_raises_when_ticker_missing(monkeypatch):
     import yfinance as yf
     monkeypatch.setattr(yf, "download", lambda **_: raw)
 
-    with pytest.raises(ValueError, match="Price history is missing tickers"):
+    with pytest.raises(ValueError, match="Price history is missing symbols"):
         extractor.extract(["AAPL", "MSFT"])

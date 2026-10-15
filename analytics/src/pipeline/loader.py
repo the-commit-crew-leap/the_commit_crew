@@ -16,7 +16,7 @@ class Loader:
     
     def load(self, df: pd.DataFrame, output_path_factory=None) -> dict:
         """
-        Save each ticker into its own CSV.
+        Save each symbol into its own CSV.
         Ensures one row per:
             symbol + date
             
@@ -28,7 +28,7 @@ class Loader:
                 Optional function receiving a symbol and returning
                 its CSV path.
 
-                Defaults to config.get_ticker_csv_path.
+                Defaults to config.get_symbol_csv_path.
 
                 Keeping this injectable makes load() easy to test
                 without modifying the real application data.
@@ -39,7 +39,7 @@ class Loader:
             return {"saved": 0, "errors": ["Empty dataframe"]}
         
         if output_path_factory is None:
-            output_path_factory = config.get_ticker_csv_path
+            output_path_factory = config.get_symbol_csv_path
 
         errors = []
         saved = 0
@@ -58,8 +58,8 @@ class Loader:
         for symbol in df["symbol"].unique():
 
             try:
-                ticker_df = (df[df["symbol"] == symbol].copy())
-                if ticker_df.empty:
+                symbol_df = df[df["symbol"] == symbol].copy()
+                if symbol_df.empty:
                     continue
                 
                 path = Path(output_path_factory(symbol))
@@ -68,9 +68,9 @@ class Loader:
                 if path.exists():
                     existing = pd.read_csv(path, parse_dates=["date"])
                     existing["date"] = (pd.to_datetime(existing["date"], errors="coerce").dt.normalize())
-                    combined = pd.concat([existing, ticker_df], ignore_index=True)
+                    combined = pd.concat([existing, symbol_df], ignore_index=True)
                 else:
-                    combined = ticker_df
+                    combined = symbol_df
 
                 # Ensure clean dates
                 combined["date"] = (pd.to_datetime(combined["date"], errors="coerce").dt.normalize())

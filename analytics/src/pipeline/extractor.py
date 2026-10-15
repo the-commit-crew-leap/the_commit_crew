@@ -12,23 +12,23 @@ class Extractor:
     """Extract price data from yfinance."""
     
     def group_price_history(prices: pd.DataFrame) -> pd.DataFrame:
-        """Return price history ordered by ticker and date.
+        """Return price history ordered by symbol and date.
 
         Args:
             prices: Raw or normalized price history records.
 
         Returns:
-            A copy of the input records ordered by ticker then date.
+            A copy of the input records ordered by symbol then date.
         """
-        return prices.sort_values(["ticker", "date"]).reset_index(drop=True)
+        return prices.sort_values(["symbol", "date"]).reset_index(drop=True)
     
     
-    def extract(self, tickers: list[str]) -> pd.DataFrame:
+    def extract(self, symbols: list[str]) -> pd.DataFrame:
         """
         Fetch historical price data from yfinance for given tickers.
         
         Args:
-            tickers: List of ticker symbols to fetch.
+            symbols: List of instrument symbols to fetch.
             
         Returns:
             DataFrame with columns: date, symbol, open, high, low, close, volume, adj_close.
@@ -36,10 +36,10 @@ class Extractor:
         Raises:
             ValueError: If no data is returned or required fields are missing.
         """
-        logger.info("Extracting price history for %s tickers", len(tickers))
+        logger.info("Extracting price history for %s symbols", len(symbols))
         
         raw = yf.download(
-            tickers=tickers,
+            tickers=symbols,
             period="10y",
             interval="1d",
             auto_adjust=False,
@@ -55,12 +55,12 @@ class Extractor:
         if isinstance(raw.columns, pd.MultiIndex):
             prices = (
                 raw.stack(level=1)
-                .rename_axis(index=["date", "ticker"])
+                .rename_axis(index=["date", "symbol"])
                 .reset_index()
             )
         else:
             prices = raw.reset_index()
-            prices["ticker"] = tickers[0]
+            prices["symbol"] = symbols[0]
         
         # Normalize column names
         prices.columns = [str(col).lower().replace(" ", "_") for col in prices.columns]
@@ -70,14 +70,11 @@ class Extractor:
         if missing_columns:
             raise ValueError(f"Price history is missing columns: {sorted(missing_columns)}")
         
-        # Validate tickers are present
-        found_tickers = set(prices["ticker"].dropna())
-        missing_tickers = [ticker for ticker in tickers if ticker not in found_tickers]
-        if missing_tickers:
-            raise ValueError(f"Price history is missing tickers: {missing_tickers}")
-        
-        # Rename ticker → symbol for consistency
-        prices = prices.rename(columns={"ticker": "symbol"})
+        # Validate symbols are present.
+        found_symbols = set(prices["symbol"].dropna())
+        missing_symbols = [symbol for symbol in symbols if symbol not in found_symbols]
+        if missing_symbols:
+            raise ValueError(f"Price history is missing symbols: {missing_symbols}")
         
         # Sort by symbol and date
         prices = prices.sort_values(["symbol", "date"]).reset_index(drop=True)

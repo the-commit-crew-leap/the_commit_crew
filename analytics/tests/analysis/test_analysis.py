@@ -17,7 +17,7 @@ engine = AnalysisEngine(data_loader=data_loader, helper=helper)
 def test_get_returns_for_tickers(monkeypatch, csv_file):
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: csv_file
     )
 
@@ -93,7 +93,7 @@ def test_get_returns_uses_close_when_adj_close_has_no_values(monkeypatch):
 def test_calculate_summary_statistics(monkeypatch, csv_file):
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: csv_file
     )
 

@@ -11,7 +11,7 @@ data_loader = DataLoader()
 def test_load_price_data_missing_file(monkeypatch):
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: config.CHARTS_DIR / "missing.csv"
     )
 
@@ -28,7 +28,7 @@ def test_load_price_data_empty_file(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: path
     )
 
@@ -46,7 +46,7 @@ def test_load_price_data_removes_duplicate_dates(monkeypatch, tmp_path, price_da
 
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: path
     )
 
@@ -62,7 +62,7 @@ def test_load_price_data_removes_duplicate_dates(monkeypatch, tmp_path, price_da
 def test_load_price_data_filters_dates(monkeypatch, csv_file):
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: csv_file
     )
 
@@ -82,7 +82,7 @@ def test_load_price_data_read_error(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         config,
-        "get_ticker_csv_path",
+        "get_symbol_csv_path",
         lambda _: path
     )
 

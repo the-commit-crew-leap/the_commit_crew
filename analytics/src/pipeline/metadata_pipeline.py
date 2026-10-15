@@ -1,6 +1,8 @@
+import csv
+import logging
+from pathlib import Path
 import pandas as pd
 import yfinance as yf
-import logging
 
 from config import config
 
@@ -9,14 +11,16 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataPipeline:
-    """Self-contained pipeline for extracting and saving ticker metadata."""   
+    """Extract instrument metadata and generate its CSV and SQL outputs."""
+
+    SEED_FILE = Path(__file__).resolve().parents[3] / "db" / "seeds" / "instruments-data.sql"
     
-    def fetch_ticker_metadata(self, tickers: list[str]) -> pd.DataFrame:
+    def fetch_symbol_metadata(self, symbols: list[str]) -> pd.DataFrame:
         """
         Fetch ticker metadata from yfinance for given symbols.
         
         Args:
-            tickers: List of ticker symbols to fetch.
+            symbols: List of instrument symbols to fetch.
             
         Returns:
             DataFrame with ticker metadata including asset class and currency.
@@ -24,25 +28,25 @@ class MetadataPipeline:
         Raises:
             ValueError: If metadata lookups fail or required fields are missing.
         """
-        logger.info("Fetching metadata for %s tickers", len(tickers))
+        logger.info("Fetching metadata for %s symbols", len(symbols))
         
         rows = []
-        failed_tickers = {}
+        failed_symbols = {}
         
-        for symbol in tickers:
-            ticker = yf.Ticker(symbol)
+        for symbol in symbols:
+            instrument = yf.Ticker(symbol)
             info = {}
             
             try:
-                info = ticker.get_info()
+                info = instrument.get_info()
             except Exception as error:
-                failed_tickers[symbol] = str(error)
+                failed_symbols[symbol] = str(error)
                 logger.warning("Metadata lookup failed for %s: %s", symbol, error)
             
             rows.append(
                 {
-                    "ticker": symbol,
-                    "asset_class": config.TICKER_CLASS.get(symbol),
+                    "symbol": symbol,
+                    "asset_class": config.SYMBOL_CLASS.get(symbol),
                     "long_name": info.get("longName"),
                     "sector": info.get("sector"),
                     "currency": info.get("currency"),
@@ -53,36 +57,36 @@ class MetadataPipeline:
         metadata = pd.DataFrame(rows)
         
         # Validate output
-        if len(metadata) != len(tickers):
+        if len(metadata) != len(symbols):
             raise ValueError("Metadata row count does not match the number of requested tickers")
         
         missing_columns = set(config.REQUIRED_METADATA_FIELDS) - set(metadata.columns)
         if missing_columns:
             raise ValueError(f"Metadata is missing columns: {sorted(missing_columns)}")
         
-        found_tickers = set(metadata["ticker"].dropna())
-        missing_tickers = [ticker for ticker in tickers if ticker not in found_tickers]
-        if missing_tickers:
-            raise ValueError(f"Metadata is missing tickers: {missing_tickers}")
+        found_symbols = set(metadata["symbol"].dropna())
+        missing_symbols = [symbol for symbol in symbols if symbol not in found_symbols]
+        if missing_symbols:
+            raise ValueError(f"Metadata is missing symbols: {missing_symbols}")
         
         missing_required_values = {}
         for field in config.REQUIRED_METADATA_FIELDS:
-            missing_for_field = metadata.loc[metadata[field].isna(), "ticker"].tolist()
+            missing_for_field = metadata.loc[metadata[field].isna(), "symbol"].tolist()
             if missing_for_field:
                 missing_required_values[field] = missing_for_field
         
         validation_errors = []
         
-        if failed_tickers:
+        if failed_symbols:
             validation_errors.append(
-                "Metadata lookup failed for tickers: "
-                + ", ".join(f"{ticker} ({message})" for ticker, message in failed_tickers.items())
+            "Metadata lookup failed for symbols: "
+            + ", ".join(f"{symbol} ({message})" for symbol, message in failed_symbols.items())
             )
             
         if missing_required_values:
             validation_errors.append(
                 "Metadata is missing required values: "
-                + ", ".join(f"{field}={tickers}" for field, tickers in missing_required_values.items())
+                + ", ".join(f"{field}={symbols}" for field, symbols in missing_required_values.items())
             )
             
         if validation_errors:
@@ -92,7 +96,7 @@ class MetadataPipeline:
         return metadata
     
     
-    def save_ticker_metadata(self, metadata: pd.DataFrame) -> dict:
+    def save_symbol_metadata(self, metadata: pd.DataFrame) -> dict:
         """
         Save ticker metadata to CSV.
         
@@ -103,10 +107,10 @@ class MetadataPipeline:
             Dictionary with save status ("saved" count and "errors" list).
         """
         try:
-            sorted_metadata = metadata.sort_values("ticker").reset_index(drop=True)
-            sorted_metadata.to_csv(config.TICKER_METADATA_FILE, index=False)
+            sorted_metadata = metadata.sort_values("symbol").reset_index(drop=True)
+            sorted_metadata.to_csv(config.SYMBOL_METADATA_FILE, index=False)
             
-            logger.info(f"Saved ticker metadata to {config.TICKER_METADATA_FILE}")
+            logger.info(f"Saved symbol metadata to {config.SYMBOL_METADATA_FILE}")
             
             return {"saved": 1, "errors": []}
         
@@ -114,9 +118,46 @@ class MetadataPipeline:
             msg = f"Failed to save ticker metadata: {str(e)}"
             logger.error(msg)
             return {"saved": 0, "errors": [msg]}
+
+    def generate_instruments_seed(self, metadata_path: Path = None) -> None:
+        """Generate the database seed from the symbol metadata CSV."""
+        metadata_path = metadata_path or config.SYMBOL_METADATA_FILE
+        rows = []
+
+        with metadata_path.open(newline="") as metadata_file:
+            for row in csv.DictReader(metadata_file):
+                name = row["long_name"].replace("'", "''")
+                asset_class = config.ASSET_CLASS_MAP.get(row["asset_class"].lower(), "FUND")
+                rows.append(
+                    (
+                        row["symbol"].upper(),
+                        name,
+                        asset_class,
+                        row["currency"],
+                        str(row["tradable"]).lower() == "true",
+                    )
+                )
+
+        sql_lines = [
+            "-- Auto-generated from symbol_metadata.csv",
+            "-- Do not edit manually; regenerate by running the analytics pipeline.",
+            "",
+            "INSERT INTO instruments (symbol, name, asset_class, currency, tradable) VALUES",
+        ]
+
+        for index, (symbol, name, asset_class, currency, tradable) in enumerate(rows):
+            comma = "," if index < len(rows) - 1 else ""
+            sql_lines.append(
+                f"    ('{symbol}', '{name}', '{asset_class}', '{currency}', {str(tradable).lower()}){comma}"
+            )
+
+        sql_lines.extend(["ON CONFLICT (symbol) DO NOTHING;", ""])
+        self.SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self.SEED_FILE.write_text("\n".join(sql_lines))
+        logger.info("Generated instruments seed at %s", self.SEED_FILE)
     
     
-    def run(self, tickers: list[str] = None) -> dict:
+    def run(self, symbols: list[str] = None) -> dict:
         """
         Execute metadata extraction and saving.
         
@@ -126,14 +167,16 @@ class MetadataPipeline:
         Returns:
             Dictionary with metadata pipeline status.
         """
-        if tickers is None:
-            tickers = config.INSTRUMENTS_LIST
+        if symbols is None:
+            symbols = config.INSTRUMENTS_LIST
         
         logger.info("Starting metadata pipeline")
         
         try:
-            metadata = self.fetch_ticker_metadata(tickers)
-            result = self.save_ticker_metadata(metadata)
+            metadata = self.fetch_symbol_metadata(symbols)
+            result = self.save_symbol_metadata(metadata)
+            if not result["errors"]:
+                self.generate_instruments_seed()
             
             logger.info("Metadata pipeline complete")
             

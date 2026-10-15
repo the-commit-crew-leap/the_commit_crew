@@ -1,13 +1,13 @@
 import pandas as pd
 
-from src.pipeline.etl_pipeline import Extractor, Transformer, Loader, DatabaseLoader, ETLPipeline
+from config import config
+from src.pipeline.etl_pipeline import Extractor, Transformer, Loader, ETLPipeline
 
 
 extractor = Extractor()
 transformer = Transformer()
 loader = Loader()
-db_loader = DatabaseLoader()
-pipeline = ETLPipeline(extractor, transformer, loader, db_loader)
+pipeline = ETLPipeline(extractor, transformer, loader)
 
 
 # TEST DATA
@@ -32,9 +32,13 @@ def test_run_etl_success(monkeypatch, tmp_path):
     """Test ETL orchestration without real extraction or filesystem."""
 
     test_data = make_valid_dataframe()
+    price_history_file = tmp_path / "price_history.csv"
+    seed_file = tmp_path / "price_history-data.sql"
+    monkeypatch.setattr(config, "PRICE_HISTORY_FILE", price_history_file)
+    monkeypatch.setattr(config, "SEED_FILE", seed_file)
 
     # Replace extract() with deterministic test data.
-    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
+    monkeypatch.setattr(extractor, "extract", lambda symbols: test_data)
 
     def output_path(symbol):
         return tmp_path / f"{symbol}.csv"
@@ -47,7 +51,7 @@ def test_run_etl_success(monkeypatch, tmp_path):
 
     monkeypatch.setattr(loader, "load", test_load)
 
-    result = pipeline.run(tickers=["AAPL", "SPY"])
+    result = pipeline.run(symbols=["AAPL", "SPY"])
 
     assert result["status"] == "success"
     assert result["extracted"] == 3
@@ -57,17 +61,19 @@ def test_run_etl_success(monkeypatch, tmp_path):
 
     assert (tmp_path / "AAPL.csv").exists()
     assert (tmp_path / "SPY.csv").exists()
+    assert seed_file.exists()
+    assert "INSERT INTO price_history (symbol" in seed_file.read_text()
 
 
 def test_run_etl_fails_when_extraction_fails(monkeypatch):
     """A failed extraction should stop the ETL."""
 
-    def failing_extract(tickers):
+    def failing_extract(symbols):
         raise RuntimeError("Extraction failed")
 
     monkeypatch.setattr(extractor, "extract", failing_extract)
 
-    result = pipeline.run(tickers=["AAPL"])
+    result = pipeline.run(symbols=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -79,14 +85,14 @@ def test_run_etl_fails_when_transform_fails(monkeypatch):
     """A transformation error should prevent loading."""
 
     test_data = make_valid_dataframe()
-    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
+    monkeypatch.setattr(extractor, "extract", lambda symbols: test_data)
 
     def failing_transform(df):
         raise ValueError("Invalid market data")
 
     monkeypatch.setattr(transformer, "transform", failing_transform)
 
-    result = pipeline.run(tickers=["AAPL"])
+    result = pipeline.run(symbols=["AAPL"])
 
     assert result["status"] == "failed"
     assert result["saved"] == 0
@@ -97,14 +103,14 @@ def test_run_etl_reports_partial_load_failure(monkeypatch):
     """A partial load should result in a partial ETL status."""
 
     test_data = make_valid_dataframe()
-    monkeypatch.setattr(extractor, "extract", lambda tickers: test_data)
+    monkeypatch.setattr(extractor, "extract", lambda symbols: test_data)
 
     def partially_failing_load(df, output_path_factory=None):
         return {"saved": 1, "errors": ["SPY: simulated save failure"]}
 
     monkeypatch.setattr(loader, "load", partially_failing_load)
 
-    result = pipeline.run(tickers=["AAPL", "SPY"])
+    result = pipeline.run(symbols=["AAPL", "SPY"])
 
     assert result["status"] == "partial"
     assert result["saved"] == 1

@@ -25,15 +25,15 @@ class DataLoader:
     # DATA LOADING
     def load_price_data(self, symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
         """
-        Load historical price data for a single ticker from its CSV file.
-        The CSV path is obtained from config.get_ticker_csv_path().
+        Load historical price data for a single symbol from its CSV file.
+        The CSV path is obtained from config.get_symbol_csv_path().
         Dates are normalized to midnight so that multiple timestamps belonging
         to the same trading day are treated as the same date.
 
         Duplicate dates are removed, keeping the last occurrence.
 
         Args:
-            symbol: Ticker symbol, for example "AAPL".
+            symbol: Instrument symbol, for example "AAPL".
 
             start_date: Optional inclusive start date in YYYY-MM-DD format.
 
@@ -48,7 +48,7 @@ class DataLoader:
                 - An error occurs while loading the file.
         """
         symbol = self._normalize_ticker(symbol)
-        csv_path = config.get_ticker_csv_path(symbol)
+        csv_path = config.get_symbol_csv_path(symbol)
         
         if not csv_path.exists():
             logger.warning(f"No CSV found for {symbol}: {csv_path}")

@@ -1,4 +1,5 @@
 import argparse
+from config import config
 from src.pipeline.etl_pipeline import ETLPipeline
 from src.pipeline.metadata_pipeline import MetadataPipeline
 from src.pipeline.extractor import Extractor
@@ -12,7 +13,7 @@ from src.reports.dashboard_report import DashBoardReport
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=['run'])
-    parser.add_argument('--tickers', nargs='+', default=None)
+    parser.add_argument('--symbols', nargs='+', default=None)
     parser.add_argument('--period', default='1y')
     
     args = parser.parse_args()
@@ -32,11 +33,12 @@ def main():
     dashboard = DashBoardReport(helper, engine)
     
     if args.command == 'run':
-        tickers_result = metadata_pipeline.run()
-        price_result = etl_pipeline.run()
-        print("Tickers ETL:", tickers_result)
+        symbols = args.symbols or config.INSTRUMENTS_LIST
+        metadata_result = metadata_pipeline.run(symbols=symbols)
+        price_result = etl_pipeline.run(symbols=symbols)
+        print("Symbols ETL:", metadata_result)
         print("Price ETL:", price_result)
-        dashboard.run_dashboard(tickers=args.tickers, period=args.period)
+        dashboard.run_dashboard(tickers=symbols, period=args.period)
 
         
 if __name__ == '__main__':
