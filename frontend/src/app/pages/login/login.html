@@ -48,6 +48,12 @@
       <button type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
       </button>
+
+      <div class="auth-divider"><span>or continue with</span></div>
+
+      <button class="secondary-button" type="button" (click)="continueWithGoogle()">
+        Continue with Google
+      </button>
     </form>
 
     <p class="hint">
