@@ -114,7 +114,33 @@ When run as part of docker-compose: [http://your-linux-ip:8086](http://your-linu
 
 ## Playwright tests
 
-To run playwright (only on windows):
+### First install:
+```bash
+cd frontend
+npx playwright install --with-deps chromium
+```
+```bash
+sudo dnf install -y   atk   at-spi2-atk   cups-libs   libdrm   libXcomposite   libXdamage   libXfixes   libXrandr   mesa-libgbm   pango   alsa-lib   nss   gtk3
+```
+
+### If you get an error saying you need Node.js 20+:
+```bash
+nvm install 20
+nvm use 20
+```
+
+#### Verify: 
+```bash
+node --version
+```
+
+### Start the frontend service:
+```bash
+cd frontend
+ng serve
+```
+
+### Run the playwright tests (in a different terminal):
 ```bash
 cd frontend
 npm test
