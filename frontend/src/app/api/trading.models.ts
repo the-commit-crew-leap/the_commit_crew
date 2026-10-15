@@ -38,3 +38,15 @@ export interface OrderResponse {
     status: 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED';
     createdOn: string;
 }
+
+export interface DepositRequest {
+    amount: number;
+}
+
+export interface DepositResponse {
+    accountId: string;
+    transactionType: 'DEPOSIT';
+    amount: number;
+    newBalance: Money;
+    timestamp: string;
+}
