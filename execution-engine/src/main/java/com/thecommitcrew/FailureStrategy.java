@@ -1,5 +1,6 @@
 package com.thecommitcrew;
 
+import java.io.IOException;
 import java.time.Duration;
 
 /**
@@ -39,10 +40,7 @@ public class FailureStrategy {
             return cause instanceof java.util.concurrent.TimeoutException || 
                    cause instanceof org.springframework.kafka.KafkaException;
         }
-        if (exception instanceof java.io.IOException) {
-            return true;
-        }
-        return false;
+        return exception instanceof IOException;
     }
 
     /**
