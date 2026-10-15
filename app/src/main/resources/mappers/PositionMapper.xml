@@ -24,4 +24,9 @@
             average_cost = #{averageCost}
     </insert>
 
+    <delete id="deleteByAccountIdAndSymbol">
+        DELETE FROM positions
+        WHERE account_id = #{accountId} AND symbol = #{symbol}
+    </delete>
+
 </mapper>
