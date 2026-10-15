@@ -7,7 +7,40 @@
     <a routerLink="/dashboard">Back to dashboard</a>
   </header>
 
+  <section class="order-overview" aria-label="Order overview">
+    <article class="overview-card">
+      <span>Total orders</span>
+      <strong>{{ orders.length }}</strong>
+      <small>Across all order statuses</small>
+    </article>
+    <article class="overview-card">
+      <span>Filled orders</span>
+      <strong>{{ filledOrders }}</strong>
+      <small>{{ orders.length ? ((filledOrders / orders.length) * 100 | number:'1.1-1') : '0.0' }}% completion rate</small>
+    </article>
+    <article class="overview-card">
+      <span>Open orders</span>
+      <strong>{{ openOrders }}</strong>
+      <small>Orders awaiting execution</small>
+    </article>
+    <article class="overview-card">
+      <span>Canceled orders</span>
+      <strong>{{ cancelledOrders }}</strong>
+      <small>No fees on unfilled orders</small>
+    </article>
+  </section>
+
   <section class="history-card">
+    <header class="table-header">
+      <div>
+        <h2>All orders <span>{{ orders.length }}</span></h2>
+        <p *ngIf="!loading && !error">{{ orders.length ? 'Your recent trading activity' : 'No order activity yet' }}</p>
+      </div>
+      <p class="total-value" *ngIf="!loading && !error">
+        Total value <strong>${{ formatCurrency(totalOrderValue) }}</strong>
+      </p>
+    </header>
+
     <p *ngIf="loading" class="state">Loading order history...</p>
 
     <div *ngIf="!loading && error" class="error">
@@ -21,22 +54,27 @@
       <table>
         <thead>
           <tr>
+            <th>Order / Date</th>
             <th>Asset</th>
             <th>Side</th>
             <th>Quantity</th>
-            <th>Price</th>
+            <th>Price (USD)</th>
+            <th>Total (USD)</th>
             <th>Status</th>
-            <th>Created time</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let order of orders">
+            <td>
+              <strong>{{ order.orderId }}</strong>
+              <small>{{ formatCreatedOn(order.createdOn) }}</small>
+            </td>
             <td><strong>{{ order.symbol }}</strong></td>
             <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
-            <td>{{ order.quantity }}</td>
+            <td>{{ order.quantity | number:'1.0-4' }}</td>
             <td>${{ order.price | number:'1.2-2' }}</td>
+            <td>${{ orderValue(order) | number:'1.2-2' }}</td>
             <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
-            <td>{{ formatCreatedOn(order.createdOn) }}</td>
           </tr>
         </tbody>
       </table>
