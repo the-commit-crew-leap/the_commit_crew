@@ -12,10 +12,24 @@
     </a>
   </nav>
   <div class="tcc-account-actions">
-    <button class="tcc-account-selector" type="button">
+    <div class="tcc-account-menu">
+      <button
+        class="tcc-account-selector"
+        type="button"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="accountMenuOpen"
+        (click)="toggleAccountMenu()">
       Account
-      <span aria-hidden="true">⌄</span>
-    </button>
+      </button>
+
+      <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
+        <span class="tcc-account-label">Account</span>
+        <strong>{{ accountId() || 'Unknown account' }}</strong>
+        <button class="tcc-dropdown-logout" type="button" role="menuitem" (click)="logout()">
+          Log out
+        </button>
+      </div>
+    </div>
 
     <button class="tcc-action-button" type="button" (click)="openDeposit()">
       <span aria-hidden="true">+</span>
@@ -24,5 +38,5 @@
   </div>
 </header>
 
-<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId"
+<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId() ?? ''"
   (closed)="closeDeposit()" (deposited)="onDepositSuccess()"/>

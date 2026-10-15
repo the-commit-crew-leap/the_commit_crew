@@ -22,6 +22,7 @@ describe('DepositModalComponent', () => {
       balance: signal(null),
       balanceLoading: signal(false),
       getBalance: jest.fn(),
+      updateBalance: jest.fn(),
       deposit: jest.fn(),
     } as unknown as jest.Mocked<DepositService>;
 
@@ -77,7 +78,7 @@ describe('DepositModalComponent', () => {
     expect(depositService.deposit).not.toHaveBeenCalled();
   });
 
-  it('submits the deposit and refreshes the balance', () => {
+  it('submits the deposit and updates the shared balance', () => {
     depositService.deposit.mockReturnValue(
       of({
         accountId: 'ACC-123',
@@ -90,15 +91,19 @@ describe('DepositModalComponent', () => {
         timestamp: '2026-10-15T12:00:00Z',
       }),
     );
-    depositService.getBalance.mockReturnValue(of(balance));
-
     const depositedSpy = jest.spyOn(component.deposited, 'emit');
 
     component.amount.set(500);
     component.submitDeposit();
 
     expect(depositService.deposit).toHaveBeenCalledWith('ACC-123', 500);
-    expect(depositService.getBalance).toHaveBeenCalledWith('ACC-123');
+    expect(depositService.updateBalance).toHaveBeenCalledWith({
+      accountId: 'ACC-123',
+      cashBalance: {
+        amount: '1500.00',
+        currency: 'USD',
+      },
+    });
     expect(component.success()).toBe(true);
     expect(component.loading()).toBe(false);
     expect(depositedSpy).toHaveBeenCalled();

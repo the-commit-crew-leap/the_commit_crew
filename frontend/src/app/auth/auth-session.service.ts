@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { AuthApiService } from './auth-api.service';
 import { AuthUser, LoginRequest, RegisterRequest, RegisterResponse } from './auth.models';
@@ -8,15 +8,20 @@ import { TokenStorageService } from './token-storage.service';
   providedIn: 'root'
 })
 export class AuthSessionService {
+  readonly accountId = signal<string | null>(null);
+
   constructor(
     private readonly authApi: AuthApiService,
     private readonly tokenStorage: TokenStorageService
-  ) {}
+  ) {
+    this.accountId.set(this.tokenStorage.getAccountId());
+  }
 
   login(payload: LoginRequest): Observable<void> {
     return this.authApi.login(payload).pipe(
       tap((response) => {
         localStorage.setItem('auth.accountId', response.accountId);
+        this.accountId.set(response.accountId);
         const expiresAt = Date.now() + response.expiresIn * 1000;
         this.tokenStorage.saveSession({
           accessToken: response.accessToken,
@@ -59,6 +64,7 @@ export class AuthSessionService {
   logout(): void {
     this.tokenStorage.clearSession();
     localStorage.removeItem('auth.accountId');
+    this.accountId.set(null);
   }
 
   getAccessToken(): string | null {
@@ -75,7 +81,9 @@ export class AuthSessionService {
       return null;
     }
 
-    return this.tokenStorage.getAccountId();
+    const accountId = this.tokenStorage.getAccountId();
+    this.accountId.set(accountId);
+    return accountId;
   }
 
   getRole(): string | null {

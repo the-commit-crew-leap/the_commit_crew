@@ -1,14 +1,15 @@
 import { Component, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DepositModalComponent } from '../deposit/deposit.component';
 import { AuthSessionService } from '../auth/auth-session.service';
-import { DepositService } from '../services/deposit.service';
+import { NgIf } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-header',
   styleUrl: './header.css',
   templateUrl: './header.html',
   imports: [
+    NgIf,
     RouterLink,
     RouterLinkActive,
     DepositModalComponent
@@ -16,19 +17,18 @@ import { DepositService } from '../services/deposit.service';
 })
 export class TCC_HeaderComponent {
     readonly depositModalVisible = signal(false);
-    accountId = '';
+    readonly accountId = this.authSession.accountId;
 
     constructor( 
       private readonly authSession: AuthSessionService, 
-      private readonly depositService: DepositService,
+      private readonly router: Router
     ) {
-      this.accountId = this.authSession.getAccountId() ?? '';
     }
 
     openDeposit(): void {
-      this.accountId = this.authSession.getAccountId() ?? '';
+      const accountId = this.accountId();
 
-      if (!this.accountId) {
+      if (!accountId) {
         console.error('No authenticated account is available.');
         return;
       }
@@ -41,8 +41,18 @@ export class TCC_HeaderComponent {
     }
 
     onDepositSuccess(): void {
-      if (this.accountId) {
-        this.depositService.getBalance(this.accountId).subscribe();
-      }
+      // DepositModalComponent updates the shared balance from the response.
     }
+  accountMenuOpen = false;
+
+  toggleAccountMenu(): void {
+    this.accountMenuOpen = !this.accountMenuOpen;
+  }
+
+  logout(): void {
+    this.authSession.logout();
+    this.accountMenuOpen = false;
+    void this.router.navigate(['/login']);
+  }
+
 }

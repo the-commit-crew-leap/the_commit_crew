@@ -88,19 +88,14 @@ export class DepositModalComponent implements OnChanges {
       .deposit(this.accountId, amount)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => {
+        next: (response) => {
           // The deposit has been confirmed by the backend.
           this.success.set(true);
-          this.deposited.emit();
-
-          // Fetch the canonical balance after the deposit.
-          this.depositService.getBalance(this.accountId).subscribe({
-            error: () => {
-              // Do not treat a successful deposit as a failed deposit
-              // just because refreshing the balance failed.
-              this.balanceRefreshFailed.set(true);
-            },
+          this.depositService.updateBalance({
+            accountId: response.accountId,
+            cashBalance: response.newBalance,
           });
+          this.deposited.emit();
         },
 
         error: (error: HttpErrorResponse) => {

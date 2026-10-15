@@ -3,12 +3,15 @@ import { Router, UrlTree } from '@angular/router';
 
 import { authGuard } from './auth.guard';
 import { AuthSessionService } from './auth-session.service';
+import { environment } from '../../environments/environment';
 
 describe('authGuard', () => {
   let authSession: jest.Mocked<AuthSessionService>;
   let router: jest.Mocked<Router>;
 
   beforeEach(() => {
+    environment.bypassAuth = false;
+
     authSession = {
       isAuthenticated: jest.fn(),
       isSessionExpired: jest.fn(),
@@ -25,6 +28,10 @@ describe('authGuard', () => {
         { provide: Router, useValue: router }
       ]
     });
+  });
+
+  afterEach(() => {
+    environment.bypassAuth = true;
   });
 
   function runGuard(url = '/dashboard') {

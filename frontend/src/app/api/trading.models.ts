@@ -14,6 +14,16 @@ export interface BalanceResponse {
     cashBalance: Money;
 }
 
+export interface PositionResponse {
+    symbol: string;
+    quantity: number;
+    averageCost: number;
+    currentPrice: number | null;
+    marketValue: number | null;
+    unrealizedPnL: number | null;
+    unrealizedPnLPercent: number | null;
+}
+
 export interface TradingApiError {
     errorCode: string;
     message: string;

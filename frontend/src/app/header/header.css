@@ -52,6 +52,7 @@
 }
 
 .tcc-account-actions {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
@@ -59,9 +60,12 @@
   gap: 18px;
 }
 
+.tcc-account-menu {
+  position: relative;
+}
+
 .tcc-account-selector,
-.tcc-icon-button,
-.tcc-profile {
+.tcc-icon-button {
   border: 0;
   color: #a5adba;
   background: transparent;
@@ -80,6 +84,53 @@
   color: #0d1015;
   font-weight: 600;
   cursor: pointer;
+}
+
+.tcc-account-dropdown {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 12px);
+  right: 0;
+  display: flex;
+  min-width: 190px;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #2a3039;
+  border-radius: 8px;
+  background: #15191f;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 28%);
+}
+
+.tcc-account-label {
+  color: #8993a3;
+  font-size: 11px;
+}
+
+.tcc-account-dropdown strong {
+  color: #f0f2f6;
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tcc-dropdown-logout {
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 1px solid #2a3039;
+  border-radius: 6px;
+  background: #1c2129;
+  color: #f0f2f6;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.tcc-dropdown-logout:hover {
+  background: #29313c;
 }
 
 .tcc-profile {
@@ -104,9 +155,7 @@
     gap: 16px;
   }
 
-  .tcc-account-selector,
-  .tcc-icon-button 
-  {
+  .tcc-icon-button {
     display: none;
   }
 }

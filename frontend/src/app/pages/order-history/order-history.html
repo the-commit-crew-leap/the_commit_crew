@@ -1,37 +1,45 @@
-<section class="history">
-  <h1>Order History</h1>
+<section class="history-page">
+  <header class="history-header">
+    <div>
+      <h1>Order history</h1>
+      <p>Review your recent trading activity.</p>
+    </div>
+    <a routerLink="/dashboard">Back to dashboard</a>
+  </header>
 
-  <p *ngIf="loading">Loading order history...</p>
+  <section class="history-card">
+    <p *ngIf="loading" class="state">Loading order history...</p>
 
-  <div *ngIf="!loading && error" class="error">
-    <p>{{ error }}</p>
-    <button type="button" (click)="loadOrders()">Retry</button>
-  </div>
+    <div *ngIf="!loading && error" class="error">
+      <p>{{ error }}</p>
+      <button type="button" (click)="loadOrders()">Retry</button>
+    </div>
 
-  <p *ngIf="!loading && !error && orders.length === 0">No orders yet.</p>
+    <p *ngIf="!loading && !error && orders.length === 0" class="state">No orders yet.</p>
 
-  <table *ngIf="!loading && !error && orders.length > 0">
-    <thead>
-      <tr>
-        <th>Symbol</th>
-        <th>Side</th>
-        <th>Quantity</th>
-        <th>Price</th>
-        <th>Status</th>
-        <th>Created Time</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let order of orders">
-        <td>{{ order.symbol }}</td>
-        <td>{{ order.side }}</td>
-        <td>{{ order.quantity }}</td>
-        <td>{{ order.price }}</td>
-        <td>
-          <span [class]="statusClass(order.status)">{{ order.status }}</span>
-        </td>
-        <td>{{ formatCreatedOn(order.createdOn) }}</td>
-      </tr>
-    </tbody>
-  </table>
+    <div class="table-wrap" *ngIf="!loading && !error && orders.length > 0">
+      <table>
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Side</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Created time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of orders">
+            <td><strong>{{ order.symbol }}</strong></td>
+            <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>${{ order.price | number:'1.2-2' }}</td>
+            <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
+            <td>{{ formatCreatedOn(order.createdOn) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </section>
