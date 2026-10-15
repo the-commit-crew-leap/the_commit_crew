@@ -85,6 +85,34 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
     return new Date(value).toLocaleString();
   }
 
+  get totalOrderValue(): number {
+    return this.orders.reduce((total, order) => total + this.orderValue(order), 0);
+  }
+
+  get filledOrders(): number {
+    return this.orders.filter((order) => order.status === 'FILLED').length;
+  }
+
+  get openOrders(): number {
+    return this.orders.filter((order) => order.status === 'NEW').length;
+  }
+
+  get cancelledOrders(): number {
+    return this.orders.filter((order) => order.status === 'CANCELLED').length;
+  }
+
+  orderValue(order: Order): number {
+    return order.quantity * order.price;
+  }
+
+  formatCurrency(value: number): string {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  orderTotal(order: Order): number {
+    return order.quantity * order.price;
+  }
+
   private getAccountId(): string | null {
     return this.authSession.getAccountId();
   }

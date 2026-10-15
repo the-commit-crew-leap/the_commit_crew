@@ -15,6 +15,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       AUTH_DB: ${AUTH_DB:?}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8082/api/auth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8086/login}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
       # Trading Database
       TRADING_DB_HOST: db

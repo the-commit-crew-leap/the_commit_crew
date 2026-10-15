@@ -29,6 +29,7 @@ import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
 import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.InstrumentService;
+import com.thecommitcrew.service.PriceService;
 
 @WebMvcTest(InstrumentController.class)
 @Import(InstrumentControllerTest.TestSecurityConfig.class)
@@ -43,6 +44,9 @@ class InstrumentControllerTest {
 
     @MockBean
     private InstrumentService instrumentService;
+
+    @MockBean
+    private PriceService priceService;
 
     @MockBean
     private AuthServiceClient authServiceClient;
@@ -156,6 +160,27 @@ class InstrumentControllerTest {
             mockMvc.perform(get("/api/v1/instruments/{symbol}", TEST_SYMBOL))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("INSTRUMENT_NOT_FOUND"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/instruments/{symbol}/price")
+    class GetInstrumentPriceEndpoint {
+        @BeforeEach
+        void setup() {
+            reset(priceService);
+        }
+
+        @Test
+        @DisplayName("Returns the latest price for an instrument")
+        void returnsCurrentPrice() throws Exception {
+            when(priceService.getCurrentPrice(TEST_SYMBOL))
+                .thenReturn(new java.math.BigDecimal("195.50"));
+
+            mockMvc.perform(get("/api/v1/instruments/{symbol}/price", "aapl"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.symbol").value(TEST_SYMBOL))
+                .andExpect(jsonPath("$.price").value(195.50));
         }
     }
 

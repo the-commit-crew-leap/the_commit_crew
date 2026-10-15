@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, Delete, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param, ParseIntPipe, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { 
   ApiTags, 
   ApiOperation, 
@@ -48,6 +49,36 @@ export class AuthController {
       status: 'SUCCESS',
       data: await this.authService.login(loginDto),
     };
+  }
+
+  @Get('google')
+  @ApiOperation({ summary: 'Start Google sign-in' })
+  googleLogin(@Res() response: Response) {
+    response.redirect(this.authService.getGoogleAuthorizationUrl());
+  }
+
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Complete Google sign-in' })
+  async googleCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() response: Response,
+  ) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8086/login';
+
+    try {
+      const session = await this.authService.loginWithGoogle(code, state);
+      const fragment = new URLSearchParams({
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        expiresIn: String(session.expiresIn),
+        accountId: session.accountId,
+        role: session.role,
+      }).toString();
+      response.redirect(`${frontendUrl}#${fragment}`);
+    } catch {
+      response.redirect(`${frontendUrl}?oauthError=google_login_failed`);
+    }
   }
 
   @Post('refresh')

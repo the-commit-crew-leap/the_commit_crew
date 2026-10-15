@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException, ConflictException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { OAuth2Client } from 'google-auth-library';
+import { JwtService } from '@nestjs/jwt';
 import { TokenService } from './token.service';
 import { DatabaseService } from './database.service';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
@@ -19,9 +21,120 @@ export class AuthService implements OnModuleInit {
     private tokenService: TokenService,
     private usersRepository: UsersRepository,
     private databaseService: DatabaseService,
+    private jwtService: JwtService,
   ) {
     // Read cost factor from environment variable or default to 12
     this.bcryptCostFactor = parseInt(process.env.BCRYPT_COST_FACTOR || '12', 10);
+  }
+
+  getGoogleAuthorizationUrl(): string {
+    const client = this.googleClient();
+    const state = this.jwtService.sign(
+      { purpose: 'google-oauth', nonce: uuidv4() },
+      { expiresIn: '10m' },
+    );
+
+    return client.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['openid', 'email', 'profile'],
+      state,
+      prompt: 'select_account',
+    });
+  }
+
+  async loginWithGoogle(code: string, state: string): Promise<any> {
+    const statePayload = this.jwtService.verify<{ purpose?: string }>(state);
+    if (statePayload.purpose !== 'google-oauth') {
+      throw new UnauthorizedException('Invalid Google sign-in state');
+    }
+
+    const client = this.googleClient();
+    const { tokens } = await client.getToken(code);
+    if (!tokens.id_token) {
+      throw new UnauthorizedException('Google did not return an identity token');
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload?.email?.trim().toLowerCase();
+
+    if (!email || payload?.email_verified !== true) {
+      throw new UnauthorizedException('Google email is not verified');
+    }
+
+    let user = await this.usersRepository.findByEmail(email);
+    if (!user) {
+      user = await this.createGoogleUser(email, payload.name || email);
+    }
+
+    const userWithAccounts =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(user.username);
+    const linkedAccount = userWithAccounts?.tradingAccounts?.[0];
+
+    if (!linkedAccount) {
+      throw new UnauthorizedException('No trading account linked to user');
+    }
+
+    const tokensResponse = this.tokenService.issue(
+      user.username,
+      linkedAccount.accountId,
+      linkedAccount.role,
+    );
+
+    return {
+      ...tokensResponse,
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
+    };
+  }
+
+  private googleClient(): OAuth2Client {
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+      throw new BadRequestException('Google sign-in is not configured');
+    }
+
+    return new OAuth2Client(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+      GOOGLE_REDIRECT_URI,
+    );
+  }
+
+  private async createGoogleUser(email: string, fullName: string) {
+    const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24) || 'google_user';
+    let username = baseUsername.length >= 3 ? baseUsername : `${baseUsername}_user`;
+    let suffix = 0;
+
+    while (await this.usersRepository.findByUsername(username)) {
+      suffix += 1;
+      username = `${baseUsername.slice(0, 30 - String(suffix).length - 1)}_${suffix}`;
+    }
+
+    const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const passwordHash = await bcrypt.hash(uuidv4(), this.bcryptCostFactor);
+    let accountCreated = false;
+
+    try {
+      await this.databaseService.createAccount(accountId, fullName);
+      accountCreated = true;
+      return await this.usersRepository.createUserWithCredentialAndTradingLink({
+        username,
+        email,
+        fullName,
+        passwordHash,
+        accountId,
+        role: 'CLIENT',
+      });
+    } catch (error) {
+      if (accountCreated) {
+        await this.compensateCreatedAccount(accountId);
+      }
+      throw error;
+    }
   }
 
   async onModuleInit() {

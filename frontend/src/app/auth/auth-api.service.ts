@@ -17,6 +17,10 @@ import {
 export class AuthApiService {
   private readonly baseUrl = environment.authApiBaseUrl;
 
+  get googleLoginUrl(): string {
+    return `${this.baseUrl}/google`;
+  }
+
   constructor(private readonly http: HttpClient) {}
 
   login(payload: LoginRequest): Observable<LoginResponse> {

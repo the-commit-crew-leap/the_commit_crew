@@ -5,13 +5,14 @@ import { EMPTY, finalize, catchError, timeout } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
 import { getAuthErrorMessage } from '../../auth/auth-error.util';
+import { AuthHeaderComponent } from '../../auth-header/auth-header.component';
 
 @Component({
   standalone: true,
   selector: 'app-register',
   templateUrl: './register.html',
   styleUrl: './register.css',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink]
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthHeaderComponent]
 })
 export class RegisterComponent {
   isSubmitting = false;
