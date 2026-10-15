@@ -12,4 +12,5 @@ public interface PositionMapper {
     Optional<Position> findByAccountIdAndSymbol(String accountId, String symbol);
     List<Position> findByAccountId(String accountId);
     void save(Position position);
+    void deleteByAccountIdAndSymbol(String accountId, String symbol);
 }
