@@ -1,13 +1,24 @@
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
 import logging
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
 
 from src.analysis.analysis_helper import AnalysisHelper
 from src.analysis.data_loader import DataLoader
+from src.analysis.statistics_calculator import StatisticsCalculator
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class AnalysisPeriod:
+    """Resolved date range used by one analysis run."""
+
+    label: str
+    start_date: str
+    end_date: str
 
 
 class AnalysisEngine:
@@ -15,7 +26,19 @@ class AnalysisEngine:
     def __init__(self, data_loader: DataLoader, helper: AnalysisHelper):
         self.loader = data_loader
         self.helper = helper
-        self.logger = logging.getLogger(__name__)
+        self.statistics_calculator = StatisticsCalculator(helper)
+
+    def _resolve_period(self, period: str) -> AnalysisPeriod:
+        """Resolve a period name once for the complete analysis run."""
+        start_date, end_date = self.helper.get_date_range(period)
+        return AnalysisPeriod(period.upper(), start_date, end_date)
+
+    def _chart_labels(self, symbols: list) -> tuple[str, str]:
+        """Return filesystem and human-readable labels for symbols."""
+        return (
+            self.helper.get_ticker_label(symbols),
+            self.helper.get_ticker_title(symbols),
+        )
 
 
     # RETURN CALCULATIONS
@@ -125,8 +148,7 @@ class AnalysisEngine:
             return
 
         correlation = returns_df.corr()
-        ticker_label = self.helper.get_ticker_label(returns_df.columns.tolist())
-        ticker_title = self.helper.get_ticker_title(returns_df.columns.tolist())
+        ticker_label, ticker_title = self._chart_labels(returns_df.columns.tolist())
 
         fig = go.Figure(data=go.Heatmap(
             z=correlation.values,
@@ -180,8 +202,7 @@ class AnalysisEngine:
             logger.warning("No data available for volatility plot")
             return
 
-        ticker_label = self.helper.get_ticker_label(returns_df.columns.tolist())
-        ticker_title = self.helper.get_ticker_title(returns_df.columns.tolist())
+        ticker_label, ticker_title = self._chart_labels(returns_df.columns.tolist())
 
         fig = go.Figure()
         plotted = 0
@@ -251,8 +272,7 @@ class AnalysisEngine:
             logger.warning("No valid volatility data for asset class plot")
             return
 
-        ticker_label = self.helper.get_ticker_label(plot_df["Ticker"].tolist())
-        ticker_title = self.helper.get_ticker_title(plot_df["Ticker"].tolist())
+        ticker_label, ticker_title = self._chart_labels(plot_df["Ticker"].tolist())
 
         fig = go.Figure()
 
@@ -331,37 +351,7 @@ class AnalysisEngine:
             An empty DataFrame is returned if no usable return data exists.
         """
         returns_df = self.get_returns_for_tickers(tickers, start_date, end_date)
-
-        if returns_df.empty:
-            return pd.DataFrame()
-
-        rows = []
-
-        for ticker in returns_df.columns:
-            returns = returns_df[ticker].dropna()
-
-            if returns.empty:
-                continue
-
-            annualized_return = (1 + returns).prod() ** (252 / len(returns)) - 1
-            annualized_volatility = returns.std() * np.sqrt(252)
-            sharpe_ratio = annualized_return / annualized_volatility if annualized_volatility > 0 else np.nan
-            
-            rows.append({
-                "Ticker": ticker, 
-                "Asset Class": self.helper.get_asset_class(ticker), 
-                "Observations": len(returns), 
-                "Annualized Return (%)": annualized_return * 100, 
-                "Annualized Volatility (%)": annualized_volatility * 100, 
-                "Sharpe Ratio": sharpe_ratio, 
-                "Best Daily Return (%)": returns.max() * 100, 
-                "Worst Daily Return (%)": returns.min() * 100
-            })
-
-        if not rows:
-            return pd.DataFrame()
-
-        return pd.DataFrame(rows).sort_values("Ticker").reset_index(drop=True)
+        return self.statistics_calculator.calculate(returns_df)
 
 
     # PLOTS SUMMARY
@@ -416,18 +406,31 @@ class AnalysisEngine:
             logger.error("No tickers selected. Check config.INSTRUMENTS.")
             return pd.DataFrame()
 
-        start_date, end_date = self.helper.get_date_range(period)
-        period_label = period.upper()
+        analysis_period = self._resolve_period(period)
 
-        logger.info(f"Analysis date range: {start_date} to {end_date}")
+        logger.info(
+            "Analysis date range: %s to %s",
+            analysis_period.start_date,
+            analysis_period.end_date,
+        )
         logger.info(f"Analyzing tickers: {analysis_tickers}")
         
         # plots
         if generate_plots:
-            self.generate_analysis_plots(analysis_tickers, start_date, end_date, period_label, volatility_window)
+            self.generate_analysis_plots(
+                analysis_tickers,
+                analysis_period.start_date,
+                analysis_period.end_date,
+                analysis_period.label,
+                volatility_window,
+            )
             
         # summary
-        summary = self.calculate_summary_statistics(analysis_tickers, start_date, end_date)
+        summary = self.calculate_summary_statistics(
+            analysis_tickers,
+            analysis_period.start_date,
+            analysis_period.end_date,
+        )
 
         if not summary.empty:
             logger.info("Summary statistics:")
