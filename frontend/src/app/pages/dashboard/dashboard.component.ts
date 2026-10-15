@@ -21,7 +21,6 @@ import { AssetsComponent } from './assets/assets.component';
 export class DashboardComponent implements OnDestroy, OnInit {
   private readonly depositService = inject(DepositService);
   readonly balance = this.depositService.balance;
-  //balance: BalanceResponse | null = null;
   balanceError: boolean = false;
   positions: PositionResponse[] = [];
   orders: Order[] = [];
