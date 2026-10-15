@@ -55,9 +55,9 @@ class ETLPipeline:
             )
 
         sql_lines.extend(["ON CONFLICT (symbol, price_date) DO NOTHING;", ""])
-        config.SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
-        config.SEED_FILE.write_text("\n".join(sql_lines))
-        logger.info("Generated price-history seed at %s", config.SEED_FILE)
+        config.PRICE_HISTORY_SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config.PRICE_HISTORY_SEED_FILE.write_text("\n".join(sql_lines))
+        logger.info("Generated price-history seed at %s", config.PRICE_HISTORY_SEED_FILE)
 
     def run(self, symbols: list[str] = None):
         """

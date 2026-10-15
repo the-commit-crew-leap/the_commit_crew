@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 class MetadataPipeline:
     """Extract instrument metadata and generate its CSV and SQL outputs."""
-
-    SEED_FILE = Path(__file__).resolve().parents[3] / "db" / "seeds" / "instruments-data.sql"
     
     def fetch_symbol_metadata(self, symbols: list[str]) -> pd.DataFrame:
         """
@@ -152,9 +150,9 @@ class MetadataPipeline:
             )
 
         sql_lines.extend(["ON CONFLICT (symbol) DO NOTHING;", ""])
-        self.SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
-        self.SEED_FILE.write_text("\n".join(sql_lines))
-        logger.info("Generated instruments seed at %s", self.SEED_FILE)
+        config.INSTRUMENTS_SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config.INSTRUMENTS_SEED_FILE.write_text("\n".join(sql_lines))
+        logger.info("Generated instruments seed at %s", config.INSTRUMENTS_SEED_FILE)
     
     
     def run(self, symbols: list[str] = None) -> dict:

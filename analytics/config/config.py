@@ -4,6 +4,7 @@ from pathlib import Path
 
 # Project root
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 
 # Load environment variables
 load_dotenv(BASE_DIR / ".env")
@@ -50,7 +51,8 @@ CSV_DIR = OUTPUT_DIR / "csv"
 CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Seed file
-SEED_FILE = Path(__file__).resolve().parents[3] / "db" / "seeds" / "price_history-data.sql"
+INSTRUMENTS_SEED_FILE = REPO_ROOT / "db" / "seeds" / "instruments-data.sql"
+PRICE_HISTORY_SEED_FILE = REPO_ROOT / "db" / "seeds" / "price_history-data.sql"
 
 # Price history and metadata files
 PRICE_HISTORY_FILE = CSV_DIR / "price_history.csv"
