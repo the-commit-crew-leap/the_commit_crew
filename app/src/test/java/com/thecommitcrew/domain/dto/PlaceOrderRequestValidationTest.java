@@ -1,8 +1,7 @@
 package com.thecommitcrew.domain.dto;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.math.BigDecimal;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.thecommitcrew.domain.enums.OrderSide;
 
@@ -21,7 +20,7 @@ import org.junit.jupiter.api.Nested;
 * Using Validator instance since this class has annotations
 * Validator checks that the validation rules work correctly
 */
-public class PlaceOrderRequestValidationTest {
+class PlaceOrderRequestValidationTest {
     
     private Validator validator;
     
@@ -34,12 +33,10 @@ public class PlaceOrderRequestValidationTest {
     @Test
     void testValidPlaceOrderRequest() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             OrderSide.BUY,
-            100L,
-            new BigDecimal("150.00"),
-            "KEY-12345"
+            100L
         );
         
         Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
@@ -54,12 +51,10 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test null symbol")
         void testSymbolCannotBeNull() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 null,
                 OrderSide.BUY,
-                100L,
-                new BigDecimal("150.00"),
-                "KEY-12345"
+                100L
             );
             
             Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
@@ -70,12 +65,10 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test empty symbol")
         void testSymbolCannotBeBlank() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "   ",
                 OrderSide.BUY,
-                100L,
-                new BigDecimal("150.00"),
-                "KEY-12345"
+                100L
             );
             
             Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
@@ -87,12 +80,10 @@ public class PlaceOrderRequestValidationTest {
     @DisplayName("Test null side")
     void testSideCannotBeNull() {
         PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-            1L,
+            "ACC-1001",
             "AAPL",
             null,
-            100L,
-            new BigDecimal("150.00"),
-            "KEY-12345"
+            100L
         );
         
         Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
@@ -107,12 +98,10 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test zero quantity")
         void testQuantityCannotBeZero() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
-                0L,
-                new BigDecimal("150.00"),
-                "KEY-12345"
+                0L
             );
             
             Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
@@ -123,90 +112,14 @@ public class PlaceOrderRequestValidationTest {
         @DisplayName("Test negative quantity")
         void testQuantityMustBePositive() {
             PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
+                "ACC-1001",
                 "AAPL",
                 OrderSide.BUY,
-                -5L,
-                new BigDecimal("150.00"),
-                "KEY-12345"
+                -5L
             );
             
             Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-        }
-    }
-
-    @Nested
-    @DisplayName("Price tests")
-    class testingPrice {
-
-        @Test
-        @DisplayName("Test null price")
-        void testPriceCannotBeNull() {
-            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
-                "AAPL",
-                OrderSide.BUY,
-                100L,
-                null,
-                "KEY-12345"
-            );
-            
-            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-        
-        @Test
-        @DisplayName("Test zero price")
-        void testPriceMustBePositive() {
-            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
-                "AAPL",
-                OrderSide.BUY,
-                100L,
-                new BigDecimal("0.00"),
-                "KEY-12345"
-            );
-            
-            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-    }
-
-    @Nested
-    @DisplayName("Idempotency key tests")
-    class testingIdempotencyKey {
-
-        @Test
-        @DisplayName("Test blank idempotency key")
-        void testIdempotencyKeyCannotBeBlank() {
-            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
-                "AAPL",
-                OrderSide.BUY,
-                100L,
-                new BigDecimal("150.00"),
-                "   "
-            );
-            
-            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-        }
-
-        @Test
-        @DisplayName("Test valid idempotency key")
-        void testValidIdempotencyKey() {
-            PlaceOrderRequestDTO request = new PlaceOrderRequestDTO(
-                1L,
-                "AAPL",
-                OrderSide.BUY,
-                100L,
-                new BigDecimal("150.00"),
-                "UNIQUE-KEY-123"
-            );
-            
-            Set<ConstraintViolation<PlaceOrderRequestDTO>> violations = validator.validate(request);
-            assertTrue(violations.isEmpty());
         }
     }
 }

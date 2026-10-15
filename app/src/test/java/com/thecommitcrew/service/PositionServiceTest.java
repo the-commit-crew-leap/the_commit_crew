@@ -4,7 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.domain.model.Position;
 
-public class PositionServiceTest {
+class PositionServiceTest {
 
     private PositionService positionService;
     private Position position;
@@ -38,9 +39,9 @@ public class PositionServiceTest {
         currentPrice = new BigDecimal("150");
         negativeCurrentPrice = new BigDecimal("-10");
         loweredCurrentPrice = new BigDecimal("50");
-        position = new Position(1L, "TSLA", quantity, averageCost);
-        buyOrder = new Order(UUID.randomUUID(), 1L, "TSLA", OrderSide.BUY, 5L, new BigDecimal("110"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
-        sellOrder = new Order(UUID.randomUUID(), 1L, "TSLA", OrderSide.SELL, 3L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-3");
+        position = new Position("ACC-1001", "TSLA", quantity, averageCost);
+        buyOrder = new Order(UUID.randomUUID(), "ACC-1001", "TSLA", OrderSide.BUY, 5L, new BigDecimal("110"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
+        sellOrder = new Order(UUID.randomUUID(), "ACC-1001", "TSLA", OrderSide.SELL, 3L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-3");
     }
 
     @Nested
@@ -55,16 +56,14 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Doesn't update position when quantity is zero")
         void marketValueWithZeroQuantity() throws NegativePriceException {
-            Position positionZero = new Position(1L, "TSLA", zeroQuantity, averageCost);
+            Position positionZero = new Position("ACC-1001", "TSLA", zeroQuantity, averageCost);
             assertEquals(new BigDecimal("0"), positionService.marketValue(positionZero, currentPrice));
         }
 
         @Test
         @DisplayName("Throws exception for negative price")
         void marketValueWithNegativePrice() {
-            assertThrows(NegativePriceException.class, () -> {
-                positionService.marketValue(position, negativeCurrentPrice);
-            });
+            assertThrows(NegativePriceException.class, () -> positionService.marketValue(position, negativeCurrentPrice));
         }
     }
 
@@ -86,9 +85,48 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Throws exception for negative price")
         void unrealizedProfitLossWithNegativePrice() {
-            assertThrows(NegativePriceException.class, () -> {
-                positionService.unrealizedProfitLoss(position, negativeCurrentPrice);
-            });
+            assertThrows(NegativePriceException.class, () -> positionService.unrealizedProfitLoss(position, negativeCurrentPrice));
+        }
+    }
+
+    @Nested
+    @DisplayName("Unrealized PnL percent calculations")
+    class UPLPercentOperations {
+        
+        @Test
+        @DisplayName("Calculates PnL percent correctly with profit")
+        void unrealizedPnLPercentCalculatesCorrectlyWithProfit() throws NegativePriceException {
+            // Position: 10 shares at $100 avg cost
+            // Current price: $150
+            // Cost basis: $1000, Market value: $1500, Profit: $500
+            // Percent: (500 / 1000) * 100 = 50.0000%
+            BigDecimal result = positionService.unrealizedPnLPercent(position, currentPrice);
+            assertEquals(new BigDecimal("50.0000"), result);
+        }
+
+        @Test
+        @DisplayName("Calculates PnL percent correctly with loss")
+        void unrealizedPnLPercentCalculatesCorrectlyWithLoss() throws NegativePriceException {
+            // Current price: $50
+            // Cost basis: $1000, Market value: $500, Loss: -$500
+            // Percent: (-500 / 1000) * 100 = -50.0000%
+            BigDecimal result = positionService.unrealizedPnLPercent(position, loweredCurrentPrice);
+            assertEquals(new BigDecimal("-50.0000"), result);
+        }
+
+        @Test
+        @DisplayName("Returns zero percent when cost basis is zero")
+        void unrealizedPnLPercentReturnsZeroWhenZeroCostBasis() throws NegativePriceException {
+            // Zero average cost position
+            Position zeroAvgCostPosition = new Position("ACC-1001", "TSLA", quantity, BigDecimal.ZERO);
+            BigDecimal result = positionService.unrealizedPnLPercent(zeroAvgCostPosition, currentPrice);
+            assertEquals(BigDecimal.ZERO, result);
+        }
+
+        @Test
+        @DisplayName("Throws exception for negative price")
+        void unrealizedPnLPercentThrowsExceptionForNegativePrice() {
+            assertThrows(NegativePriceException.class, () -> positionService.unrealizedPnLPercent(position, negativeCurrentPrice));
         }
     }
 
@@ -130,7 +168,7 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Closes position when selling all owned")
         void applySellOrderClosingPosition() {
-            Order sellOrderClosing = new Order(UUID.randomUUID(), 1L, "TSLA", OrderSide.SELL, 10L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
+            Order sellOrderClosing = new Order(UUID.randomUUID(), "ACC-1001", "TSLA", OrderSide.SELL, 10L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
             Position updatedPosition = positionService.applyOrder(position, sellOrderClosing);
             
             assertEquals(0L, updatedPosition.getQuantity());
@@ -140,11 +178,9 @@ public class PositionServiceTest {
         @Test
         @DisplayName("Throws exception when selling more than owned")
         void applyOrderThrowsExceptionWhenSellingMoreThanOwned() {
-            Order sellOrderTooMany = new Order(UUID.randomUUID(), 1L, "TSLA", OrderSide.SELL, 15L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
+            Order sellOrderTooMany = new Order(UUID.randomUUID(), "ACC-1001", "TSLA", OrderSide.SELL, 15L, new BigDecimal("120"), OrderStatus.NEW, LocalDateTime.now(), "idempotency-1");
             
-            assertThrows(IllegalArgumentException.class, () -> {
-                positionService.applyOrder(position, sellOrderTooMany);
-            });
+            assertThrows(IllegalArgumentException.class, () -> positionService.applyOrder(position, sellOrderTooMany));
         }
     }
 }

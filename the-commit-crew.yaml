@@ -9,11 +9,11 @@ info:
     url: https://example.com/license
 
 servers:
-  - url: /api/v1
-  - url: /api/v2
+  - url: /
+    description: Trading service base URL
 
 paths:
-  /orders:
+  /api/v1/orders:
     post:
       summary: Submit an order for processing
       operationId: submitOrder
@@ -26,12 +26,10 @@ paths:
             schema:
               $ref: '#/components/schemas/OrderRequest'
             example:
-              accountId: 1
+              accountId: ACC-1001
               symbol: AAPL
               side: BUY
               quantity: 100
-              price: 150.00
-              idempotencyKey: uuid-string-123
       responses:
         '201':
           description: Order accepted for processing
@@ -41,7 +39,7 @@ paths:
                 $ref: '#/components/schemas/OrderResponse'
               example:
                 orderId: 550e8400-e29b-41d4-a716-446655440000
-                accountId: 1
+                accountId: ACC-1001
                 symbol: AAPL
                 side: BUY
                 quantity: 100
@@ -59,8 +57,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderResponse'
-  /orders/{id}:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot use the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/v1/orders/{id}:
     delete:
       summary: Cancel a working order
       operationId: cancelOrder
@@ -88,7 +99,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /accounts/{id}:
+  /api/v1/accounts/{id}:
     get:
       summary: Retrieve account details
       operationId: getAccount
@@ -99,8 +110,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Account details retrieved successfully
@@ -109,7 +119,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountResponse'
               example:
-                accountId: 1
+                accountId: ACC-1001
                 status: ACTIVE
                 cashBalance:
                   amount: 10000.00
@@ -120,8 +130,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /accounts/{id}/balance:
+  /api/v1/accounts/{id}/balance:
     get:
       summary: Retrieve account cash balance
       operationId: getAccountBalance
@@ -132,8 +154,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Cash balance retrieved successfully
@@ -142,7 +163,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BalanceResponse'
               example:
-                accountId: 1
+                accountId: ACC-1001
                 cashBalance:
                   amount: 10000.00
                   currency: USD
@@ -152,8 +173,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /accounts/{id}/positions:
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/accounts/{id}/positions:
     get:
       summary: Retrieve account holdings
       operationId: getAccountPositions
@@ -164,8 +196,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Holdings retrieved successfully
@@ -182,14 +213,19 @@ paths:
                   currentPrice: 155.50
                   marketValue: 15550.00
                   unrealizedPnL: 550.00
+                  unrealizedPnLPercent: 3.67
         '404':
           description: Account not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /accounts/{id}/orders:
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+  /api/v1/accounts/{id}/orders:
     get:
       summary: Retrieve account order history
       operationId: getAccountOrders
@@ -200,8 +236,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Order history retrieved successfully
@@ -213,7 +248,7 @@ paths:
                   $ref: '#/components/schemas/OrderResponse'
               example:
                 - orderId: 550e8400-e29b-41d4-a716-446655440000
-                  accountId: 1
+                  accountId: ACC-1001
                   symbol: AAPL
                   side: BUY
                   quantity: 100
@@ -226,6 +261,182 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /api/v1/accounts/{id}/deposit:
+    post:
+      summary: Deposit money into account
+      operationId: depositFunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+            example:
+              amount: 1000.00
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+              example:
+                accountId: ACC-1001
+                transactionType: DEPOSIT
+                amount: 1000.00
+                newBalance:
+                  amount: 11000.00
+                  currency: USD
+                timestamp: 2026-09-21T10:30:00
+        '400':
+          description: Bad request - validation failed (amount must be positive)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/accounts/{id}/withdraw:
+    post:
+      summary: Withdraw money from account
+      operationId: withdrawFunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+            example:
+              amount: 500.00
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+              example:
+                accountId: ACC-1001
+                transactionType: WITHDRAW
+                amount: 500.00
+                newBalance:
+                  amount: 9500.00
+                  currency: USD
+                timestamp: 2026-09-21T10:35:00
+        '400':
+          description: Bad request - validation failed (amount must be positive or insufficient funds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user cannot access the requested account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/instruments:
+    get:
+      summary: Retrieve available instruments
+      operationId: getInstruments
+      parameters:
+        - name: tradable
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Instruments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentResponse'
+
+  /api/v1/instruments/{symbol}:
+    get:
+      summary: Retrieve an instrument
+      operationId: getInstrument
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Instrument retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentResponse'
+        '404':
+          description: Instrument not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 
 components:
@@ -234,15 +445,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT authentication - to be implemented
+      description: JWT authentication required by the service
   schemas:
     OrderRequest:
       type: object
-      required: [accountId, symbol, side, quantity, price, idempotencyKey]
+      required: [accountId, symbol, side, quantity]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         symbol:
           type: string
           example: AAPL
@@ -250,17 +460,9 @@ components:
           type: string
           enum: [BUY, SELL]
         quantity:
-          type: number
-          format: double
-          minimum: 0
-          exclusiveMinimum: true
-        price:
-          type: number
-          format: double
-          minimum: 0
-          exclusiveMinimum: true
-        idempotencyKey:
-          type: string
+          type: integer
+          format: int64
+          minimum: 1
 
     OrderResponse:
       type: object
@@ -270,16 +472,15 @@ components:
           type: string
           format: uuid
         accountId:
-          type: integer
-          format: int64
+          type: string
         symbol:
           type: string
         side:
           type: string
           enum: [BUY, SELL]
         quantity:
-          type: number
-          format: double
+          type: integer
+          format: int64
         price:
           type: number
           format: double
@@ -295,8 +496,7 @@ components:
       required: [accountId, status, cashBalance]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         status:
           type: string
           enum: [ACTIVE, SUSPENDED, CLOSED]
@@ -308,8 +508,7 @@ components:
       required: [accountId, cashBalance]
       properties:
         accountId:
-          type: integer
-          format: int64
+          type: string
         cashBalance:
           $ref: '#/components/schemas/Money'
 
@@ -337,6 +536,10 @@ components:
           type: number
           format: double
           nullable: true
+        unrealizedPnLPercent:
+          type: number
+          format: double
+          nullable: true
 
     Money:
       type: object
@@ -356,3 +559,47 @@ components:
           type: string
         message:
           type: string
+
+    TransactionRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+
+    TransactionResponse:
+      type: object
+      required: [accountId, transactionType, amount, newBalance, timestamp]
+      properties:
+        accountId:
+          type: string
+        transactionType:
+          type: string
+          enum: [DEPOSIT, WITHDRAW]
+        amount:
+          type: number
+          format: double
+        newBalance:
+          $ref: '#/components/schemas/Money'
+        timestamp:
+          type: string
+          format: date-time
+
+    InstrumentResponse:
+      type: object
+      required: [symbol, name, assetClass, currency, tradable]
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        assetClass:
+          type: string
+          enum: [EQUITY, BOND, FUND, CASH]
+        currency:
+          type: string
+        tradable:
+          type: boolean

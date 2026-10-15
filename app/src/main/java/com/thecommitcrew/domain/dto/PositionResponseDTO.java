@@ -11,6 +11,7 @@ public record PositionResponseDTO (
     BigDecimal averageCost,
     @Nullable BigDecimal currentPrice,
     @Nullable BigDecimal marketValue,
-    @Nullable BigDecimal unrealizedPnL
+    @Nullable BigDecimal unrealizedPnL,
+    @Nullable BigDecimal unrealizedPnLPercent
 
 ) {}

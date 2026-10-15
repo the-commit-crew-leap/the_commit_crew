@@ -9,14 +9,18 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-public class AccountTest {
+class AccountTest {
     
     private Account account;
     private static final AccountStatusValidator VALIDATOR = new DefaultAccountStatusValidator();
     
-    private static final Long TEST_ACCOUNT_ID = 1L;
+    private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_HOLDER_NAME = "John Doe";
     private static final int TEST_VERSION = 1;
 
@@ -32,7 +36,7 @@ public class AccountTest {
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         account = new Account(
             TEST_ACCOUNT_ID,
             TEST_HOLDER_NAME,
@@ -45,7 +49,7 @@ public class AccountTest {
     }
 
     @Test
-    public void testDebit_SuccessfulTransactionUpdatesBalance() {
+    void testDebit_SuccessfulTransactionUpdatesBalance() {
         Money debitAmount = createMoney(DEBIT_AMOUNT);
         
         Account updatedAccount = account.debit(debitAmount);
@@ -54,16 +58,14 @@ public class AccountTest {
     }
     
     @Test
-    public void testDebit_ThrowsExceptionWhenInsufficientFunds() {
+    void testDebit_ThrowsExceptionWhenInsufficientFunds() {
         Money debitAmount = createMoney(INSUFFICIENT_AMOUNT);
         
-        assertThrows(IllegalArgumentException.class, () -> {
-            account.debit(debitAmount);
-        });
+        assertThrows(IllegalArgumentException.class, () -> account.debit(debitAmount));
     }
 
     @Test
-    public void testCredit_SuccessfullyIncreasesBalance() {
+    void testCredit_SuccessfullyIncreasesBalance() {
         Money creditAmount = createMoney(CREDIT_AMOUNT);
         
         Account updatedAccount = account.credit(creditAmount);
@@ -74,16 +76,15 @@ public class AccountTest {
     }
     
     @Test
-    public void testDebit_ThrowsExceptionWhenAccountIsInactive() {
+    void testDebit_ThrowsExceptionWhenAccountIsInactive() {
         Account suspendedAccount = account.updateStatus(AccountStatus.SUSPENDED);
+        Money debitAmount = createMoney(SMALL_AMOUNT);
         
-        assertThrows(IllegalStateException.class, () -> {
-            suspendedAccount.debit(createMoney(SMALL_AMOUNT));
-        });
+        assertThrows(IllegalStateException.class, () -> suspendedAccount.debit(debitAmount));
     }
 
     @Test
-    public void testIsActive_ReturnsTrueForActiveAndFalseForInactiveStatuses() {
+    void testIsActive_ReturnsTrueForActiveAndFalseForInactiveStatuses() {
         assertTrue(account.isActive());
         
         Account suspendedAccount = account.updateStatus(AccountStatus.SUSPENDED);
@@ -94,7 +95,7 @@ public class AccountTest {
     }
 
     @Test
-    public void testVersionIncrement_IncrementsOnEveryOperation() {
+    void testVersionIncrement_IncrementsOnEveryOperation() {
         assertEquals(1L, account.getVersion());
         
         Account updatedAccount = account.debit(createMoney(new BigDecimal("100.00")));
@@ -105,12 +106,12 @@ public class AccountTest {
     }
 
     @Test
-    public void testEquals_IdentifiesAccountsByIdOnly() {
+    void testEquals_IdentifiesAccountsByIdOnly() {
         assertEquals(account, new Account(TEST_ACCOUNT_ID, "Different Name",
             createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
         
-        assertNotEquals(account, new Account(2L, "Different Name",
+        assertNotEquals(account, new Account("ACC-1002", "Different Name",
             createMoney(MEDIUM_AMOUNT), AccountStatus.ACTIVE, TEST_VERSION,
             LocalDateTime.now(), VALIDATOR));
     }

@@ -14,7 +14,7 @@ public class Instrument {
     private final String symbol;
     private final String name;
     private final AssetClass assetClass;
-    private final String currency = "USD";
+    private static final String CURRENCY = "USD";
     private final boolean tradable;
 
 
@@ -46,10 +46,9 @@ public class Instrument {
     }
 
     public String getCurrency() {
-        return currency;
+        return CURRENCY;
     }
 
-    // TODO: change this method once we know what makes an Instrument tradable
     public Boolean isTradable() {
         return tradable;
     }
@@ -57,7 +56,7 @@ public class Instrument {
     @Override
     public String toString() {
         return "Instrument [id=" + id + ", symbol=" + symbol + ", name=" + name + ", assetClass=" + assetClass
-                + ", currency=" + currency + ", isTradable=" + tradable + "]";
+                + ", currency=" + CURRENCY + ", isTradable=" + tradable + "]";
     }
 
     private static <T> T validateNotNull(T value, String message) {

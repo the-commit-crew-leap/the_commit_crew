@@ -1,0 +1,389 @@
+openapi: 3.0.3
+info:
+  title: The Commit Crew - Auth API
+  version: 1.0.0
+  description: Authentication service API for user registration, login, token refresh, and validation
+
+servers:
+  - url: /api/auth
+    description: Auth API endpoint
+
+paths:
+  /register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+      responses:
+        '200':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Invalid input data or registration failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /login:
+    post:
+      summary: Login with credentials
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials or inactive account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /refresh:
+    post:
+      summary: Refresh access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshDto'
+      responses:
+        '200':
+          description: Token successfully refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /validate:
+    post:
+      summary: Validate an access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateDto'
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponse'
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delete/{userId}:
+    delete:
+      summary: Delete a user account
+      tags:
+        - Authentication
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID to delete
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User successfully deleted and trading account closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserResponse'
+        '400':
+          description: User deletion is not implemented or the request is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    RegisterDto:
+      type: object
+      required:
+        - username
+        - email
+        - fullName
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: Unique username (alphanumeric, underscore, hyphen only)
+        email:
+          type: string
+          format: email
+          description: User email address
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: User full name
+        password:
+          type: string
+          minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]+$'
+          description: Password must contain uppercase, lowercase, number, and special character
+
+    LoginDto:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Username or email
+        password:
+          type: string
+          minLength: 1
+          description: User password
+
+    RefreshDto:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          format: jwt
+          description: Refresh token received from login or registration
+
+    ValidateDto:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          format: jwt
+          description: Access token to validate
+
+    AuthResponseDto:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          format: jwt
+          description: JWT access token
+        refreshToken:
+          type: string
+          format: jwt
+          description: JWT refresh token
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Access token expiration time in seconds
+        accountId:
+          type: string
+          description: Linked trading account ID, when available
+        role:
+          type: string
+          description: Role on the linked trading account, when available
+
+    RegisterResponseData:
+      type: object
+      required:
+        - userId
+        - username
+        - email
+        - accountId
+        - role
+        - createdAt
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID of the newly registered user
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        accountId:
+          type: string
+          description: Linked trading account ID
+        role:
+          type: string
+          description: Role on the linked trading account
+        createdAt:
+          type: string
+          format: date-time
+
+    ValidateResponseData:
+      type: object
+      required:
+        - username
+        - valid
+      properties:
+        username:
+          type: string
+        accountId:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        valid:
+          type: boolean
+
+    RegisterResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          $ref: '#/components/schemas/RegisterResponseData'
+
+    AuthResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          $ref: '#/components/schemas/AuthResponseDto'
+
+    ValidateResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          $ref: '#/components/schemas/ValidateResponseData'
+
+    DeleteUserResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - message
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - ERROR
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        data:
+          type: object
+          nullable: true
+          description: Error payload, currently always null
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Health
+    description: Service health check

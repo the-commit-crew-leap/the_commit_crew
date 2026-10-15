@@ -1,0 +1,42 @@
+<header class="tcc-header">
+  <a class="tcc-brand" routerLink="/">
+    <span class="tcc-brand-mark" aria-hidden="true"></span>
+    <span>The Commit Crew</span>
+  </a>
+  <nav class="tcc-primary-nav" aria-label="Primary navigation">
+    <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+      Dashboard
+    </a>
+    <a routerLink="/orders" routerLinkActive="is-active">
+      Orders
+    </a>
+  </nav>
+  <div class="tcc-account-actions">
+    <div class="tcc-account-menu">
+      <button
+        class="tcc-account-selector"
+        type="button"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="accountMenuOpen"
+        (click)="toggleAccountMenu()">
+      Account
+      </button>
+
+      <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
+        <span class="tcc-account-label">Account</span>
+        <strong>{{ accountId() || 'Unknown account' }}</strong>
+        <button class="tcc-dropdown-logout" type="button" role="menuitem" (click)="logout()">
+          Log out
+        </button>
+      </div>
+    </div>
+
+    <button class="tcc-action-button" type="button" (click)="openDeposit()">
+      <span aria-hidden="true">+</span>
+      Deposit
+    </button>
+  </div>
+</header>
+
+<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId() ?? ''"
+  (closed)="closeDeposit()" (deposited)="onDepositSuccess()"/>

@@ -23,7 +23,7 @@ public class AccountMapper {
         Money cashBalance = new Money(entity.getCashBalance());
         
         return new Account(
-            entity.getId(),
+            entity.getAccountId(),
             entity.getHolderName(),
             cashBalance,
             entity.getStatus(),
@@ -38,7 +38,7 @@ public class AccountMapper {
         if (domain == null) return null;
         
         return new AccountEntity(
-            domain.getAccountId().toString(),
+            domain.getAccountId(),
             domain.getHolderName(),
             domain.getCashBalance().getAmount(),
             domain.getStatus(),

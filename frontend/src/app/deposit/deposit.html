@@ -1,0 +1,119 @@
+
+@if (visible) {
+  <div class="tcc-modal-backdrop" (click)="close()">
+    <section class="tcc-deposit-modal" role="dialog" aria-modal="true" 
+    aria-labelledby="deposit-title" (click)="$event.stopPropagation()">
+      
+      <div class="tcc-current-balance">
+        <span>Current balance</span>
+
+        @if (balanceLoading()) {
+          <strong>Loading...</strong>
+        } @else if (balance()) {
+          <strong>
+            {{ balance()?.cashBalance?.amount }}
+            {{ balance()?.cashBalance?.currency || 'USD' }}
+          </strong>
+        } @else {
+          <strong>Unavailable</strong>
+        }
+      </div>
+      
+      <div class="tcc-modal-header">
+        <div>
+          <h2 id="deposit-title">Deposit funds</h2>
+          <p>Add funds to your trading account.</p>
+        </div>
+
+        <button
+          type="button"
+          class="tcc-modal-close"
+          aria-label="Close dialog"
+          [disabled]="loading()"
+          (click)="close()"
+        >
+          &times;
+        </button>
+      </div>
+
+      @if (success()) {
+        <div class="tcc-success" role="status">
+          <h3>Deposit successful!</h3>
+          <p>Your funds have been added to your account.</p>
+
+          @if (balanceRefreshFailed()) {
+            <p>
+              Your deposit succeeded, but the latest balance could not
+              be retrieved. Refresh your account balance before trading.
+            </p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="tcc-deposit-confirm"
+          (click)="close()"
+        >
+          Done
+        </button>
+      } @else {
+        <form (ngSubmit)="submitDeposit()">
+          <label for="deposit-amount">Amount to deposit</label>
+
+          <input
+            id="deposit-amount"
+            type="number"
+            name="amount"
+            [ngModel]="amount()"
+            (ngModelChange)="amount.set($event)"
+            min="0.01"
+            step="0.01"
+            required
+            [disabled]="loading()"
+            placeholder="Enter amount"
+          />
+
+          <div class="tcc-deposit-presets">
+            <button
+              type="button"
+              [disabled]="loading()"
+              (click)="selectAmount(100)"
+            >
+              $100
+            </button>
+
+            <button
+              type="button"
+              [disabled]="loading()"
+              (click)="selectAmount(500)"
+            >
+              $500
+            </button>
+
+            <button
+              type="button"
+              [disabled]="loading()"
+              (click)="selectAmount(1000)"
+            >
+              $1,000
+            </button>
+          </div>
+
+          @if (errorMessage()) {
+            <p class="tcc-error" role="alert">
+              {{ errorMessage() }}
+            </p>
+          }
+
+          <button
+            type="submit"
+            class="tcc-deposit-confirm"
+            [disabled]="loading()"
+          >
+            {{ loading() ? 'Processing...' : 'Confirm deposit' }}
+          </button>
+        </form>
+      }
+    </section>
+  </div>
+}

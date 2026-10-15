@@ -1,9 +1,9 @@
 package com.thecommitcrew.domain.enums;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OrderSideTest {
+class OrderSideTest {
     @Test
     void buyAppliesAddition() {
         long result = OrderSide.BUY.apply(10L, 5L);

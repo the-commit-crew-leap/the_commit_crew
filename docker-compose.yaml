@@ -5,14 +5,39 @@ services:
       context: .
       dockerfile: auth/Dockerfile
     ports:
-      - "0.0.0.0:8082:8080"
+      - "0.0.0.0:8082:3000"
     environment:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
+      NODE_ENV: ${NODE_ENV:-development}
+      # Auth Database
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTH_DB: ${AUTH_DB:?}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
+      # Trading Database
+      TRADING_DB_HOST: db
+      TRADING_DB_PORT: 5432
+      TRADING_DB_USER: postgres
+      TRADING_DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      TRADING_DB_NAME: ${POSTGRES_DB:?}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 
   app:
     build: .
     depends_on:
+      auth:
+        condition: service_healthy
       db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     ports:
       - "0.0.0.0:8081:8081"
@@ -21,6 +46,15 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTH_SERVICE_URL: http://auth:3000
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://*,https://*}
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   analytics:
     build:
@@ -42,6 +76,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "0.0.0.0:8086:80"
+    environment:
+      - ANGULAR_API_URL=http://app:8081
+    depends_on:
+      app:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
   db:
     build: 
       context: .
@@ -63,12 +115,60 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  kafka:
+    image: apache/kafka:4.3.1
+    ports:
+      - "${KAFKA_PORT:-9094}:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${KAFKA_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 10
+
+  execution-engine:
+    build:
+      context: .
+      dockerfile: execution-engine/Dockerfile
+    ports:
+      - "0.0.0.0:8084:8082"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ENGINE_MIN_DELAY: ${ENGINE_MIN_DELAY:-500ms}
+      ENGINE_MAX_DELAY: ${ENGINE_MAX_DELAY:-2000ms}
+      ENGINE_MAX_PRICE_IMPROVEMENT_BPS: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:-50}
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.5.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: the-commit-crew
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+
 networks:
   default:
     name: the-commit-crew_default
     
 volumes:
   db_data:
-    # Named volume: persists Postgres data across 'docker compose down' and
-    # 'docker compose up'. Use 'docker compose down -v' to also remove this
-    # volume, which wipes the database and starts fresh on the next 'up'.

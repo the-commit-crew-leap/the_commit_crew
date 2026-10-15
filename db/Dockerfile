@@ -3,7 +3,12 @@ FROM postgres:15
 ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
 # Copy entire db directory with schema, seeds, and indexes
-COPY . /docker-entrypoint-initdb.d/
+COPY db/ /docker-entrypoint-initdb.d/
+
+# Copy generated market data CSV files
+RUN mkdir -p /docker-entrypoint-initdb.d/data && \
+    cp /market_data/price_history.csv /docker-entrypoint-initdb.d/data/ && \
+    cp /market_data/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
 
 # Make all shell scripts executable
 RUN chmod +x /docker-entrypoint-initdb.d/*.sh

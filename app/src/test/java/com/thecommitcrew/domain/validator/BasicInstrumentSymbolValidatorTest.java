@@ -1,7 +1,8 @@
 package com.thecommitcrew.domain.validator;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
@@ -16,7 +17,7 @@ import com.thecommitcrew.persistence.entity.InstrumentEntity;
 import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
 @ExtendWith(MockitoExtension.class)
-public class BasicInstrumentSymbolValidatorTest {
+class BasicInstrumentSymbolValidatorTest {
 
     @Mock
     private InstrumentRepository instrumentRepository;
@@ -29,7 +30,7 @@ public class BasicInstrumentSymbolValidatorTest {
     }
     
     @Test
-    public void testValidateSymbol_ValidSymbol() {
+    void testValidateSymbol_ValidSymbol() {
         // Mock valid symbols
         when(instrumentRepository.findBySymbol("AAPL"))
             .thenReturn(Optional.of(new InstrumentEntity("AAPL", "Apple Inc.", null, "USD", true)));
@@ -40,14 +41,12 @@ public class BasicInstrumentSymbolValidatorTest {
     }
     
     @Test
-    public void testValidateSymbol_InvalidSymbol() {
+    void testValidateSymbol_InvalidSymbol() {
         // Mock invalid symbol - returns empty Optional
         when(instrumentRepository.findBySymbol("NONEXISTENT"))
             .thenReturn(Optional.empty());
         
-        assertThrows(InstrumentNotFoundException.class, () -> {
-            validator.validateSymbol("NONEXISTENT");
-        });
+        assertThrows(InstrumentNotFoundException.class, () -> validator.validateSymbol("NONEXISTENT"));
     }
 
 }

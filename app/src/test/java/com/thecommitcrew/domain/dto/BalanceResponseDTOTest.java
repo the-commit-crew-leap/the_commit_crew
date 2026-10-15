@@ -1,6 +1,7 @@
 package com.thecommitcrew.domain.dto;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
 
@@ -8,11 +9,11 @@ import org.junit.jupiter.api.Test;
 
 import com.thecommitcrew.domain.model.Money;
 
-public class BalanceResponseDTOTest {
+class BalanceResponseDTOTest {
     
     @Test
     void testBalanceResponseCreation() {
-        Long accountId = 1L;
+        String accountId = "ACC-1001";
         Money cashBalance = new Money(new BigDecimal("10000.00"));
         
         BalanceResponseDTO response = new BalanceResponseDTO(
@@ -26,7 +27,7 @@ public class BalanceResponseDTOTest {
     
     @Test
     void testBalanceResponseFields() {
-        Long accountId = 2L;
+        String accountId = "ACC-1002";
         Money cashBalance = new Money(new BigDecimal("25000.50"));
         
         BalanceResponseDTO response = new BalanceResponseDTO(

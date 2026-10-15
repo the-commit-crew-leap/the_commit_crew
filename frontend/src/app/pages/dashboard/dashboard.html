@@ -1,0 +1,41 @@
+<section class="dash-shell">
+  <div class="workspace">
+    <div class="dash-card">
+      <h1>Trading overview</h1>
+      <p class="welcome-message">Welcome back. Here's what's in your account.</p>
+    </div>
+
+    <section class="portfolio-overview" aria-label="Portfolio overview">
+      <article class="overview-card">
+        <span>Total portfolio value</span>
+        <strong>${{ formatCurrency(portfolioValue) }}</strong>
+        <small [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
+          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }} today
+        </small>
+      </article>
+      <article class="overview-card">
+        <span>Available to trade</span>
+        <strong>
+          ${{ balance() ? formatCurrency(+balance()!.cashBalance.amount) : '—' }}
+        </strong>
+        <small>USD balance · Ready to invest</small>
+      </article>
+      <article class="overview-card">
+        <span>Today's return</span>
+        <strong class="positive">{{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}</strong>
+        <small class="positive">Across your portfolio</small>
+      </article>
+      <article class="overview-card">
+        <span>Open orders</span>
+        <strong>{{ openOrders }}</strong>
+        <small>{{ openOrders }} active order{{ openOrders === 1 ? '' : 's' }}</small>
+      </article>
+    </section>
+
+    <main class="portfolio-column">
+      <app-assets></app-assets>
+    </main>
+
+    <app-order-ticket [balance]="balance()"></app-order-ticket>
+  </div>
+</section>

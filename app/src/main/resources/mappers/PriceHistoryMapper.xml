@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thecommitcrew.persistence.mapper.PriceHistoryMapper">
+
+    <select id="findLatestPriceBySymbol" resultType="com.thecommitcrew.domain.model.PriceHistory">
+        SELECT id, symbol, price_date as priceDate, open_price as openPrice, high_price as highPrice, low_price as lowPrice, close_price as closePrice, volume
+        FROM price_history
+        WHERE symbol = #{symbol}
+        ORDER BY price_date DESC
+        LIMIT 1
+    </select>
+
+</mapper>

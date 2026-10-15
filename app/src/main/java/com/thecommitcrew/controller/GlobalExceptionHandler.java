@@ -2,6 +2,7 @@ package com.thecommitcrew.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +16,8 @@ import com.thecommitcrew.domain.exception.InsufficientFundsException;
 import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
+import com.thecommitcrew.domain.exception.PriceNotFoundException;
+import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,6 +33,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleInstrumentNotFound(InstrumentNotFoundException e) {
         ErrorResponseDTO error = new ErrorResponseDTO("INSTRUMENT_NOT_FOUND", e.getMessage());
+        return ResponseEntity.status(404).body(error);
+    }
+
+    @ExceptionHandler(PriceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handlePriceNotFound(PriceNotFoundException e) {
+        ErrorResponseDTO error = new ErrorResponseDTO("PRICE_NOT_FOUND", e.getMessage());
         return ResponseEntity.status(404).body(error);
     }
 
@@ -93,5 +102,11 @@ public class GlobalExceptionHandler {
         logger.error("Unhandled exception:", e);
         ErrorResponseDTO error = new ErrorResponseDTO("INTERNAL_SERVER_ERROR", "An unexpected error occurred");
         return ResponseEntity.status(500).body(error);
+    }
+
+    @ExceptionHandler(UnauthorizedAccountException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUnauthorizedAccountException(UnauthorizedAccountException e) {
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO("FORBIDDEN", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
 }

@@ -4,7 +4,7 @@ import com.thecommitcrew.domain.model.Money;
 
 public record BalanceResponseDTO (
 
-    Long accountId,
+    String accountId,
     Money cashBalance
 
 ) {}

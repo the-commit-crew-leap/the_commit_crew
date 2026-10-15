@@ -1,0 +1,38 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+import {
+    AccountResponse,
+    BalanceResponse,
+    OrderResponse,
+    PositionResponse,
+    PlaceOrderRequest
+} from './trading.models';
+
+@Injectable({ providedIn: 'root' })
+export class TradingApiService {
+    private readonly baseUrl = environment.appApiBaseUrl;
+
+    constructor(private readonly http: HttpClient) {}
+
+    getAccount(accountId: string): Observable<AccountResponse> {
+        return this.http.get<AccountResponse>(`${this.baseUrl}/accounts/${accountId}`);
+    }
+
+    getBalance(accountId: string): Observable<BalanceResponse> {
+        return this.http.get<BalanceResponse>(`${this.baseUrl}/accounts/${accountId}/balance`);
+    }
+
+    getPositions(accountId: string): Observable<PositionResponse[]> {
+        return this.http.get<PositionResponse[]>(`${this.baseUrl}/accounts/${accountId}/positions`);
+    }
+
+    getAccountOrders(accountId: string): Observable<OrderResponse[]> {
+        return this.http.get<OrderResponse[]>(`${this.baseUrl}/accounts/${accountId}/orders`);
+    }
+
+    placeOrder(request: PlaceOrderRequest): Observable<OrderResponse> {
+        return this.http.post<OrderResponse>(`${this.baseUrl}/orders`, request);
+    }
+}
