@@ -39,6 +39,10 @@ app-order-ticket {
   color: #e8ebf0;
 }
 
+.dash-card h1 {
+  margin: 0;
+}
+
 .portfolio-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

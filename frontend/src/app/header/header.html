@@ -20,7 +20,6 @@
         [attr.aria-expanded]="accountMenuOpen"
         (click)="toggleAccountMenu()">
       Account
-        <span aria-hidden="true">⌄</span>
       </button>
 
       <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
