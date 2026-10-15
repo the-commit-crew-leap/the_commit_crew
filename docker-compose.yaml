@@ -22,19 +22,23 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
 
-  scheduler:
+  analytics:
     build:
       context: .
       dockerfile: analytics/Dockerfile
     working_dir: /app/analytics
+    command: ["uvicorn", "src.api_module:app", "--host", "0.0.0.0", "--port", "8090"]
+    ports:
+      - "0.0.0.0:${ANALYTICS_API_PORT:-8090}:8090"
     environment:
       PYTHONUNBUFFERED: 1
       LOG_LEVEL: INFO
     volumes:
       - ./analytics:/app/analytics
-      - ./outputs:/app/outputs
+      - ./analytics/outputs:/app/analytics/outputs
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   db:

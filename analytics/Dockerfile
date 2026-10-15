@@ -19,5 +19,5 @@ COPY analytics/ .
 # Set PYTHONUNBUFFERED to see logs in real-time
 ENV PYTHONUNBUFFERED=1
 
-# Run the scheduler
-CMD ["python", "src/run_scheduler.py"]
+# Run the analytics API
+CMD ["uvicorn", "src.api_module:app", "--host", "0.0.0.0", "--port", "8090"]

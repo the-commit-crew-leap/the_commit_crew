@@ -35,8 +35,8 @@ python -m src.main run --asset-classes stocks bonds --period 5y
 python -m src.main run --period 5y
 python -m src.main run --period all
 
-# Run scheduler (runs ETL automatically on schedule)
-python src/run_scheduler.py
+# Run the API locally
+uvicorn src.api_module:app --host 0.0.0.0 --port 8090
 ```
 
 
@@ -48,9 +48,6 @@ python -m pytest -v tests
 
 # Run specific test
 python -m pytest -v tests/pipeline/test_etl.py
-
-# Run scheduler tests
-python -m pytest -v tests/scheduler/test_scheduler.py
 
 # Run tests coverage
 # Needs pytest-cov installed
@@ -94,11 +91,11 @@ curl "http://localhost:8000/charts/asset-class-volatility?tickers=AAPL&tickers=S
 
 ### 4. Docker
 
-Dockerfile in `analytics` folder and `scheduler` service added to `docker-compose` file. Now ETL pipeline runs daily at configured time (17:00).
+The `analytics` service exposes the FastAPI application on port 8090.
 
 ```bash
-# Scheduler logs
-docker-compose logs -f scheduler
+# Analytics API logs
+docker-compose logs -f analytics-api
 ```
 
 

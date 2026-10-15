@@ -174,5 +174,5 @@ def get_asset_class_volatility_chart(
     return FileResponse(path=path, media_type="image/png", filename=filename)
 
 if __name__ == "__main__":
-    uvicorn.run("src.api_module:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("src.api_module:app", host="0.0.0.0", port=8090)
 
