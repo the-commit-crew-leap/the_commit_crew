@@ -1,11 +1,23 @@
-import { test, expect } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const ordersUrl = '**/accounts/ACC-F92249B8/orders';
 
-test('shows order history rows and statuses', async ({ page }) => {
+async function seedSession(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    const session = {
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token',
+      expiresAt: Date.now() + 60 * 60 * 1000,
+      accountId: 'ACC-F92249B8',
+      role: 'USER'
+    };
     localStorage.setItem('auth.accountId', 'ACC-F92249B8');
+    sessionStorage.setItem('auth_session', JSON.stringify(session));
   });
+}
+
+test('shows order history rows and statuses', async ({ page }) => {
+  await seedSession(page);
 
   await page.route(ordersUrl, async (route) => {
     await route.fulfill({
@@ -38,7 +50,7 @@ test('shows order history rows and statuses', async ({ page }) => {
 
   await page.goto('/orders');
 
-  await expect(page.getByRole('heading', { name: 'Order History' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Order history' })).toBeVisible();
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('TSLA')).toBeVisible();
   await expect(page.getByText('FILLED')).toBeVisible();
@@ -46,9 +58,7 @@ test('shows order history rows and statuses', async ({ page }) => {
 });
 
 test('shows error state when API fails', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('auth.accountId', 'ACC-F92249B8');
-  });
+  await seedSession(page);
 
   await page.route(ordersUrl, async (route) => {
     await route.fulfill({ status: 500, body: 'error' });
