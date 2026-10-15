@@ -68,6 +68,18 @@ describe('WatchlistComponent', () => {
     expect(searchInput.disabled).toBe(false);
   });
 
+  it('disables the add button until an instrument is selected', () => {
+    fixture.detectChanges();
+
+    const addButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(addButton.disabled).toBe(true);
+
+    component.selectedSymbol = 'ETH';
+    fixture.detectChanges();
+
+    expect(addButton.disabled).toBe(false);
+  });
+
   it('adds and removes an instrument for the current account', () => {
     component.selectedSymbol = 'ETH';
     component.addInstrument();
