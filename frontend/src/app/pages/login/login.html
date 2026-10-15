@@ -5,13 +5,13 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="username">Username</label>
-      <input id="username" type="text" formControlName="username" autocomplete="username" />
+      <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Enter your username" />
       <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
         Username is required.
       </p>
 
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+      <input id="password" type="password" formControlName="password" autocomplete="current-password" placeholder="Enter your password" />
       <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
         Password is required.
       </p>
