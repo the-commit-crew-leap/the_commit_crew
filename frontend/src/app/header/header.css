@@ -24,9 +24,10 @@
 }
 
 .tcc-brand-mark {
+  display: block;
   width: 26px;
   height: 26px;
-  background: #a7b8fa;
+  object-fit: contain;
 }
 
 .tcc-primary-nav {
