@@ -51,8 +51,8 @@ CSV_DIR = OUTPUT_DIR / "csv"
 CSV_DIR.mkdir(parents=True, exist_ok=True)
 
 # Seed file
-INSTRUMENTS_SEED_FILE = REPO_ROOT / "db" / "seeds" / "instruments-data.sql"
-PRICE_HISTORY_SEED_FILE = REPO_ROOT / "db" / "seeds" / "price_history-data.sql"
+INSTRUMENTS_SEED_FILE = REPO_ROOT / "db" / "seeds" / "trading-db" / "instruments-data.sql"
+PRICE_HISTORY_SEED_FILE = REPO_ROOT / "db" / "seeds" / "trading-db" / "price_history-data.sql"
 
 # Price history and metadata files
 PRICE_HISTORY_FILE = CSV_DIR / "price_history.csv"
