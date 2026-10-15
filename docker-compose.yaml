@@ -33,6 +33,7 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
       LOG_LEVEL: INFO
+      ANALYTICS_CORS_ORIGINS: ${ANALYTICS_CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
     volumes:
       - ./analytics:/app/analytics
       - ./analytics/outputs:/app/analytics/outputs

@@ -1,20 +1,38 @@
-from typing import List, Optional
+import json
 import logging
+import os
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import uvicorn
 
 from src.analysis.analysis_helper import AnalysisHelper
 from src.analysis.data_loader import DataLoader
 from src.analysis.analysis_engine import AnalysisEngine
 from src.reports.web_report import WebReport
-from config import config
 
 logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="Portfolio Analytics API")
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "ANALYTICS_CORS_ORIGINS",
+        "http://localhost:8086,http://127.0.0.1:8086",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 helper = AnalysisHelper()
 loader = DataLoader()
 analysis_engine = AnalysisEngine(data_loader=loader, helper=helper)
@@ -47,15 +65,11 @@ def _select_tickers(
     return selected
 
 
-def _chart_response(
-    chart_path: str,
-    filename: str,
-) -> FileResponse:
-    """Return a generated HTML chart or a useful server error."""
-    path = config.CHARTS_DIR / chart_path
-    if not path.exists():
-        raise HTTPException(status_code=500, detail="Chart was not generated")
-    return FileResponse(path=path, media_type="text/html", filename=filename)
+def _figure_response(figure) -> JSONResponse:
+    """Serialize a Plotly figure for browser-side rendering."""
+    if figure is None:
+        raise HTTPException(status_code=404, detail="No chart data available")
+    return JSONResponse(content=json.loads(figure.to_json()))
 
 
 # HEALTH
@@ -107,8 +121,7 @@ def run_analysis(
     """
     Run the complete analysis, including statistics and plot generation.
 
-    This endpoint generates the PNG files but does not save the JSON
-    web-report file.
+    This endpoint generates chart data for the UI but does not save files.
     """
     _validate_period(period)
     result = web_report.generate_web_report(
@@ -140,12 +153,13 @@ def get_correlation_chart(
     period = _validate_period(period)
 
     start_date, end_date = helper.get_date_range(period)
-    ticker_label = helper.get_ticker_label(selected_tickers)
-    filename = f"correlation_{ticker_label}_{period.upper()}.html"
-
-    analysis_engine.plot_correlation_heatmap(selected_tickers, start_date, end_date, period.upper())
-
-    return _chart_response(f"correlation/{filename}", filename)
+    figure = analysis_engine.create_correlation_figure(
+        selected_tickers,
+        start_date,
+        end_date,
+        period.upper(),
+    )
+    return _figure_response(figure)
 
 
 @app.get("/charts/volatility")
@@ -162,12 +176,14 @@ def get_volatility_chart(
     period = _validate_period(period)
 
     start_date, end_date = helper.get_date_range(period)
-    ticker_label = helper.get_ticker_label(selected_tickers)
-    filename = f"rolling_volatility_{volatility_window}d_{ticker_label}_{period.upper()}.html"
-
-    analysis_engine.plot_volatility_trends(selected_tickers, start_date, end_date, period.upper(), window=volatility_window)
-
-    return _chart_response(f"rolling_volatility/{filename}", filename)
+    figure = analysis_engine.create_volatility_figure(
+        selected_tickers,
+        start_date,
+        end_date,
+        period.upper(),
+        window=volatility_window,
+    )
+    return _figure_response(figure)
 
 
 @app.get("/charts/asset-class-volatility")
@@ -183,12 +199,13 @@ def get_asset_class_volatility_chart(
     period = _validate_period(period)
 
     start_date, end_date = helper.get_date_range(period)
-    ticker_label = helper.get_ticker_label(selected_tickers)
-    filename = f"asset_class_volatility_{ticker_label}_{period.upper()}.html"
-    
-    analysis_engine.plot_asset_class_volatility(selected_tickers, start_date, end_date,period.upper())
-
-    return _chart_response(f"asset_class_volatility/{filename}", filename)
+    figure = analysis_engine.create_asset_class_volatility_figure(
+        selected_tickers,
+        start_date,
+        end_date,
+        period.upper(),
+    )
+    return _figure_response(figure)
 
 if __name__ == "__main__":
     uvicorn.run("src.api_module:app", host="0.0.0.0", port=8090)

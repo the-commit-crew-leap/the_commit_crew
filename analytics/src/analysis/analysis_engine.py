@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -122,9 +123,15 @@ class AnalysisEngine:
 
 
     # CORRELATION ANALYSIS
-    def plot_correlation_heatmap(self, tickers: list, start_date: str, end_date: str, period_label: str) -> None:
+    def create_correlation_figure(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> Optional[go.Figure]:
         """
-        Generate and save an interactive correlation heatmap of daily returns.
+        Generate an interactive correlation heatmap of daily returns.
         Pearson correlation is calculated between the daily returns of each
         pair of instruments.
 
@@ -135,17 +142,17 @@ class AnalysisEngine:
             period_label: Human-readable period label such as "1Y" or "5Y".
 
         Returns:
-            None. The resulting HTML is saved to config.CHARTS_DIR.
+            A Plotly figure, or None when there is insufficient data.
         """
         returns_df = self.get_returns_for_tickers(tickers, start_date, end_date)
 
         if returns_df.empty:
             logger.warning("No data available for correlation plot")
-            return
+            return None
 
         if len(returns_df.columns) < 2:
             logger.warning("At least two tickers are required for a correlation heatmap")
-            return
+            return None
 
         correlation = returns_df.corr()
         ticker_label, ticker_title = self._chart_labels(returns_df.columns.tolist())
@@ -172,14 +179,36 @@ class AnalysisEngine:
             height=800
         )
 
+        return fig
+
+    def plot_correlation_heatmap(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> None:
+        """Generate and save the correlation heatmap for file-based reports."""
+        figure = self.create_correlation_figure(tickers, start_date, end_date, period_label)
+        if figure is None:
+            return
+
+        ticker_label, _ = self._chart_labels(figure.data[0].x)
         filename = f"correlation/correlation_{ticker_label}_{period_label}.html"
-        self.helper.save_plotly_chart(fig, filename)
+        self.helper.save_plotly_chart(figure, filename)
 
 
     # ROLLING VOLATILITY
-    def plot_volatility_trends(self, tickers: list, start_date: str, end_date: str, period_label: str, window: int = 30) -> None:
+    def create_volatility_figure(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+        window: int = 30,
+    ) -> Optional[go.Figure]:
         """
-        Generate and save interactive rolling annualized volatility trends.
+        Generate interactive rolling annualized volatility trends.
         The resulting values are displayed as percentages -> 0.20 annualized volatility = 20%
 
         Args:
@@ -191,7 +220,7 @@ class AnalysisEngine:
                 volatility calculation. Default is 30 trading days.
 
         Returns:
-            None. The resulting HTML is saved to config.CHARTS_DIR.
+            A Plotly figure, or None when there is insufficient data.
         """
         if window < 2:
             raise ValueError("Volatility window must be at least 2 trading days")
@@ -200,7 +229,7 @@ class AnalysisEngine:
 
         if returns_df.empty:
             logger.warning("No data available for volatility plot")
-            return
+            return None
 
         ticker_label, ticker_title = self._chart_labels(returns_df.columns.tolist())
 
@@ -222,7 +251,7 @@ class AnalysisEngine:
 
         if plotted == 0:
             logger.warning(f"Not enough data to calculate {window}-day rolling volatility")
-            return
+            return None
 
         fig.update_layout(
             title=f"{window}-Day Rolling Annualized Volatility — {ticker_title} — {period_label}",
@@ -234,12 +263,34 @@ class AnalysisEngine:
             template="plotly_white"
         )
 
+        return fig
+
+    def plot_volatility_trends(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+        window: int = 30,
+    ) -> None:
+        """Generate and save rolling volatility for file-based reports."""
+        figure = self.create_volatility_figure(tickers, start_date, end_date, period_label, window)
+        if figure is None:
+            return
+
+        ticker_label, _ = self._chart_labels(figure.data[0].name and [trace.name for trace in figure.data])
         filename = f"rolling_volatility/rolling_volatility_{window}d_{ticker_label}_{period_label}.html"
-        self.helper.save_plotly_chart(fig, filename)
+        self.helper.save_plotly_chart(figure, filename)
 
 
     # ASSET CLASS VOLATILITY
-    def plot_asset_class_volatility(self, tickers: list, start_date: str, end_date: str, period_label: str) -> None:
+    def create_asset_class_volatility_figure(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> Optional[go.Figure]:
         """
         Compare annualized volatility across individual securities and
         configured asset classes using an interactive box plot with overlay.
@@ -256,7 +307,7 @@ class AnalysisEngine:
 
         if returns_df.empty:
             logger.warning("No data available for asset class volatility plot")
-            return
+            return None
 
         volatility = returns_df.std() * np.sqrt(252) * 100
         data_for_plot = []
@@ -270,7 +321,7 @@ class AnalysisEngine:
 
         if plot_df.empty:
             logger.warning("No valid volatility data for asset class plot")
-            return
+            return None
 
         ticker_label, ticker_title = self._chart_labels(plot_df["Ticker"].tolist())
 
@@ -308,8 +359,23 @@ class AnalysisEngine:
             hovermode="closest"
         )
 
+        return fig
+
+    def plot_asset_class_volatility(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> None:
+        """Generate and save asset-class volatility for file-based reports."""
+        figure = self.create_asset_class_volatility_figure(tickers, start_date, end_date, period_label)
+        if figure is None:
+            return
+
+        ticker_label, _ = self._chart_labels(figure.data[-1].text)
         filename = f"asset_class_volatility/asset_class_volatility_{ticker_label}_{period_label}.html"
-        self.helper.save_plotly_chart(fig, filename)
+        self.helper.save_plotly_chart(figure, filename)
 
 
     # STATISTICS SUMMARY

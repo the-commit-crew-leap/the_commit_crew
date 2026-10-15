@@ -26,10 +26,7 @@ python -m src.analysis.analysis_engine
 python -m src.main run
 
 # Analyze specific symbols and period
-python -m src.main run --symbols AAPL BND SPY --period 1y
-
-# Analyze by asset class and period
-python -m src.main run --asset-classes stocks bonds --period 5y
+python -m src.main run --symbols AAPL IEF SPY --period 1y
 
 # Different periods
 python -m src.main run --period 5y
@@ -40,7 +37,7 @@ uvicorn src.api_module:app --host 0.0.0.0 --port 8090
 ```
 
 
-### 2. Run tests
+### 3. Run tests
 
 ```bash
 # Run all tests
@@ -55,47 +52,47 @@ python -m pytest --cov=src --cov-report=term-missing tests/
 ```
 
 
-### 3. API Endpoints
+### 4. API Endpoints
 
 ```bash
 # Run server
 python -m src.api_module
 ```
 
-Service available on `localhost:8000`.
+Service available on `http://localhost:8090`.
 
-Six different endpoints:
+The API provides six endpoints:
 - `GET /health` -> checks if service is running
 - `POST /analysis` -> runs the complete analysis (statistics + plots)
 ```bash
-curl -X POST "http://127.0.0.1:8000/analysis?tickers=AAPL&tickers=SPY&tickers=BND&period=1y&volatility_window=30"
+curl -X POST "http://127.0.0.1:8090/analysis?tickers=AAPL&tickers=SPY&tickers=IEF&period=1y&volatility_window=30"
 
 ```
 - `GET /insights` -> returns web report with statistics
 ```bash
-curl "http://localhost:8000/insights?asset_classes=stocks&asset_classes=bonds&period=5y"
+curl "http://localhost:8090/insights?asset_classes=stocks&asset_classes=bonds&period=5y"
 ```
 - `GET /charts/correlation` -> returns correlation heatmap
 ```bash
-curl "http://localhost:8000/charts/correlation?tickers=AAPL&tickers=SPY&tickers=BND&period=1y"
+curl "http://localhost:8090/charts/correlation?tickers=AAPL&tickers=SPY&tickers=IEF&period=1y"
 ```
 - `GET /charts/volatility` -> return rolling volatility chart
 ```bash
-curl "http://localhost:8000/charts/volatility?tickers=AAPL&tickers=SPY&period=1y&volatility_window=30"
+curl "http://localhost:8090/charts/volatility?tickers=AAPL&tickers=SPY&period=1y&volatility_window=30"
 ```
 - `GET /charts/asset-class-volatility` -> returns the asset-class volatility chart
 ```bash
-curl "http://localhost:8000/charts/asset-class-volatility?tickers=AAPL&tickers=SPY&tickers=BND&period=1y"
+curl "http://localhost:8090/charts/asset-class-volatility?tickers=AAPL&tickers=SPY&tickers=IEF&period=1y"
 ```
 
 
-### 4. Docker
+### 5. Docker
 
 The `analytics` service exposes the FastAPI application on port 8090.
 
 ```bash
 # Analytics API logs
-docker-compose logs -f analytics-api
+docker compose logs -f analytics
 ```
 
 
