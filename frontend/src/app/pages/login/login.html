@@ -1,25 +1,58 @@
+<app-auth-header />
+
 <section class="auth-shell">
+  <div class="auth-intro" aria-hidden="true">
+    <p class="eyebrow">Built for your next move</p>
+    <h1>A clearer view.<br />A sharper trade.</h1>
+    <p class="intro-copy">
+      Real-time markets, powerful tools, and your entire portfolio. One focused workspace for every decision.
+    </p>
+    <div class="intro-chart">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="intro-stats">
+      <span><strong>24/7</strong>Global markets</span>
+      <span><strong>50+</strong>Digital assets</span>
+      <span><strong>One</strong>Connected portfolio</span>
+    </div>
+  </div>
+
   <div class="auth-card">
     <h1>Sign in</h1>
     <p class="info-msg" *ngIf="infoMessage">{{ infoMessage }}</p>
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="username">Username</label>
-      <input id="username" type="text" formControlName="username" autocomplete="username" />
+      <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Enter your username" />
       <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
         Username is required.
       </p>
 
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+      <input id="password" type="password" formControlName="password" autocomplete="current-password" placeholder="Enter your password" />
       <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
         Password is required.
       </p>
 
+      <label class="remember-me">
+        <input type="checkbox" formControlName="rememberMe" />
+        <span>Remember me</span>
+      </label>
       <p class="api-error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
       <button type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+      </button>
+
+      <div class="auth-divider"><span>or continue with</span></div>
+
+      <button class="secondary-button" type="button" (click)="continueWithGoogle()">
+        Continue with Google
       </button>
     </form>
 

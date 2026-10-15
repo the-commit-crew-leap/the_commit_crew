@@ -65,6 +65,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /google:
+    get:
+      summary: Start Google sign-in
+      tags:
+        - Authentication
+      responses:
+        '302':
+          description: Redirects to Google authorization
+
+  /google/callback:
+    get:
+      summary: Complete Google sign-in
+      tags:
+        - Authentication
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects to the frontend with an authenticated session
+
   /refresh:
     post:
       summary: Refresh access token

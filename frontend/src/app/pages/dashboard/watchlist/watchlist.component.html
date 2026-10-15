@@ -1,0 +1,63 @@
+<section class="watchlist-card" aria-labelledby="watchlist-title">
+  <header class="watchlist-header">
+    <div>
+      <h2 id="watchlist-title">Watchlist</h2>
+      <p>Track instruments you may want to trade.</p>
+    </div>
+  </header>
+
+  <form class="watchlist-form" (ngSubmit)="addInstrument()">
+    <label for="instrument-select">Add an instrument</label>
+    <select
+      id="instrument-select"
+      name="selectedSymbol"
+      [(ngModel)]="selectedSymbol"
+      [disabled]="loading || saving || availableInstruments.length === 0"
+      aria-label="Instrument to add">
+      <option value="">Select an instrument</option>
+      <option *ngFor="let instrument of availableInstruments" [value]="instrument.symbol">
+        {{ instrument.symbol }} · {{ instrument.name }}
+      </option>
+    </select>
+    <button type="submit" [disabled]="loading || saving || !selectedSymbol">
+      {{ saving ? 'Adding...' : 'Add' }}
+    </button>
+  </form>
+
+  <p *ngIf="loading" class="watchlist-state">Loading your watchlist...</p>
+  <p *ngIf="!loading && error" class="watchlist-state watchlist-error" role="alert">{{ error }}</p>
+  <p *ngIf="!loading && !error && success" class="watchlist-state watchlist-success" role="status">
+    {{ success }}
+  </p>
+  <p *ngIf="!loading && !error && watchlist.length === 0" class="watchlist-state">
+    Your watchlist is empty. Search for an instrument above to get started.
+  </p>
+
+  <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-columns" aria-hidden="true">
+    <span>Asset</span>
+    <span>Latest price</span>
+    <span></span>
+  </div>
+  <ul *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-items">
+    <li *ngFor="let instrument of watchlist" class="watchlist-item">
+      <div class="watchlist-asset">
+        <strong>{{ instrument.symbol }}</strong>
+        <span>{{ instrument.name }}</span>
+      </div>
+      <span class="watchlist-price">
+        <span *ngIf="isPricePending(instrument.symbol)">Loading...</span>
+        <span *ngIf="isPriceUnavailable(instrument.symbol)">Unavailable</span>
+        <span *ngIf="!isPricePending(instrument.symbol) && !isPriceUnavailable(instrument.symbol)">
+          ${{ getLatestPrice(instrument.symbol) | number:'1.2-2' }}
+        </span>
+      </span>
+      <button
+        type="button"
+        class="remove-button"
+        [disabled]="removingSymbol === instrument.symbol"
+        (click)="removeInstrument(instrument)">
+        {{ removingSymbol === instrument.symbol ? 'Removing...' : 'Remove' }}
+      </button>
+    </li>
+  </ul>
+</section>

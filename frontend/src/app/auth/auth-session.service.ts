@@ -17,22 +17,48 @@ export class AuthSessionService {
     this.accountId.set(this.tokenStorage.getAccountId());
   }
 
-  login(payload: LoginRequest): Observable<void> {
+  login(payload: LoginRequest, rememberMe = false): Observable<void> {
     return this.authApi.login(payload).pipe(
       tap((response) => {
         localStorage.setItem('auth.accountId', response.accountId);
         this.accountId.set(response.accountId);
+
         const expiresAt = Date.now() + response.expiresIn * 1000;
+
         this.tokenStorage.saveSession({
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           expiresAt,
           accountId: response.accountId,
           role: response.role
-        });
+        }, rememberMe);
       }),
       map(() => void 0)
     );
+  }
+
+  completeGoogleLogin(fragment: string, rememberMe = false): boolean {
+    const params = new URLSearchParams(fragment.replace(/^#/, ''));
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    const expiresIn = Number(params.get('expiresIn'));
+    const accountId = params.get('accountId');
+    const role = params.get('role');
+
+    if (!accessToken || !refreshToken || !Number.isFinite(expiresIn) || !accountId || !role) {
+      return false;
+    }
+
+    localStorage.setItem('auth.accountId', accountId);
+    this.accountId.set(accountId);
+    this.tokenStorage.saveSession({
+      accessToken,
+      refreshToken,
+      expiresAt: Date.now() + expiresIn * 1000,
+      accountId,
+      role
+    }, rememberMe);
+    return true;
   }
 
   validateSession(): Observable<void> {

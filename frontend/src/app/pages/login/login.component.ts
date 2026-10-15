@@ -5,13 +5,15 @@ import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
 import { getAuthErrorMessage } from '../../auth/auth-error.util';
+import { AuthHeaderComponent } from '../../auth-header/auth-header.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
   selector: 'app-login',
   templateUrl: './login.html',
   styleUrl: './login.css',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink]
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthHeaderComponent]
 })
 export class LoginComponent {
   isSubmitting = false;
@@ -20,7 +22,8 @@ export class LoginComponent {
 
   form = this.fb.nonNullable.group({
     username: ['', [Validators.required]],
-    password: ['', [Validators.required]]
+    password: ['', [Validators.required]],
+    rememberMe: [false]
   });
 
   constructor(
@@ -30,12 +33,30 @@ export class LoginComponent {
     private readonly route: ActivatedRoute,
     private readonly cdr: ChangeDetectorRef
   ) {
+    const oauthRememberMe = sessionStorage.getItem('oauth_remember_me') === 'true';
+    if (window.location.hash && this.authSession.completeGoogleLogin(window.location.hash, oauthRememberMe)) {
+      sessionStorage.removeItem('oauth_remember_me');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      void this.router.navigateByUrl('/dashboard');
+      return;
+    }
+
+    if (new URLSearchParams(window.location.search).get('oauthError')) {
+      this.errorMessage = 'Google sign-in failed. Please try again.';
+    }
+
     const query = this.route.snapshot.queryParamMap;
     if (query.get('registered') === '1') {
       this.infoMessage = 'Account created successfully. Please sign in.';
     } else if (query.get('expired') === '1') {
       this.infoMessage = 'Session expired. Please sign in again.';
     }
+
+  }
+
+  continueWithGoogle(): void {
+    sessionStorage.setItem('oauth_remember_me', String(this.form.controls.rememberMe.value));
+    window.location.assign(`${environment.authApiBaseUrl}/google`);
   }
 
   submit(): void {
@@ -47,7 +68,13 @@ export class LoginComponent {
     this.errorMessage = '';
     this.isSubmitting = true;
 
-    this.authSession.login(this.form.getRawValue())
+    this.authSession.login(
+      {
+        username: this.form.controls.username.value,
+        password: this.form.controls.password.value
+      },
+      this.form.controls.rememberMe.value
+    )
       .pipe(
         finalize(() => {
           this.isSubmitting = false;

@@ -20,6 +20,7 @@
 
 .ticket-header,
 .balance-row,
+.quote-row,
 .total-row {
   display: flex;
   align-items: center;
@@ -76,13 +77,21 @@ form {
 }
 
 .balance-row,
+.quote-row,
 .ticket-note {
   color: #8f9aaa;
 }
 
-.balance-row strong {
+.balance-row strong,
+.quote-row strong,
+.total-row strong {
   color: #e8ebf0;
   font-weight: 500;
+}
+
+.total-row {
+  color: #a8b1c0;
+  font-size: 18px;
 }
 
 .field-label {
