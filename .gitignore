@@ -1,13 +1,40 @@
 target/
-.env
+.env.dev
+.env.prod
 .env.*
-.venv
 .vscode
+
+# Python
+.venv
 **/.venv/
-python/market_data/
 **/__pycache__/
+*/__pycache__
 .pytest_cache/
 __init__.py
-*/__pycache__
 analytics.log
 analytics/outputs/
+
+# Node.js
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+coverage/
+.nyc_output/
+
+# Frontend
+.angular/
+.angular/cache
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+
+playwright-report/
+test-results/
+blob-report/
