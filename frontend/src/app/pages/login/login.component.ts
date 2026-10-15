@@ -5,13 +5,14 @@ import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
 import { getAuthErrorMessage } from '../../auth/auth-error.util';
+import { AuthHeaderComponent } from '../../auth-header/auth-header.component';
 
 @Component({
   standalone: true,
   selector: 'app-login',
   templateUrl: './login.html',
   styleUrl: './login.css',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink]
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthHeaderComponent]
 })
 export class LoginComponent {
   isSubmitting = false;
@@ -20,7 +21,8 @@ export class LoginComponent {
 
   form = this.fb.nonNullable.group({
     username: ['', [Validators.required]],
-    password: ['', [Validators.required]]
+    password: ['', [Validators.required]],
+    rememberMe: [false]
   });
 
   constructor(
@@ -47,13 +49,13 @@ export class LoginComponent {
     this.errorMessage = '';
     this.isSubmitting = true;
 
-    this.authSession.login(this.form.getRawValue())
-      .pipe(
-        finalize(() => {
-          this.isSubmitting = false;
-          this.cdr.detectChanges();
-        })
-      )
+    this.authSession.login(
+      {
+        username: this.form.controls.username.value,
+        password: this.form.controls.password.value
+      },
+      this.form.controls.rememberMe.value
+    )
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';

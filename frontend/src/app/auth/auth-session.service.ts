@@ -17,19 +17,21 @@ export class AuthSessionService {
     this.accountId.set(this.tokenStorage.getAccountId());
   }
 
-  login(payload: LoginRequest): Observable<void> {
+  login(payload: LoginRequest, rememberMe = false): Observable<void> {
     return this.authApi.login(payload).pipe(
       tap((response) => {
         localStorage.setItem('auth.accountId', response.accountId);
         this.accountId.set(response.accountId);
+
         const expiresAt = Date.now() + response.expiresIn * 1000;
+
         this.tokenStorage.saveSession({
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           expiresAt,
           accountId: response.accountId,
           role: response.role
-        });
+        }, rememberMe);
       }),
       map(() => void 0)
     );
