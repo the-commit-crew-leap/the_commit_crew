@@ -1,6 +1,9 @@
 package com.thecommitcrew;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Classifies and handles execution failures, distinguishing between permanent failures
@@ -28,21 +31,16 @@ public class FailureStrategy {
      * Determines if an exception represents a transient (retriable) failure.
      */
     private boolean isTransientFailure(Exception exception) {
-        if (exception instanceof java.util.concurrent.TimeoutException) {
-            return true;
+        Throwable cause = exception;
+
+        while (cause instanceof ExecutionException
+                || cause instanceof org.springframework.kafka.listener.ListenerExecutionFailedException) {
+            cause = cause.getCause();
         }
-        if (exception instanceof org.springframework.kafka.KafkaException) {
-            return true;
-        }
-        if (exception instanceof org.springframework.kafka.listener.ListenerExecutionFailedException) {
-            Throwable cause = exception.getCause();
-            return cause instanceof java.util.concurrent.TimeoutException || 
-                   cause instanceof org.springframework.kafka.KafkaException;
-        }
-        if (exception instanceof java.io.IOException) {
-            return true;
-        }
-        return false;
+
+        return cause instanceof TimeoutException
+                || cause instanceof org.springframework.kafka.KafkaException
+                || cause instanceof IOException;
     }
 
     /**
