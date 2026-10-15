@@ -6,9 +6,10 @@ ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 COPY db/ /docker-entrypoint-initdb.d/
 
 # Copy generated market data CSV files
-RUN mkdir -p /docker-entrypoint-initdb.d/data && \
-    cp /market_data/price_history.csv /docker-entrypoint-initdb.d/data/ && \
-    cp /market_data/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
+RUN mkdir -p /docker-entrypoint-initdb.d/data
+
+COPY analytics/outputs/csv/price_history.csv /docker-entrypoint-initdb.d/data/
+COPY analytics/outputs/csv/ticker_metadata.csv /docker-entrypoint-initdb.d/data/
 
 # Make all shell scripts executable
 RUN chmod +x /docker-entrypoint-initdb.d/*.sh
