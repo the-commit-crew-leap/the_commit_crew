@@ -70,8 +70,12 @@ public class OrderListener {
         } catch (TimeoutException | ExecutionException e) {
             // Transient failure: execution or Kafka timeout
             handleTransientFailure(message, e, attemptNumber);
+        } catch (InterruptedException e) {
+            // Preserve the thread's interruption status
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
-            // Unknown exception: treat as transient first, then permanent if retries exhausted
+            // Unknown exception: retry if possible, otherwise dead-letter
             if (failureStrategy.isRetryable(e, attemptNumber)) {
                 handleTransientFailure(message, e, attemptNumber);
             } else {
@@ -107,13 +111,8 @@ public class OrderListener {
      * Deserializes an order message, throwing JsonProcessingException on invalid JSON.
      */
     private OrderEvent deserializeOrder(String message) throws JsonProcessingException {
-        try {
-            log.info("-----> Reading Message {}", message);
-            return objectMapper.readValue(message, OrderEvent.class);
-        } catch (JsonProcessingException e) {
-            log.error("Skipping unreadable order message: {}", message, e);
-            throw e;
-        }
+        log.info("-----> Reading Message {}", message);
+        return objectMapper.readValue(message, OrderEvent.class);
     }
 
     /**
@@ -129,7 +128,7 @@ public class OrderListener {
 
         // Send execution to Kafka with timeout
         kafkaTemplate.send(engineProperties.topics().executions(), 
-                          fill.accountId().toString(), 
+                          fill.accountId(), 
                           objectMapper.writeValueAsString(fill))
                 .get(10, TimeUnit.SECONDS);
         
@@ -147,10 +146,14 @@ public class OrderListener {
             String deadLetterPayload = createDeadLetterPayload(message, exception, attemptNumber, isPermanent);
             kafkaTemplate.send(topic, deadLetterPayload)
                     .get(10, TimeUnit.SECONDS);
-            
             String failureType = isPermanent ? "PERMANENT" : "TRANSIENT (budget exhausted)";
-            log.error("Dead-lettered {} failure to topic '{}' after {} attempts: {}", 
-                    failureType, topic, attemptNumber, exception.getMessage());
+            log.error("Dead-lettered {} failure to topic '{}' after {} attempts: {}",
+                    failureType, topic, attemptNumber, exception.getMessage()
+            );
+        } catch (InterruptedException e) {
+            // Preserve the thread's interruption status
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while dead-lettering message", e);
         } catch (Exception e) {
             log.error("Failed to dead-letter message to {}: {}", topic, message, e);
         }
