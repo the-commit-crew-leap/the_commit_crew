@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const accountId = 'ACC-F92249B8';
-const balanceUrl = `**/accounts/${accountId}/balance`;
-const positionsUrl = `**/accounts/${accountId}/positions`;
-const ordersUrl = `**/accounts/${accountId}/orders`;
+const balanceUrl = `**/api/v1/accounts/${accountId}/balance`;
+const positionsUrl = `**/api/v1/accounts/${accountId}/positions`;
+const ordersUrl = `**/api/v1/accounts/${accountId}/orders`;
 const placeOrderUrl = '**/api/v1/orders';
 
 const balance = {
@@ -47,6 +47,22 @@ async function seedSession(page: Page): Promise<void> {
     accountId,
     role: 'USER'
   });
+
+  await page.route('**/api/auth/validate', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'SUCCESS',
+        data: {
+          valid: true,
+          username: 'playwright-user',
+          accountId: 'ACC-F92249B8',
+          role: 'USER'
+        }
+      })
+    });
+  });
 }
 
 async function mockDashboardApi(page: Page): Promise<void> {
@@ -68,16 +84,19 @@ async function mockDashboardApi(page: Page): Promise<void> {
 }
 
 test('shows portfolio overview and asset details', async ({ page }) => {
+  const portfolioOverview = page.getByRole('region', {
+    name: 'Portfolio overview'
+  });
   await seedSession(page);
   await mockDashboardApi(page);
 
   await page.goto('/dashboard');
 
   await expect(page.getByRole('heading', { name: 'Trading overview' })).toBeVisible();
-  await expect(page.getByText('$19,550.00')).toBeVisible();
-  await expect(page.getByText('Available to trade')).toBeVisible();
-  await expect(page.getByText('$10,000.00')).toBeVisible();
-  await expect(page.getByText('+$4,550.00')).toHaveCount(2);
+  await expect(portfolioOverview.getByText('$19,550.00')).toBeVisible();
+  await expect(portfolioOverview.getByText('Available to trade')).toBeVisible();
+  await expect(portfolioOverview.getByText('$10,000.00')).toBeVisible();
+  await expect(portfolioOverview.getByText('+$4,550.00')).toHaveCount(2);
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('$195.50')).toBeVisible();
   await expect(page.getByText('Current price')).toBeVisible();
