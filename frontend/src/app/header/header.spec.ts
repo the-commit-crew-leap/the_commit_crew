@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
+import { signal } from '@angular/core';
 import { AuthSessionService } from '../auth/auth-session.service';
 import { TCC_HeaderComponent } from './header.component';
 
@@ -13,6 +14,7 @@ describe('TCC_HeaderComponent', () => {
 
   beforeEach(async () => {
     authSession = {
+      accountId: signal('ACC-1001'),
       getAccountId: jest.fn().mockReturnValue('ACC-1001'),
       logout: jest.fn()
     } as unknown as jest.Mocked<AuthSessionService>;
@@ -44,7 +46,7 @@ describe('TCC_HeaderComponent', () => {
   });
 
   it('shows the current account and logs out', () => {
-    expect(component.accountId).toBe('ACC-1001');
+    expect(component.accountId()).toBe('ACC-1001');
 
     component.toggleAccountMenu();
     component.logout();

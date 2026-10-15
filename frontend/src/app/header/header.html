@@ -24,7 +24,7 @@
 
       <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
         <span class="tcc-account-label">Account</span>
-        <strong>{{ accountId || 'Unknown account' }}</strong>
+        <strong>{{ accountId() || 'Unknown account' }}</strong>
         <button class="tcc-dropdown-logout" type="button" role="menuitem" (click)="logout()">
           Log out
         </button>
@@ -38,5 +38,5 @@
   </div>
 </header>
 
-<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId"
+<app-deposit-modal [visible]="depositModalVisible()" [accountId]="accountId() ?? ''"
   (closed)="closeDeposit()" (deposited)="onDepositSuccess()"/>

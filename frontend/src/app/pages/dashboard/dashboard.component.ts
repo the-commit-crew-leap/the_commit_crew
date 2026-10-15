@@ -6,7 +6,7 @@ import { DepositService } from '../../services/deposit.service';
 import { TradingApiService } from '../../api/trading-api.service';
 import { BalanceResponse, PositionResponse } from '../../api/trading.models';
 import { Order } from '../../models/order.model';
-import { Subject, forkJoin, interval, startWith, switchMap, takeUntil } from 'rxjs';
+import { Subject, exhaustMap, forkJoin, interval, startWith, takeUntil } from 'rxjs';
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 import { AssetsComponent } from './assets/assets.component';
 
@@ -50,17 +50,16 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(500).pipe(
+    interval(1000).pipe(
       startWith(0),
-      switchMap(() => forkJoin({
-        balance: this.tradingApi.getBalance(accountId),
+      exhaustMap(() => forkJoin({
+        balance: this.depositService.getBalance(accountId, false),
         positions: this.tradingApi.getPositions(accountId),
         orders: this.tradingApi.getAccountOrders(accountId)
       })),
       takeUntil(this.destroy$)
     ).subscribe({
-      next: ({ balance, positions, orders }) => {
-        //this.balance = balance;
+      next: ({ positions, orders }) => {
         this.positions = positions;
         this.orders = orders;
         this.balanceError = false;

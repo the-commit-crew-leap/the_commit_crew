@@ -15,7 +15,9 @@
       </article>
       <article class="overview-card">
         <span>Available to trade</span>
-        <strong>${{ balance ? formatCurrency(+balance.cashBalance.amount) : '—' }}</strong>
+        <strong>
+          ${{ balance() ? formatCurrency(+balance()!.cashBalance.amount) : '—' }}
+        </strong>
         <small>USD balance · Ready to invest</small>
       </article>
       <article class="overview-card">
@@ -34,6 +36,6 @@
       <app-assets></app-assets>
     </main>
 
-    <app-order-ticket [balance]="balance"></app-order-ticket>
+    <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
 </section>

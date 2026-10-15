@@ -20,8 +20,10 @@ export class DepositService {
   readonly balance = signal<BalanceResponse | null>(null);
   readonly balanceLoading = signal(false);
 
-  getBalance(accountId: string): Observable<BalanceResponse> {
-    this.balanceLoading.set(true);
+  getBalance(accountId: string, showLoading = true): Observable<BalanceResponse> {
+    if (showLoading) {
+      this.balanceLoading.set(true);
+    }
 
     return this.http
       .get<BalanceResponse>(
@@ -31,13 +33,21 @@ export class DepositService {
         tap({
           next: response => {
             this.balance.set(response);
-            this.balanceLoading.set(false);
+            if (showLoading) {
+              this.balanceLoading.set(false);
+            }
           },
           error: () => {
-            this.balanceLoading.set(false);
+            if (showLoading) {
+              this.balanceLoading.set(false);
+            }
           },
         }),
       );
+  }
+
+  updateBalance(balance: BalanceResponse): void {
+    this.balance.set(balance);
   }
 
   deposit(

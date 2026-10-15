@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { PositionResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
+import { Subject, exhaustMap, interval, startWith, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-assets',
@@ -34,9 +34,9 @@ export class AssetsComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(30000).pipe(
+    interval(1000).pipe(
       startWith(0),
-      switchMap(() => this.tradingApi.getPositions(accountId)),
+      exhaustMap(() => this.tradingApi.getPositions(accountId)),
       takeUntil(this.destroy$)
     ).subscribe({
       next: (positions) => {

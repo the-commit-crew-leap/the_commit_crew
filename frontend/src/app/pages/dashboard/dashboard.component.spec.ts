@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { TradingApiService } from '../../api/trading-api.service';
+import { DepositService } from '../../services/deposit.service';
 import { DashboardComponent } from './dashboard.component';
 
 describe('DashboardComponent', () => {
@@ -11,16 +13,16 @@ describe('DashboardComponent', () => {
   let component: DashboardComponent;
   let authSession: jest.Mocked<AuthSessionService>;
   let tradingApi: jest.Mocked<TradingApiService>;
+  let depositService: {
+    balance: ReturnType<typeof signal>;
+    getBalance: jest.Mock;
+  };
 
   beforeEach(async () => {
     authSession = {
       getAccountId: jest.fn().mockReturnValue('ACC-1001')
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
-      getBalance: jest.fn().mockReturnValue(of({
-        accountId: 'ACC-1001',
-        cashBalance: { amount: '10000.00', currency: 'USD' }
-      })),
       getPositions: jest.fn().mockReturnValue(of([{
         symbol: 'BTC',
         quantity: 1,
@@ -53,12 +55,23 @@ describe('DashboardComponent', () => {
         }
       ]))
     } as unknown as jest.Mocked<TradingApiService>;
+    depositService = {
+      balance: signal({
+        accountId: 'ACC-1001',
+        cashBalance: { amount: '10000.00', currency: 'USD' }
+      }),
+      getBalance: jest.fn().mockReturnValue(of({
+        accountId: 'ACC-1001',
+        cashBalance: { amount: '10000.00', currency: 'USD' }
+      }))
+    };
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         { provide: AuthSessionService, useValue: authSession },
         { provide: TradingApiService, useValue: tradingApi },
+        { provide: DepositService, useValue: depositService },
         { provide: Router, useValue: { navigate: jest.fn() } }
       ]
     }).compileComponents();
@@ -72,6 +85,6 @@ describe('DashboardComponent', () => {
     expect(component.portfolioValue).toBe(65000);
     expect(component.todayReturn).toBe(5000);
     expect(component.openOrders).toBe(1);
-    expect(component.balance?.cashBalance.amount).toBe('10000.00');
+    expect(component.balance()?.cashBalance.amount).toBe('10000.00');
   });
 });
