@@ -56,6 +56,9 @@ export class LoginComponent {
       },
       this.form.controls.rememberMe.value
     )
+      .pipe(finalize(() => {
+        this.isSubmitting = false;
+      }))
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
