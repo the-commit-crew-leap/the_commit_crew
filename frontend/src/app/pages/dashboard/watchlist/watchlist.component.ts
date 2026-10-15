@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TimeoutError, forkJoin, timeout } from 'rxjs';
+import { TimeoutError, catchError, forkJoin, map, of, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { InstrumentResponse } from '../../../api/trading.models';
@@ -21,9 +21,10 @@ export class WatchlistComponent implements OnInit {
 
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
+  watchlistPrices: Record<string, number | null> = {};
   selectedSymbol = '';
-  searchTerm = '';
   loading = true;
+  priceLoading = false;
   saving = false;
   removingSymbol = '';
   error = '';
@@ -44,6 +45,7 @@ export class WatchlistComponent implements OnInit {
       next: ({ instruments, watchlist }) => {
         this.instruments = instruments;
         this.watchlist = watchlist;
+        this.loadWatchlistPrices(watchlist);
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -57,14 +59,8 @@ export class WatchlistComponent implements OnInit {
   }
 
   get availableInstruments(): InstrumentResponse[] {
-    const query = this.searchTerm.trim().toLowerCase();
     const symbols = new Set(this.watchlist.map((instrument) => instrument.symbol));
-    return this.instruments.filter((instrument) =>
-      !symbols.has(instrument.symbol)
-      && (!query
-        || instrument.symbol.toLowerCase().includes(query)
-        || instrument.name.toLowerCase().includes(query))
-    );
+    return this.instruments.filter((instrument) => !symbols.has(instrument.symbol));
   }
 
   addInstrument(): void {
@@ -82,8 +78,8 @@ export class WatchlistComponent implements OnInit {
     ).subscribe({
       next: (instrument) => {
         this.watchlist = [...this.watchlist, instrument];
+        this.loadWatchlistPrices(this.watchlist);
         this.selectedSymbol = '';
-        this.searchTerm = '';
         this.saving = false;
         this.success = `${instrument.symbol} was added to your watchlist.`;
         this.cdr.detectChanges();
@@ -114,8 +110,8 @@ export class WatchlistComponent implements OnInit {
         const instrument = watchlist.find((item) => item.symbol === symbol);
         if (instrument) {
           this.watchlist = watchlist;
+          this.loadWatchlistPrices(watchlist);
           this.selectedSymbol = '';
-          this.searchTerm = '';
           this.success = `${instrument.symbol} was added to your watchlist.`;
         } else {
           this.error = 'The instrument could not be confirmed in your watchlist.';
@@ -144,6 +140,9 @@ export class WatchlistComponent implements OnInit {
     this.tradingApi.removeFromWatchlist(accountId, instrument.symbol).subscribe({
       next: () => {
         this.watchlist = this.watchlist.filter((item) => item.symbol !== instrument.symbol);
+        const prices = { ...this.watchlistPrices };
+        delete prices[instrument.symbol];
+        this.watchlistPrices = prices;
         this.removingSymbol = '';
         this.cdr.detectChanges();
       },
@@ -153,6 +152,44 @@ export class WatchlistComponent implements OnInit {
         this.removingSymbol = '';
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  getLatestPrice(symbol: string): number | null {
+    return this.watchlistPrices[symbol] ?? null;
+  }
+
+  isPricePending(symbol: string): boolean {
+    return this.priceLoading && !(symbol in this.watchlistPrices);
+  }
+
+  isPriceUnavailable(symbol: string): boolean {
+    return symbol in this.watchlistPrices && this.watchlistPrices[symbol] === null;
+  }
+
+  private loadWatchlistPrices(watchlist: InstrumentResponse[]): void {
+    this.watchlistPrices = {};
+    if (watchlist.length === 0) {
+      this.priceLoading = false;
+      return;
+    }
+
+    this.priceLoading = true;
+    forkJoin(watchlist.map((instrument) =>
+      this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
+        map((response) => response.price),
+        catchError((error) => {
+          console.error(`Failed to load latest price for ${instrument.symbol}`, error);
+          return of(null);
+        })
+      )
+    )).subscribe((prices) => {
+      this.watchlistPrices = prices.reduce<Record<string, number | null>>((result, price, index) => {
+        result[watchlist[index].symbol] = price;
+        return result;
+      }, {});
+      this.priceLoading = false;
+      this.cdr.detectChanges();
     });
   }
 }

@@ -34,6 +34,7 @@ describe('WatchlistComponent', () => {
     tradingApi = {
       getInstruments: jest.fn().mockReturnValue(of([bitcoin, ethereum])),
       getWatchlist: jest.fn().mockReturnValue(of([bitcoin])),
+      getInstrumentPrice: jest.fn().mockReturnValue(of({ symbol: 'BTC', price: 50000 })),
       addToWatchlist: jest.fn().mockReturnValue(of(ethereum)),
       removeFromWatchlist: jest.fn().mockReturnValue(of(void 0))
     } as unknown as jest.Mocked<TradingApiService>;
@@ -56,16 +57,15 @@ describe('WatchlistComponent', () => {
     expect(tradingApi.getWatchlist).toHaveBeenCalledWith('ACC-1001');
     expect(component.watchlist).toEqual([bitcoin]);
     expect(component.availableInstruments).toEqual([ethereum]);
+    expect(tradingApi.getInstrumentPrice).toHaveBeenCalledWith('BTC');
+    expect(component.getLatestPrice('BTC')).toBe(50000);
   });
 
-  it('keeps the search field enabled while instruments are loading', () => {
-    const loadingFixture = TestBed.createComponent(WatchlistComponent);
-    const loadingComponent = loadingFixture.componentInstance;
-    loadingComponent.loading = true;
-    loadingFixture.detectChanges();
+  it('renders the instrument dropdown without a search field', () => {
+    fixture.detectChanges();
 
-    const searchInput = loadingFixture.nativeElement.querySelector('#instrument-search') as HTMLInputElement;
-    expect(searchInput.disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('#instrument-search')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#instrument-select')).not.toBeNull();
   });
 
   it('disables the add button until an instrument is selected', () => {
@@ -78,6 +78,14 @@ describe('WatchlistComponent', () => {
     fixture.detectChanges();
 
     expect(addButton.disabled).toBe(false);
+  });
+
+  it('displays asset and latest price columns', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Asset');
+    expect(fixture.nativeElement.textContent).toContain('Latest price');
+    expect(fixture.nativeElement.textContent).toContain('$50,000.00');
   });
 
   it('adds and removes an instrument for the current account', () => {
@@ -102,5 +110,16 @@ describe('WatchlistComponent', () => {
 
     expect(failedComponent.error).toBe('Unable to load your watchlist.');
     expect(failedComponent.loading).toBe(false);
+  });
+
+  it('keeps the asset visible when its latest price cannot be loaded', () => {
+    tradingApi.getInstrumentPrice.mockReturnValue(throwError(() => new Error('failed')));
+
+    const failedPriceFixture = TestBed.createComponent(WatchlistComponent);
+    const failedPriceComponent = failedPriceFixture.componentInstance;
+    failedPriceComponent.ngOnInit();
+
+    expect(failedPriceComponent.watchlist).toEqual([bitcoin]);
+    expect(failedPriceComponent.isPriceUnavailable('BTC')).toBe(true);
   });
 });
