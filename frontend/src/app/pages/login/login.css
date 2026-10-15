@@ -147,6 +147,54 @@ button:hover:not(:disabled) {
   background: #bac8ff;
 }
 
+.secondary-button {
+  margin-top: 0;
+  border-color: #29313c;
+  background: #1c2129;
+  color: #e8ebf0;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #29313c;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  color: #8993a3;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding: 10px 10px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  flex: 1;
+  height: 1px;
+  background: #29313c;
+  content: '';
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  color: #8993a3;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.remember-me input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #a7b8fa;
+  cursor: pointer;
+}
+
 button:disabled {
   opacity: 0.65;
   cursor: not-allowed;

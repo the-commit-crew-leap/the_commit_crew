@@ -6,6 +6,7 @@ import { AuthSessionService } from '../../auth/auth-session.service';
 import { CommonModule } from '@angular/common';
 import { getAuthErrorMessage } from '../../auth/auth-error.util';
 import { AuthHeaderComponent } from '../../auth-header/auth-header.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -32,12 +33,30 @@ export class LoginComponent {
     private readonly route: ActivatedRoute,
     private readonly cdr: ChangeDetectorRef
   ) {
+    const oauthRememberMe = sessionStorage.getItem('oauth_remember_me') === 'true';
+    if (window.location.hash && this.authSession.completeGoogleLogin(window.location.hash, oauthRememberMe)) {
+      sessionStorage.removeItem('oauth_remember_me');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      void this.router.navigateByUrl('/dashboard');
+      return;
+    }
+
+    if (new URLSearchParams(window.location.search).get('oauthError')) {
+      this.errorMessage = 'Google sign-in failed. Please try again.';
+    }
+
     const query = this.route.snapshot.queryParamMap;
     if (query.get('registered') === '1') {
       this.infoMessage = 'Account created successfully. Please sign in.';
     } else if (query.get('expired') === '1') {
       this.infoMessage = 'Session expired. Please sign in again.';
     }
+
+  }
+
+  continueWithGoogle(): void {
+    sessionStorage.setItem('oauth_remember_me', String(this.form.controls.rememberMe.value));
+    window.location.assign(`${environment.authApiBaseUrl}/google`);
   }
 
   submit(): void {
@@ -56,9 +75,12 @@ export class LoginComponent {
       },
       this.form.controls.rememberMe.value
     )
-      .pipe(finalize(() => {
-        this.isSubmitting = false;
-      }))
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
