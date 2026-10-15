@@ -116,13 +116,13 @@
 }
 
 .tcc-dropdown-logout {
-  width: 100%;
+  width: 80%;
   margin-top: 6px;
   padding: 9px 10px;
-  border: 1px solid #2a3039;
+  border: 1px solid #ed7181;
   border-radius: 6px;
-  background: #1c2129;
-  color: #f0f2f6;
+  background: #351d25;
+  color: #ed7181;
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -130,7 +130,8 @@
 }
 
 .tcc-dropdown-logout:hover {
-  background: #29313c;
+  background: #713b46;
+  color: #fff;
 }
 
 .tcc-profile {
