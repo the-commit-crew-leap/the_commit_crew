@@ -17,7 +17,8 @@ describe('OrderTicketComponent', () => {
       getAccountId: jest.fn().mockReturnValue('ACC-1001')
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
-      placeOrder: jest.fn()
+      placeOrder: jest.fn(),
+      getInstrumentPrice: jest.fn()
     } as unknown as jest.Mocked<TradingApiService>;
 
     await TestBed.configureTestingModule({
@@ -89,6 +90,36 @@ describe('OrderTicketComponent', () => {
       'Could not place the order. Please review the details and try again.'
     );
     expect(component.orderSubmitting).toBe(false);
+  });
+
+  it('loads the current price and calculates the estimated order value', () => {
+    tradingApi.getInstrumentPrice.mockReturnValue(of({
+      symbol: 'BTC',
+      price: 50000
+    }));
+    component.symbol = 'btc';
+    component.quantity = 2;
+
+    component.onSymbolChange(component.symbol);
+    component.loadMarketPrice();
+
+    expect(tradingApi.getInstrumentPrice).toHaveBeenCalledWith('BTC');
+    expect(component.marketPrice).toBe(50000);
+    expect(component.estimatedOrderValue).toBe(100000);
+    expect(component.priceLoading).toBe(false);
+  });
+
+  it('shows a price error when the current price cannot be loaded', () => {
+    tradingApi.getInstrumentPrice.mockReturnValue(throwError(() => new Error('failed')));
+    component.symbol = 'UNKNOWN';
+
+    component.loadMarketPrice();
+
+    expect(component.marketPrice).toBeNull();
+    expect(component.priceError).toBe(
+      'Unable to load the current price for this instrument.'
+    );
+    expect(component.priceLoading).toBe(false);
   });
 
   it('rejects submission when the session has no account', () => {

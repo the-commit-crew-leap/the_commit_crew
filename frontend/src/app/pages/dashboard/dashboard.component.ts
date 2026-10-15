@@ -9,9 +9,10 @@ import { Order } from '../../models/order.model';
 import { Subject, exhaustMap, forkJoin, interval, startWith, takeUntil } from 'rxjs';
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 import { AssetsComponent } from './assets/assets.component';
+import { WatchlistComponent } from './watchlist/watchlist.component';
 
 @Component({
-  imports: [CommonModule, RouterLink, OrderTicketComponent, AssetsComponent],
+  imports: [CommonModule, RouterLink, OrderTicketComponent, AssetsComponent, WatchlistComponent],
   selector: 'app-dashboard',
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',

@@ -10,16 +10,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
+import com.thecommitcrew.domain.dto.PriceResponseDTO;
 import com.thecommitcrew.service.InstrumentService;
+import com.thecommitcrew.service.PriceService;
 
 @RestController
 @RequestMapping("/api/v1/instruments")
 public class InstrumentController {
 
 	private final InstrumentService instrumentService;
+	private final PriceService priceService;
 
-	public InstrumentController(InstrumentService instrumentService) {
+	public InstrumentController(InstrumentService instrumentService, PriceService priceService) {
 		this.instrumentService = instrumentService;
+		this.priceService = priceService;
 	}
 
 	@GetMapping
@@ -31,5 +35,14 @@ public class InstrumentController {
 	@GetMapping("/{symbol}")
 	public ResponseEntity<InstrumentResponseDTO> getInstrument(@PathVariable String symbol) {
 		return ResponseEntity.ok(instrumentService.getInstrument(symbol));
+	}
+
+	@GetMapping("/{symbol}/price")
+	public ResponseEntity<PriceResponseDTO> getCurrentPrice(@PathVariable String symbol) {
+		String normalizedSymbol = symbol.trim().toUpperCase();
+		return ResponseEntity.ok(new PriceResponseDTO(
+			normalizedSymbol,
+			priceService.getCurrentPrice(normalizedSymbol)
+		));
 	}
 }

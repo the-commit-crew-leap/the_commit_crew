@@ -7,7 +7,9 @@ import {
     BalanceResponse,
     OrderResponse,
     PositionResponse,
-    PlaceOrderRequest
+    PlaceOrderRequest,
+    InstrumentResponse,
+    PriceResponse
 } from './trading.models';
 
 @Injectable({ providedIn: 'root' })
@@ -34,5 +36,29 @@ export class TradingApiService {
 
     placeOrder(request: PlaceOrderRequest): Observable<OrderResponse> {
         return this.http.post<OrderResponse>(`${this.baseUrl}/orders`, request);
+    }
+
+    getInstruments(tradable = true): Observable<InstrumentResponse[]> {
+        return this.http.get<InstrumentResponse[]>(`${this.baseUrl}/instruments`, {
+            params: { tradable }
+        });
+    }
+
+    getInstrumentPrice(symbol: string): Observable<PriceResponse> {
+        return this.http.get<PriceResponse>(
+            `${this.baseUrl}/instruments/${encodeURIComponent(symbol)}/price`
+        );
+    }
+
+    getWatchlist(accountId: string): Observable<InstrumentResponse[]> {
+        return this.http.get<InstrumentResponse[]>(`${this.baseUrl}/accounts/${accountId}/watchlist`);
+    }
+
+    addToWatchlist(accountId: string, symbol: string): Observable<InstrumentResponse> {
+        return this.http.post<InstrumentResponse>(`${this.baseUrl}/accounts/${accountId}/watchlist`, { symbol });
+    }
+
+    removeFromWatchlist(accountId: string, symbol: string): Observable<void> {
+        return this.http.delete<void>(`${this.baseUrl}/accounts/${accountId}/watchlist/${encodeURIComponent(symbol)}`);
     }
 }
