@@ -58,7 +58,8 @@ describe('LoginComponent', () => {
 
     component.form.setValue({
       username: 'alice',
-      password: 'SecurePass123!'
+      password: 'SecurePass123!',
+      rememberMe: false
     });
 
     component.submit();
@@ -66,7 +67,7 @@ describe('LoginComponent', () => {
     expect(authSession.login).toHaveBeenCalledWith({
       username: 'alice',
       password: 'SecurePass123!'
-    });
+    }, false);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/orders');
     expect(component.isSubmitting).toBe(false);
   });
@@ -80,7 +81,8 @@ describe('LoginComponent', () => {
 
     component.form.setValue({
       username: 'alice',
-      password: 'wrong-password'
+      password: 'wrong-password',
+      rememberMe: false
     });
 
     component.submit();
