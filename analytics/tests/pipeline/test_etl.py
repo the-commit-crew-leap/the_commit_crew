@@ -35,7 +35,7 @@ def test_run_etl_success(monkeypatch, tmp_path):
     price_history_file = tmp_path / "price_history.csv"
     seed_file = tmp_path / "price_history-data.sql"
     monkeypatch.setattr(config, "PRICE_HISTORY_FILE", price_history_file)
-    monkeypatch.setattr(config, "SEED_FILE", seed_file)
+    monkeypatch.setattr(config, "PRICE_HISTORY_SEED_FILE", seed_file)
 
     # Replace extract() with deterministic test data.
     monkeypatch.setattr(extractor, "extract", lambda symbols: test_data)
