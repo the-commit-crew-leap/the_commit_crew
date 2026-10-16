@@ -50,6 +50,12 @@ nav a.is-active {
   color: #e8ebf0;
 }
 
+nav a:focus-visible,
+.auth-brand:focus-visible {
+  outline: 3px solid #a7b8fa;
+  outline-offset: 4px;
+}
+
 nav a.is-active {
   border-bottom: 2px solid #a7b8fa;
 }
