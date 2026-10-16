@@ -54,7 +54,7 @@ pipeline {
                     ]) {
                         echo 'Dependency Scanning: credentials bound'
 
-                        sh '''
+                        sh """
                             set +e
 
                             echo "Dependency Scanning: shell started"
@@ -71,7 +71,7 @@ pipeline {
                             find . -type f -name 'dependency-check-report.json' -print
 
                             exit "\$EXIT_CODE"
-                        '''
+                        """
                     }
                 }
             }
