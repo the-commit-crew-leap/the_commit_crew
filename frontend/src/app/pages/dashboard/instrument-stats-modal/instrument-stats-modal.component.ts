@@ -21,10 +21,12 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   error = '';
   selectedPeriod = '1y';
   readonly periods = [
+    { value: '1w', label: '1W' },
+    { value: '1m', label: '1M' },
+    { value: '6m', label: '6M' },
     { value: '1y', label: '1Y' },
     { value: '5y', label: '5Y' },
-    { value: '10y', label: '10Y' },
-    { value: 'all', label: 'All' }
+    { value: '10y', label: '10Y' }
   ];
   private pendingFigure?: PlotlyFigure;
   private readonly analyticsApi = inject(AnalyticsApiService);
@@ -58,13 +60,13 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
       autosize: true,
       width: chartElement.clientWidth,
       height: Math.max(320, chartElement.clientHeight),
-      title: undefined,
+      title: null,
       margin: { l: 42, r: 12, t: 8, b: 38 },
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
       font: { color: '#b9c2d0', size: 10 },
       showlegend: false
-    }, { responsive: true, displaylogo: false });
+    }, { responsive: true, displayModeBar: false, staticPlot: true, displaylogo: false });
   }
 
   close(): void {
@@ -93,9 +95,10 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
     this.error = '';
     this.statistic = undefined;
     this.pendingFigure = undefined;
+    const volatilityWindow = this.getVolatilityWindow();
     forkJoin({
-      insights: this.analyticsApi.getInsights([this.symbol], this.selectedPeriod, 30),
-      volatility: this.analyticsApi.getVolatility([this.symbol], this.selectedPeriod, 30)
+      insights: this.analyticsApi.getInsights([this.symbol], this.selectedPeriod, volatilityWindow),
+      volatility: this.analyticsApi.getVolatility([this.symbol], this.selectedPeriod, volatilityWindow)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ insights, volatility }) => {
         this.statistic = insights.statistics[0];
@@ -109,5 +112,14 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private getVolatilityWindow(): number {
+    switch (this.selectedPeriod) {
+      case '1w': return 2;
+      case '1m': return 5;
+      case '6m': return 10;
+      default: return 30;
+    }
   }
 }
