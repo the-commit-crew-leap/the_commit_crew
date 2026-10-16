@@ -1,8 +1,15 @@
 
 @if (visible) {
   <div class="tcc-modal-backdrop" (click)="close()">
-    <section class="tcc-deposit-modal" role="dialog" aria-modal="true" 
-    aria-labelledby="deposit-title" (click)="$event.stopPropagation()">
+    <section
+      #dialog
+      class="tcc-deposit-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deposit-title"
+      tabindex="-1"
+      (keydown)="onDialogKeydown($event)"
+      (click)="$event.stopPropagation()">
       
       <div class="tcc-current-balance">
         <span>Current balance</span>
@@ -26,6 +33,7 @@
         </div>
 
         <button
+          #closeButton
           type="button"
           class="tcc-modal-close"
           aria-label="Close dialog"
