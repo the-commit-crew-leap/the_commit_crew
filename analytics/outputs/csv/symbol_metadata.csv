@@ -1,0 +1,31 @@
+symbol,asset_class,long_name,sector,currency,tradable
+AAPL,equity,Apple Inc.,Technology,USD,True
+AMZN,equity,"Amazon.com, Inc.",Consumer Cyclical,USD,True
+BABA,equity,Alibaba Group Holding Limited,Consumer Cyclical,USD,True
+DIA,etf,State Street SPDR Dow Jones Industrial Average ETF Trust,,USD,True
+GOOGL,equity,Alphabet Inc.,Communication Services,USD,True
+HYG,bond,iShares iBoxx $ High Yield Corporate Bond ETF,,USD,True
+IEF,bond,iShares 7-10 Year Treasury Bond ETF,,USD,True
+IEI,bond,iShares 3-7 Year Treasury Bond ETF,,USD,True
+IWM,etf,iShares Russell 2000 ETF,,USD,True
+LQD,bond,iShares iBoxx $ Investment Grade Corporate Bond ETF,,USD,True
+META,equity,"Meta Platforms, Inc.",Communication Services,USD,True
+MSFT,equity,Microsoft Corporation,Technology,USD,True
+MUB,bond,iShares National Muni Bond ETF,,USD,True
+NFLX,equity,"Netflix, Inc.",Communication Services,USD,True
+NVDA,equity,NVIDIA Corporation,Technology,USD,True
+QQQ,etf,Invesco QQQ Trust,,USD,True
+SHY,bond,iShares 1-3 Year Treasury Bond ETF,,USD,True
+SPY,etf,State Street SPDR S&P 500 ETF Trust,,USD,True
+TIP,bond,iShares TIPS Bond ETF,,USD,True
+TLH,bond,iShares 10-20 Year Treasury Bond ETF,,USD,True
+TLT,bond,iShares 20+ Year Treasury Bond ETF,,USD,True
+TSLA,equity,"Tesla, Inc.",Consumer Cyclical,USD,True
+TTWO,equity,"Take-Two Interactive Software, Inc.",Communication Services,USD,True
+VGIT,bond,Vanguard Intermediate-Term Treasury Index Fund ETF Shares,,USD,True
+VNQ,etf,Vanguard Real Estate Index Fund ETF Shares,,USD,True
+VTI,etf,Vanguard Morningstar Total Stock Market ETF,,USD,True
+XLE,etf,State Street Energy Select Sector SPDR ETF,,USD,True
+XLF,etf,State Street Financial Select Sector SPDR ETF,,USD,True
+XLK,etf,State Street Technology Select Sector SPDR ETF,,USD,True
+XLV,etf,State Street Health Care Select Sector SPDR ETF,,USD,True

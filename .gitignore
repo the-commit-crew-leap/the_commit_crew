@@ -12,7 +12,13 @@ target/
 .pytest_cache/
 __init__.py
 analytics.log
-analytics/outputs/
+
+# Ignore analytics outputs except database CSV inputs
+analytics/outputs/**
+!analytics/outputs/csv/
+analytics/outputs/csv/*
+!analytics/outputs/csv/price_history.csv
+!analytics/outputs/csv/symbol_metadata.csv
 
 # Node.js
 node_modules/
