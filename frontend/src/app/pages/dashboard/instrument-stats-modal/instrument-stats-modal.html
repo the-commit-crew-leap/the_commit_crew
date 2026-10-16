@@ -8,16 +8,52 @@
       <button class="close-button" type="button" aria-label="Close statistics" (click)="close()">×</button>
     </header>
 
-    <p *ngIf="loading" class="modal-state">Loading one-year statistics...</p>
-    <p *ngIf="error" class="modal-state error" role="alert">{{ error }}</p>
-    <div *ngIf="statistic && !loading" class="stat-grid">
-      <article><span>Asset class</span><strong>{{ statistic['Asset Class'] }}</strong></article>
-      <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
-      <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
-      <article><span>Sharpe ratio</span><strong>{{ formatRatio(statistic['Sharpe Ratio']) }}</strong></article>
-      <article><span>Best daily return</span><strong>{{ formatPercent(statistic['Best Daily Return (%)']) }}</strong></article>
-      <article><span>Worst daily return</span><strong>{{ formatPercent(statistic['Worst Daily Return (%)']) }}</strong></article>
+    <div class="period-picker" aria-label="Statistics period">
+      <span>Lookback</span>
+      <div class="period-buttons">
+        <button
+          *ngFor="let period of periods"
+          type="button"
+          [class.is-active]="selectedPeriod === period.value"
+          [attr.aria-pressed]="selectedPeriod === period.value"
+          (click)="changePeriod(period.value)">
+          {{ period.label }}
+        </button>
+      </div>
     </div>
-    <footer><span>Based on the last 12 months of available price history.</span><button type="button" (click)="close()">Done</button></footer>
+
+    <div class="modal-body">
+      <section class="statistics-panel" aria-labelledby="statistics-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Performance readout</p>
+            <h3 id="statistics-title">Key statistics</h3>
+          </div>
+          <span>{{ selectedPeriod }} lookback</span>
+        </div>
+        <p *ngIf="loading" class="modal-state">Updating statistics...</p>
+        <p *ngIf="error" class="modal-state error" role="alert">{{ error }}</p>
+        <div *ngIf="statistic && !loading" class="stat-grid">
+          <article><span>Asset class</span><strong>{{ statistic['Asset Class'] }}</strong></article>
+          <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
+          <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
+          <article><span>Sharpe ratio</span><strong>{{ formatRatio(statistic['Sharpe Ratio']) }}</strong></article>
+          <article><span>Best daily return</span><strong>{{ formatPercent(statistic['Best Daily Return (%)']) }}</strong></article>
+          <article><span>Worst daily return</span><strong>{{ formatPercent(statistic['Worst Daily Return (%)']) }}</strong></article>
+        </div>
+      </section>
+
+      <section *ngIf="!loading && !error" class="volatility-panel" aria-labelledby="volatility-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Risk path</p>
+            <h3 id="volatility-title">Rolling volatility</h3>
+          </div>
+          <span>30-day annualized</span>
+        </div>
+        <div #volatilityChart class="volatility-chart"></div>
+      </section>
+    </div>
+    <footer><span>Based on {{ selectedPeriod }} of available price history.</span><button type="button" (click)="close()">Done</button></footer>
   </section>
 </div>
