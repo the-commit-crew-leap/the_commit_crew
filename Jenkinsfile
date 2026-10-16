@@ -53,19 +53,24 @@ pipeline {
                         sh '''
                             set +e
 
-                            if [ -z "\${NVD_API_KEY:-}" ]; then
-                                echo "NVD_API_KEY is not available"
-                                exit 2
-                            fi
+                            echo "Workspace: $PWD"
 
-                            mvn -B dependency-check:check \
+                            mvn -B -e dependency-check:check \
                                 -DnvdApiKey="\$NVD_API_KEY" \
                                 -Ddependency-check.fail.build.on.cvss=5.0
 
                             EXIT_CODE=$?
 
                             echo "Dependency-Check exit code: $EXIT_CODE"
-                            find . -path '*/target/dependency-check/*' -type f -print
+                            echo "Dependency-Check files:"
+                            find . -type f \\( \
+                                -name 'dependency-check-report.json' -o \
+                                -name 'dependency-check-report.xml' -o \
+                                -name 'dependency-check-report.html' \
+                            \\) -print
+
+                            echo "Dependency-Check directories:"
+                            find . -type d -path '*dependency-check*' -print
 
                             exit "\$EXIT_CODE"
                         '''
@@ -75,7 +80,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts(
-                        artifacts: '**/target/dependency-check/**/*',
+                        artifacts: '**/dependency-check-report.json',
                         allowEmptyArchive: true
                     )
                 }
