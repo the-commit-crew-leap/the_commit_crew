@@ -43,22 +43,41 @@ pipeline {
         }
         stage('Dependency Scanning') {
             steps {
-                script {
-                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    withCredentials([
+                        string(
+                            credentialsId: 'nvd-api-key',
+                            variable: 'NVD_API_KEY'
+                        )
+                    ]) {
                         sh '''
+                            set +e
+
+                            if [ -z "\${NVD_API_KEY:-}" ]; then
+                                echo "NVD_API_KEY is not available"
+                                exit 2
+                            fi
+
                             mvn -B dependency-check:check \
                                 -DnvdApiKey="\$NVD_API_KEY" \
-                                -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
-                            
-                            # Always pass to allow pipeline to continue
-                            exit 0
+                                -Ddependency-check.fail.build.on.cvss=5.0
+
+                            EXIT_CODE=$?
+
+                            echo "Dependency-Check exit code: $EXIT_CODE"
+                            find . -path '*/target/dependency-check/*' -type f -print
+
+                            exit "\$EXIT_CODE"
                         '''
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
+                    archiveArtifacts(
+                        artifacts: '**/target/dependency-check/**/*',
+                        allowEmptyArchive: true
+                    )
                 }
             }
         }
