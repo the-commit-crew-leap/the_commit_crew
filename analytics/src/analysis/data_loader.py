@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+from typing import Optional
 import logging
 
 from src.analysis.analysis_helper import AnalysisHelper
@@ -82,3 +83,13 @@ class DataLoader:
         logger.debug(f"Loaded {len(df)} rows for {symbol}")
 
         return df.reset_index(drop=True)
+
+    def get_latest_date(self, symbols: list[str]) -> Optional[pd.Timestamp]:
+        """Return the latest available price date across the requested symbols."""
+        latest_dates = []
+        for symbol in symbols:
+            price_data = self.load_price_data(symbol)
+            if not price_data.empty:
+                latest_dates.append(price_data["date"].max())
+
+        return max(latest_dates) if latest_dates else None

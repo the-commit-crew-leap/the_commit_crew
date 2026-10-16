@@ -43,7 +43,7 @@ loader = DataLoader()
 analysis_engine = AnalysisEngine(data_loader=loader, helper=helper)
 web_report = WebReport(helper=helper, analysis_engine=analysis_engine)
 
-SUPPORTED_PERIODS = {"1y", "5y", "10y", "all"}
+SUPPORTED_PERIODS = {"1w", "1m", "6m", "1y", "5y", "10y", "all"}
 
 
 def _validate_period(period: str) -> str:
@@ -51,7 +51,7 @@ def _validate_period(period: str) -> str:
     if period not in SUPPORTED_PERIODS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown period '{period}'. Use one of: 1y, 5y, 10y, all.",
+            detail=f"Unknown period '{period}'. Use one of: 1w, 1m, 6m, 1y, 5y, 10y.",
         )
     return period
 
@@ -157,7 +157,8 @@ def get_correlation_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_correlation_figure(
         selected_tickers,
         start_date,
@@ -180,7 +181,8 @@ def get_volatility_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_volatility_figure(
         selected_tickers,
         start_date,
@@ -203,7 +205,8 @@ def get_asset_class_volatility_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_asset_class_volatility_figure(
         selected_tickers,
         start_date,

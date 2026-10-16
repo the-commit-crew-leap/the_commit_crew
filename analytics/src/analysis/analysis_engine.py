@@ -29,9 +29,14 @@ class AnalysisEngine:
         self.helper = helper
         self.statistics_calculator = StatisticsCalculator(helper)
 
-    def _resolve_period(self, period: str) -> AnalysisPeriod:
+    def _resolve_period(self, period: str, symbols: Optional[list[str]] = None) -> AnalysisPeriod:
         """Resolve a period name once for the complete analysis run."""
-        start_date, end_date = self.helper.get_date_range(period)
+        latest_date = self.loader.get_latest_date(symbols or [])
+        if latest_date is None:
+            start_date, end_date = self.helper.get_date_range(period)
+        else:
+            end_date = latest_date.strftime("%Y-%m-%d")
+            start_date = self.helper.get_date_range(period, end_date=end_date)[0]
         return AnalysisPeriod(period.upper(), start_date, end_date)
 
     def _chart_labels(self, symbols: list) -> tuple[str, str]:
@@ -472,7 +477,7 @@ class AnalysisEngine:
             logger.error("No tickers selected. Check config.INSTRUMENTS.")
             return pd.DataFrame()
 
-        analysis_period = self._resolve_period(period)
+        analysis_period = self._resolve_period(period, analysis_tickers)
 
         logger.info(
             "Analysis date range: %s to %s",
