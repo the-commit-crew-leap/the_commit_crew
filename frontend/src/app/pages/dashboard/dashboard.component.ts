@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { DepositService } from '../../services/deposit.service';
 import { TradingApiService } from '../../api/trading-api.service';
@@ -10,9 +9,10 @@ import { Subject, exhaustMap, forkJoin, interval, startWith, takeUntil } from 'r
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 import { AssetsComponent } from './assets/assets.component';
 import { WatchlistComponent } from './watchlist/watchlist.component';
+import { InstrumentStatsModalComponent } from './instrument-stats-modal/instrument-stats-modal.component';
 
 @Component({
-  imports: [CommonModule, RouterLink, OrderTicketComponent, AssetsComponent, WatchlistComponent],
+  imports: [CommonModule, OrderTicketComponent, AssetsComponent, WatchlistComponent, InstrumentStatsModalComponent],
   selector: 'app-dashboard',
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',
@@ -26,6 +26,7 @@ export class DashboardComponent implements OnDestroy, OnInit {
   positions: PositionResponse[] = [];
   orders: Order[] = [];
   overviewError = false;
+  selectedInstrument = '';
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -90,6 +91,14 @@ export class DashboardComponent implements OnDestroy, OnInit {
 
     get openOrders(): number {
       return this.orders.filter((order) => order.status === 'NEW').length;
+    }
+
+    openInstrumentStats(symbol: string): void {
+      this.selectedInstrument = symbol;
+    }
+
+    closeInstrumentStats(): void {
+      this.selectedInstrument = '';
     }
 
     formatCurrency(value: number): string {

@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectorRef, Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { PositionResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
@@ -9,11 +8,12 @@ import { Subject, exhaustMap, interval, startWith, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-assets',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './assets.component.html',
   styleUrl: './assets.component.css'
 })
 export class AssetsComponent implements OnDestroy, OnInit {
+  @Output() readonly instrumentSelected = new EventEmitter<string>();
   positions: PositionResponse[] = [];
   loading = true;
   error = '';
@@ -74,5 +74,9 @@ export class AssetsComponent implements OnDestroy, OnInit {
       minimumFractionDigits: 0,
       maximumFractionDigits: 4
     });
+  }
+
+  selectInstrument(symbol: string): void {
+    this.instrumentSelected.emit(symbol);
   }
 }

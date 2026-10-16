@@ -33,10 +33,15 @@
     </section>
 
     <main class="portfolio-column">
-      <app-assets></app-assets>
+      <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>
     </main>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
 </section>
+
+<app-instrument-stats-modal
+  [symbol]="selectedInstrument"
+  [visible]="!!selectedInstrument"
+  (closed)="closeInstrumentStats()" />
