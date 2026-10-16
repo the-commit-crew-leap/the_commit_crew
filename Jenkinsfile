@@ -57,18 +57,6 @@ pipeline {
                         sh '''
                             set +e
 
-                            HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
-                                -H "apiKey: $NVD_API_KEY" \
-                                "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=1")
-
-                            echo "NVD API HTTP status: $HTTP_STATUS"
-
-                            if [ "$HTTP_STATUS" != "200" ]; then
-                                echo "NVD API access test failed"
-                            fi
-                            
-                            set +e
-
                             echo "Dependency Scanning: shell started"
                             echo "Workspace: $PWD"
 
