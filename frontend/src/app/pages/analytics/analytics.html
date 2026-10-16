@@ -83,29 +83,35 @@
       </article>
     </section>
 
-    <section class="charts-grid" aria-label="Analytics charts">
-      <article class="chart-card">
-        <header><div><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></div></header>
-        <div #volatilityChart class="plot-container"></div>
-      </article>
-      <article class="chart-card">
-        <header><div><p class="eyebrow">Distribution</p><h2>Volatility by class</h2></div></header>
-        <div #assetClassChart class="plot-container"></div>
-      </article>
-    </section>
-
     <section *ngIf="statistics.length" class="statistics-card" aria-labelledby="statistics-title">
       <header class="section-heading"><div><p class="eyebrow">Readout</p><h2 id="statistics-title">Instrument statistics</h2></div></header>
       <div class="statistics-table" role="table">
-        <div class="statistics-row statistics-header" role="row"><span>Symbol</span><span>Class</span><span>Return</span><span>Volatility</span><span>Sharpe</span></div>
+        <div class="statistics-row statistics-header" role="row"><span>Symbol</span><span>Class</span><span>Return</span><span>Volatility</span><span>Sharpe</span><span>Max drawdown</span><span>VaR 95%</span></div>
         <div *ngFor="let statistic of statistics" class="statistics-row" role="row">
           <strong>{{ statistic.Ticker }}</strong>
           <span>{{ statistic['Asset Class'] }}</span>
           <span [class.positive]="statistic['Annualized Return (%)'] >= 0" [class.negative]="statistic['Annualized Return (%)'] < 0">{{ formatPercent(statistic['Annualized Return (%)']) }}</span>
           <span>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</span>
           <span>{{ formatRatio(statistic['Sharpe Ratio']) }}</span>
+          <span>{{ formatPercent(statistic['Maximum Drawdown (%)']) }}</span>
+          <span>{{ formatPercent(statistic['Historical VaR 95% (%)']) }}</span>
         </div>
       </div>
+    </section>
+
+    <section class="charts-grid" aria-label="Analytics charts">
+      <article class="chart-card">
+        <header><div><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></div></header>
+        <div #volatilityChart class="plot-container"></div>
+      </article>
+      <article class="chart-card">
+        <header><div><p class="eyebrow">Downside risk</p><h2>Drawdown</h2></div></header>
+        <div #drawdownChart class="plot-container"></div>
+      </article>
+      <article class="chart-card">
+        <header><div><p class="eyebrow">Risk profile</p><h2>Risk / return</h2></div></header>
+        <div #performanceChart class="plot-container"></div>
+      </article>
     </section>
   </div>
 </section>

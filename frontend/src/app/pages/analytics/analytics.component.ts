@@ -20,7 +20,8 @@ import { TradingApiService } from '../../api/trading-api.service';
 })
 export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('volatilityChart') private volatilityChart?: ElementRef<HTMLElement>;
-  @ViewChild('assetClassChart') private assetClassChart?: ElementRef<HTMLElement>;
+  @ViewChild('performanceChart') private performanceChart?: ElementRef<HTMLElement>;
+  @ViewChild('drawdownChart') private drawdownChart?: ElementRef<HTMLElement>;
 
   instruments: InstrumentResponse[] = [];
   selectedSymbols: string[] = [];
@@ -40,7 +41,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   loadingInstruments = true;
   loadingAnalytics = false;
   error = '';
-  private pendingFigures?: { volatility: PlotlyFigure; assetClass: PlotlyFigure };
+  private pendingFigures?: { volatility: PlotlyFigure; performance: PlotlyFigure; drawdown: PlotlyFigure };
   private readonly destroy$ = new Subject<void>();
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly tradingApi = inject(TradingApiService);
@@ -64,19 +65,21 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    if (!this.pendingFigures || !this.volatilityChart || !this.assetClassChart) {
+    if (!this.pendingFigures || !this.volatilityChart || !this.performanceChart || !this.drawdownChart) {
       return;
     }
 
     const figures = this.pendingFigures;
     this.pendingFigures = undefined;
     void this.renderFigure(this.volatilityChart.nativeElement, figures.volatility);
-    void this.renderFigure(this.assetClassChart.nativeElement, figures.assetClass);
+    void this.renderFigure(this.performanceChart.nativeElement, figures.performance);
+    void this.renderFigure(this.drawdownChart.nativeElement, figures.drawdown);
   }
 
   ngOnDestroy(): void {
     if (this.volatilityChart) Plotly.purge(this.volatilityChart.nativeElement);
-    if (this.assetClassChart) Plotly.purge(this.assetClassChart.nativeElement);
+    if (this.performanceChart) Plotly.purge(this.performanceChart.nativeElement);
+    if (this.drawdownChart) Plotly.purge(this.drawdownChart.nativeElement);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -119,12 +122,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
     forkJoin({
       insights: this.analyticsApi.getInsights(this.selectedSymbols, this.period, volatilityWindow),
       volatility: this.analyticsApi.getVolatility(this.selectedSymbols, this.period, volatilityWindow),
-      assetClass: this.analyticsApi.getAssetClassVolatility(this.selectedSymbols, this.period)
+      drawdown: this.analyticsApi.getDrawdown(this.selectedSymbols, this.period)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ insights, volatility, assetClass }) => {
+      next: ({ insights, volatility, drawdown }) => {
         this.insights = insights;
         this.statistics = insights.statistics;
-        this.pendingFigures = { volatility, assetClass };
+        this.pendingFigures = {
+          volatility,
+          performance: this.createPerformanceFigure(insights.statistics),
+          drawdown
+        };
         this.loadingAnalytics = false;
         this.cdr.markForCheck();
       },
@@ -154,8 +161,53 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
       font: { color: '#dbe2ed' },
-      margin: { l: 52, r: 20, t: 12, b: 48 }
-    }, { responsive: true, displaylogo: false, displayModeBar: false, staticPlot: true });
+      margin: { l: 52, r: 20, t: 12, b: 48 },
+      hovermode: 'closest',
+      hoverdistance: 24,
+      spikedistance: -1,
+      hoverlabel: { bgcolor: '#151920', bordercolor: '#a7b8fa', font: { color: '#f0f2f6' } }
+    }, {
+      ...figure.config,
+      responsive: true,
+      displaylogo: false,
+      displayModeBar: false,
+      staticPlot: true,
+      scrollZoom: false
+    });
+  }
+
+  private createPerformanceFigure(statistics: AnalyticsStatistic[]): PlotlyFigure {
+    const usableStatistics = statistics.filter((statistic) => (
+      Number.isFinite(statistic['Annualized Return (%)'])
+      && Number.isFinite(statistic['Annualized Volatility (%)'])
+    ));
+
+    return {
+      data: [{
+        type: 'scatter',
+        mode: 'markers+text',
+        x: usableStatistics.map((statistic) => statistic['Annualized Volatility (%)']),
+        y: usableStatistics.map((statistic) => statistic['Annualized Return (%)']),
+        text: usableStatistics.map((statistic) => statistic.Ticker),
+        textposition: 'top center',
+        textfont: { color: '#dbe2ed', size: 10 },
+        customdata: usableStatistics.map((statistic) => [statistic.Ticker, statistic['Sharpe Ratio']]),
+        hovertemplate: '<b>%{customdata[0]}</b><br>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Sharpe: %{customdata[1]:.2f}<extra></extra>',
+        marker: {
+          size: 12,
+          color: usableStatistics.map((statistic) => statistic['Sharpe Ratio'] ?? 0),
+          colorscale: [[0, '#ed7181'], [0.5, '#f2bf69'], [1, '#53d5ad']],
+          showscale: true,
+          colorbar: { title: 'Sharpe' },
+          line: { color: '#0b0e12', width: 1 }
+        }
+      }],
+      layout: {
+        xaxis: { title: 'Annualized volatility (%)', zeroline: true, zerolinecolor: '#8993a3' },
+        yaxis: { title: 'Annualized return (%)', zeroline: true, zerolinecolor: '#8993a3' },
+        showlegend: false
+      }
+    };
   }
 
   private getVolatilityWindow(): number {

@@ -18,6 +18,11 @@ export interface AnalyticsStatistic {
   'Sharpe Ratio': number | null;
   'Best Daily Return (%)'?: number;
   'Worst Daily Return (%)'?: number;
+  'Maximum Drawdown (%)'?: number;
+  'Current Drawdown (%)'?: number;
+  'Max Drawdown Duration (days)'?: number;
+  'Historical VaR 95% (%)'?: number;
+  'Expected Shortfall 95% (%)'?: number;
 }
 
 export interface AnalyticsInsights {
@@ -55,20 +60,14 @@ export class AnalyticsApiService {
     });
   }
 
-  getCorrelation(symbols: string[], period: string): Observable<PlotlyFigure> {
-    return this.http.get<PlotlyFigure>(`${this.baseUrl}/charts/correlation`, {
-      params: this.buildParams(symbols, period)
-    });
-  }
-
   getVolatility(symbols: string[], period: string, volatilityWindow: number): Observable<PlotlyFigure> {
     return this.http.get<PlotlyFigure>(`${this.baseUrl}/charts/volatility`, {
       params: this.buildParams(symbols, period, volatilityWindow)
     });
   }
 
-  getAssetClassVolatility(symbols: string[], period: string): Observable<PlotlyFigure> {
-    return this.http.get<PlotlyFigure>(`${this.baseUrl}/charts/asset-class-volatility`, {
+  getDrawdown(symbols: string[], period: string): Observable<PlotlyFigure> {
+    return this.http.get<PlotlyFigure>(`${this.baseUrl}/charts/drawdown`, {
       params: this.buildParams(symbols, period)
     });
   }

@@ -215,6 +215,27 @@ def get_asset_class_volatility_chart(
     )
     return _figure_response(figure)
 
+
+@app.get("/charts/drawdown")
+def get_drawdown_chart(
+    tickers: Optional[List[str]] = Query(default=None),
+    asset_classes: Optional[List[str]] = Query(default=None),
+    period: str = "1y"
+):
+    """Generate and return the drawdown chart."""
+    selected_tickers = _select_tickers(tickers, asset_classes)
+    period = _validate_period(period)
+
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
+    figure = analysis_engine.create_drawdown_figure(
+        selected_tickers,
+        start_date,
+        end_date,
+        period.upper(),
+    )
+    return _figure_response(figure)
+
 if __name__ == "__main__":
     uvicorn.run("src.api_module:app", host="0.0.0.0", port=8090)
 

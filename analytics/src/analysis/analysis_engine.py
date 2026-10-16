@@ -288,6 +288,57 @@ class AnalysisEngine:
         self.helper.save_plotly_chart(figure, filename)
 
 
+    # DRAWDOWN ANALYSIS
+    def create_drawdown_figure(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> Optional[go.Figure]:
+        """Generate interactive drawdown percentages from daily returns."""
+        returns_df = self.get_returns_for_tickers(tickers, start_date, end_date)
+
+        if returns_df.empty:
+            logger.warning("No data available for drawdown plot")
+            return None
+
+        _, ticker_title = self._chart_labels(returns_df.columns.tolist())
+        fig = go.Figure()
+
+        for symbol in returns_df.columns:
+            returns = returns_df[symbol].dropna()
+            if returns.empty:
+                continue
+
+            cumulative_value = (1 + returns).cumprod()
+            drawdown = (cumulative_value / cumulative_value.cummax() - 1) * 100
+            fig.add_trace(go.Scatter(
+                x=drawdown.index,
+                y=drawdown.values,
+                mode="lines",
+                name=symbol,
+                fill="tozeroy",
+                customdata=[symbol] * len(drawdown),
+                hovertemplate="<b>%{customdata}</b><br>%{x|%Y-%m-%d}<br>Drawdown: %{y:.2f}%<extra></extra>",
+            ))
+
+        if not fig.data:
+            logger.warning("No valid data available for drawdown plot")
+            return None
+
+        fig.update_layout(
+            title=f"Drawdown — {ticker_title} — {period_label}",
+            xaxis_title="Date",
+            yaxis_title="Drawdown (%)",
+            hovermode="x unified",
+            width=1400,
+            height=700,
+            template="plotly_white",
+        )
+        return fig
+
+
     # ASSET CLASS VOLATILITY
     def create_asset_class_volatility_figure(
         self,
@@ -332,7 +383,8 @@ class AnalysisEngine:
 
         fig = go.Figure()
 
-        # Add box plot
+        # Keep the class summary and its individual instruments in one trace so
+        # small groups remain readable instead of stacking a second scatter plot.
         for asset_class in plot_df["Asset Class"].unique():
             class_data = plot_df[plot_df["Asset Class"] == asset_class]
             fig.add_trace(go.Box(
@@ -340,19 +392,13 @@ class AnalysisEngine:
                 y=class_data["Annualized Volatility"],
                 name=asset_class,
                 boxmean="sd",
-                showlegend=False
+                boxpoints="all",
+                jitter=0.35,
+                pointpos=0,
+                customdata=class_data["Ticker"],
+                hovertemplate="<b>%{customdata}</b><br>Volatility: %{y:.2f}%<extra>%{x}</extra>",
+                showlegend=False,
             ))
-
-        # Add scatter points for individual tickers
-        fig.add_trace(go.Scatter(
-            x=plot_df["Asset Class"],
-            y=plot_df["Annualized Volatility"],
-            mode="markers",
-            marker=dict(size=10, opacity=0.7),
-            text=plot_df["Ticker"],
-            name="Tickers",
-            hovertemplate="<b>%{text}</b><br>Volatility: %{y:.2f}%<extra></extra>"
-        ))
 
         fig.update_layout(
             title=f"Annualized Volatility by Asset Class — {ticker_title} — {period_label}",
@@ -378,7 +424,7 @@ class AnalysisEngine:
         if figure is None:
             return
 
-        ticker_label, _ = self._chart_labels(figure.data[-1].text)
+        ticker_label, _ = self._chart_labels(tickers)
         filename = f"asset_class_volatility/asset_class_volatility_{ticker_label}_{period_label}.html"
         self.helper.save_plotly_chart(figure, filename)
 
