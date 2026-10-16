@@ -70,6 +70,43 @@ pipeline {
                             find . -type f -path '*target/dependency-check/*' -print
                             find . -type f -name 'dependency-check-report.json' -print
 
+                            python3 - <<'PY'
+                            import json
+                            from pathlib import Path
+
+                            reports = list(Path(".").glob("**/dependency-check-report.json"))
+
+                            with Path("dependency-check-summary.txt").open("w", encoding="utf-8") as out:
+                                total = 0
+
+                                for report in reports:
+                                    data = json.loads(report.read_text(encoding="utf-8"))
+
+                                    out.write(f"Report: {report}\n")
+
+                                    for dependency in data.get("dependencies", []):
+                                        file_name = dependency.get("fileName", "unknown")
+
+                                        for vulnerability in dependency.get("vulnerabilities", []):
+                                            cvss3 = vulnerability.get("cvssv3") or {}
+                                            cvss2 = vulnerability.get("cvssv2") or {}
+                                            score = cvss3.get("baseScore", cvss2.get("score", "N/A"))
+
+                                            out.write(
+                                                f"{score} | "
+                                                f"{vulnerability.get('severity', 'unknown')} | "
+                                                f"{vulnerability.get('name', 'unknown')} | "
+                                                f"{file_name}\n"
+                                            )
+                                            total += 1
+
+                                    out.write("\n")
+
+                                print(f"Dependency findings written to summary: {total}")
+                            PY
+
+                            cat dependency-check-summary.txt
+
                             exit "$EXIT_CODE"
                         '''
                     }
@@ -78,8 +115,9 @@ pipeline {
             post {
                 always {
                     archiveArtifacts(
-                        artifacts: '**/dependency-check-report.json',
-                        allowEmptyArchive: true
+                        artifacts: '**/dependency-check-report.json,dependency-check-summary.txt',
+                        allowEmptyArchive: true,
+                        fingerprint: true
                     )
                 }
             }
