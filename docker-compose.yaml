@@ -67,7 +67,7 @@ services:
     working_dir: /app/analytics
     command: ["uvicorn", "src.api_module:app", "--host", "0.0.0.0", "--port", "8090"]
     ports:
-      - "0.0.0.0:${ANALYTICS_API_PORT:-8090}:8090"
+      - "0.0.0.0:${ANALYTICS_API_PORT:-8091}:8090"
     environment:
       PYTHONUNBUFFERED: 1
       LOG_LEVEL: INFO
