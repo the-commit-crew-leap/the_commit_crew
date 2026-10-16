@@ -54,21 +54,22 @@ pipeline {
                     ]) {
                         echo 'Dependency Scanning: credentials bound'
 
-                        sh '''
-                            set +e
+                        sh(
+                            script: '''
+                                set +e
 
-                            echo "Dependency Scanning: shell started"
+                                echo "Dependency Scanning: shell started"
 
-                            mvn -B -e dependency-check:check \
-                                -DnvdApiKey="$NVD_API_KEY" \
-                                -Ddependency-check.fail.build.on.cvss=5.0
+                                mvn -B -e dependency-check:check \
+                                    -DnvdApiKey="$NVD_API_KEY" \
+                                    -Ddependency-check.fail.build.on.cvss=5.0
 
-                            EXIT_CODE=$?
+                                EXIT_CODE=$?
 
-                            echo "Dependency-Check exit code: $EXIT_CODE"
-                            find . -type f -path '*target/dependency-check/*' -print
+                                echo "Dependency-Check exit code: $EXIT_CODE"
+                                find . -type f -path '*target/dependency-check/*' -print
 
-                        python3 - <<'PY'
+                                python3 - <<'PY'
                         import json
                         from pathlib import Path
 
@@ -79,7 +80,7 @@ pipeline {
 
                             for report in reports:
                                 data = json.loads(report.read_text(encoding="utf-8"))
-                                output.write(f"Report: {report}\n")
+                                output.write(f"Report: {report}\\n")
 
                                 for dependency in data.get("dependencies", []):
                                     file_name = dependency.get("fileName", "unknown")
@@ -96,22 +97,22 @@ pipeline {
                                             f"{score} | "
                                             f"{vulnerability.get('severity', 'unknown')} | "
                                             f"{vulnerability.get('name', 'unknown')} | "
-                                            f"{file_name}\n"
+                                            f"{file_name}\\n"
                                         )
                                         total += 1
 
-                                output.write("\n")
+                                output.write("\\n")
 
                         print(f"Dependency findings written to summary: {total}")
                         PY
 
-                            echo "Summary file:"
-                            ls -lh dependency-check-summary.txt
-                            echo "Summary contents:"
-                            cat dependency-check-summary.txt
+                                echo "Summary file:"
+                                ls -lh dependency-check-summary.txt
+                                cat dependency-check-summary.txt
 
-                            exit "$EXIT_CODE"
-                        '''
+                                exit "$EXIT_CODE"
+                            '''.stripIndent()
+                        )
                     }
                 }
             }
