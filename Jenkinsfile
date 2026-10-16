@@ -43,22 +43,86 @@ pipeline {
         }
         stage('Dependency Scanning') {
             steps {
-                script {
-                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                        sh '''
-                            mvn -B dependency-check:check \
-                                -DnvdApiKey="\$NVD_API_KEY" \
-                                -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
-                            
-                            # Always pass to allow pipeline to continue
-                            exit 0
-                        '''
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    echo 'Dependency Scanning: entering catchError'
+
+                    withCredentials([
+                        string(
+                            credentialsId: 'nvd-api-key',
+                            variable: 'NVD_API_KEY'
+                        )
+                    ]) {
+                        echo 'Dependency Scanning: credentials bound'
+
+                        sh(
+                            script: '''
+                                set +e
+
+                                echo "Dependency Scanning: shell started"
+
+                                mvn -B -e dependency-check:check \
+                                    -DnvdApiKey="$NVD_API_KEY" \
+                                    -Ddependency-check.fail.build.on.cvss=5.0
+
+                                EXIT_CODE=$?
+
+                                echo "Dependency-Check exit code: $EXIT_CODE"
+                                find . -type f -path '*target/dependency-check/*' -print
+
+                                python3 - <<'PY'
+                        import json
+                        from pathlib import Path
+
+                        reports = list(Path(".").glob("**/dependency-check-report.json"))
+
+                        with Path("dependency-check-summary.txt").open("w", encoding="utf-8") as output:
+                            total = 0
+
+                            for report in reports:
+                                data = json.loads(report.read_text(encoding="utf-8"))
+                                output.write(f"Report: {report}\\n")
+
+                                for dependency in data.get("dependencies", []):
+                                    file_name = dependency.get("fileName", "unknown")
+
+                                    for vulnerability in dependency.get("vulnerabilities", []):
+                                        cvss3 = vulnerability.get("cvssv3") or {}
+                                        cvss2 = vulnerability.get("cvssv2") or {}
+                                        score = cvss3.get(
+                                            "baseScore",
+                                            cvss2.get("score", "N/A")
+                                        )
+
+                                        output.write(
+                                            f"{score} | "
+                                            f"{vulnerability.get('severity', 'unknown')} | "
+                                            f"{vulnerability.get('name', 'unknown')} | "
+                                            f"{file_name}\\n"
+                                        )
+                                        total += 1
+
+                                output.write("\\n")
+
+                        print(f"Dependency findings written to summary: {total}")
+                        PY
+
+                                echo "Summary file:"
+                                ls -lh dependency-check-summary.txt
+                                cat dependency-check-summary.txt
+
+                                exit "$EXIT_CODE"
+                            '''.stripIndent()
+                        )
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
+                    archiveArtifacts(
+                        artifacts: '**/dependency-check-report.json,dependency-check-summary.txt',
+                        allowEmptyArchive: true,
+                        fingerprint: true
+                    )
                 }
             }
         }
