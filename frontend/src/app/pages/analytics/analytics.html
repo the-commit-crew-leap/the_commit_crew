@@ -21,13 +21,10 @@
         </select>
       </div>
       <div class="control-block">
-        <label for="period">Period</label>
-        <select id="period" [(ngModel)]="period">
-          <option value="1y">1 year</option>
-          <option value="5y">5 years</option>
-          <option value="10y">10 years</option>
-          <option value="all">All history</option>
-        </select>
+        <label>Period</label>
+        <div class="period-buttons" aria-label="Analysis period">
+          <button *ngFor="let option of periods" type="button" [class.is-active]="period === option.value" [attr.aria-pressed]="period === option.value" (click)="setPeriod(option.value)">{{ option.label }}</button>
+        </div>
       </div>
       <div class="control-block">
         <label for="window">Volatility window</label>
@@ -87,10 +84,6 @@
     </section>
 
     <section class="charts-grid" aria-label="Analytics charts">
-      <article class="chart-card chart-card-wide">
-        <header><div><p class="eyebrow">Relationships</p><h2>Correlation matrix</h2></div></header>
-        <div #correlationChart class="plot-container"></div>
-      </article>
       <article class="chart-card">
         <header><div><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></div></header>
         <div #volatilityChart class="plot-container"></div>

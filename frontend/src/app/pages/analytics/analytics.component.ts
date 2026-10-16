@@ -19,7 +19,6 @@ import { TradingApiService } from '../../api/trading-api.service';
   styleUrl: './analytics.css'
 })
 export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
-  @ViewChild('correlationChart') private correlationChart?: ElementRef<HTMLElement>;
   @ViewChild('volatilityChart') private volatilityChart?: ElementRef<HTMLElement>;
   @ViewChild('assetClassChart') private assetClassChart?: ElementRef<HTMLElement>;
 
@@ -27,13 +26,21 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   selectedSymbols: string[] = [];
   selectedAssetClass = 'ALL';
   period = '1y';
+  readonly periods = [
+    { value: '1w', label: '1W' },
+    { value: '1m', label: '1M' },
+    { value: '6m', label: '6M' },
+    { value: '1y', label: '1Y' },
+    { value: '5y', label: '5Y' },
+    { value: '10y', label: '10Y' }
+  ];
   volatilityWindow = 30;
   insights?: AnalyticsInsights;
   statistics: AnalyticsStatistic[] = [];
   loadingInstruments = true;
   loadingAnalytics = false;
   error = '';
-  private pendingFigures?: { correlation: PlotlyFigure; volatility: PlotlyFigure; assetClass: PlotlyFigure };
+  private pendingFigures?: { volatility: PlotlyFigure; assetClass: PlotlyFigure };
   private readonly destroy$ = new Subject<void>();
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly tradingApi = inject(TradingApiService);
@@ -57,19 +64,17 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    if (!this.pendingFigures || !this.correlationChart || !this.volatilityChart || !this.assetClassChart) {
+    if (!this.pendingFigures || !this.volatilityChart || !this.assetClassChart) {
       return;
     }
 
     const figures = this.pendingFigures;
     this.pendingFigures = undefined;
-    void this.renderFigure(this.correlationChart.nativeElement, figures.correlation);
     void this.renderFigure(this.volatilityChart.nativeElement, figures.volatility);
     void this.renderFigure(this.assetClassChart.nativeElement, figures.assetClass);
   }
 
   ngOnDestroy(): void {
-    if (this.correlationChart) Plotly.purge(this.correlationChart.nativeElement);
     if (this.volatilityChart) Plotly.purge(this.volatilityChart.nativeElement);
     if (this.assetClassChart) Plotly.purge(this.assetClassChart.nativeElement);
     this.destroy$.next();
@@ -97,6 +102,11 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
       : [...this.selectedSymbols, symbol];
   }
 
+  setPeriod(period: string): void {
+    if (this.period === period) return;
+    this.period = period;
+  }
+
   runAnalytics(): void {
     if (this.selectedSymbols.length === 0) {
       this.error = 'Select at least one instrument.';
@@ -105,16 +115,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.loadingAnalytics = true;
     this.error = '';
+    const volatilityWindow = this.getVolatilityWindow();
     forkJoin({
-      insights: this.analyticsApi.getInsights(this.selectedSymbols, this.period, this.volatilityWindow),
-      correlation: this.analyticsApi.getCorrelation(this.selectedSymbols, this.period),
-      volatility: this.analyticsApi.getVolatility(this.selectedSymbols, this.period, this.volatilityWindow),
+      insights: this.analyticsApi.getInsights(this.selectedSymbols, this.period, volatilityWindow),
+      volatility: this.analyticsApi.getVolatility(this.selectedSymbols, this.period, volatilityWindow),
       assetClass: this.analyticsApi.getAssetClassVolatility(this.selectedSymbols, this.period)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ insights, correlation, volatility, assetClass }) => {
+      next: ({ insights, volatility, assetClass }) => {
         this.insights = insights;
         this.statistics = insights.statistics;
-        this.pendingFigures = { correlation, volatility, assetClass };
+        this.pendingFigures = { volatility, assetClass };
         this.loadingAnalytics = false;
         this.cdr.markForCheck();
       },
@@ -138,9 +148,22 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
     return Plotly.newPlot(element, figure.data, {
       ...figure.layout,
       autosize: true,
+      width: element.clientWidth,
+      height: Math.max(360, element.clientHeight),
+      title: null,
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
-      font: { color: '#dbe2ed' }
-    }, { responsive: true, displaylogo: false });
+      font: { color: '#dbe2ed' },
+      margin: { l: 52, r: 20, t: 12, b: 48 }
+    }, { responsive: true, displaylogo: false, displayModeBar: false, staticPlot: true });
+  }
+
+  private getVolatilityWindow(): number {
+    switch (this.period) {
+      case '1w': return Math.min(this.volatilityWindow, 2);
+      case '1m': return Math.min(this.volatilityWindow, 5);
+      case '6m': return Math.min(this.volatilityWindow, 10);
+      default: return this.volatilityWindow;
+    }
   }
 }
