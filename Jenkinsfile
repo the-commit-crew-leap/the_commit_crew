@@ -54,14 +54,14 @@ pipeline {
                     ]) {
                         echo 'Dependency Scanning: credentials bound'
 
-                        sh """
+                        sh '''
                             set +e
 
                             echo "Dependency Scanning: shell started"
                             echo "Workspace: $PWD"
 
                             mvn -B -e dependency-check:check \
-                                -DnvdApiKey="\$NVD_API_KEY" \
+                                -DnvdApiKey="$NVD_API_KEY" \
                                 -Ddependency-check.fail.build.on.cvss=5.0
 
                             EXIT_CODE=$?
@@ -70,8 +70,8 @@ pipeline {
                             find . -type f -path '*target/dependency-check/*' -print
                             find . -type f -name 'dependency-check-report.json' -print
 
-                            exit "\$EXIT_CODE"
-                        """
+                            exit "$EXIT_CODE"
+                        '''
                     }
                 }
             }
