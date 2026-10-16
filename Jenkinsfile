@@ -44,15 +44,20 @@ pipeline {
         stage('Dependency Scanning') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    echo 'Dependency Scanning: entering catchError'
+
                     withCredentials([
                         string(
                             credentialsId: 'nvd-api-key',
                             variable: 'NVD_API_KEY'
                         )
                     ]) {
+                        echo 'Dependency Scanning: credentials bound'
+
                         sh '''
                             set +e
 
+                            echo "Dependency Scanning: shell started"
                             echo "Workspace: $PWD"
 
                             mvn -B -e dependency-check:check \
@@ -62,15 +67,8 @@ pipeline {
                             EXIT_CODE=$?
 
                             echo "Dependency-Check exit code: $EXIT_CODE"
-                            echo "Dependency-Check files:"
-                            find . -type f \\( \
-                                -name 'dependency-check-report.json' -o \
-                                -name 'dependency-check-report.xml' -o \
-                                -name 'dependency-check-report.html' \
-                            \\) -print
-
-                            echo "Dependency-Check directories:"
-                            find . -type d -path '*dependency-check*' -print
+                            find . -type f -path '*target/dependency-check/*' -print
+                            find . -type f -name 'dependency-check-report.json' -print
 
                             exit "\$EXIT_CODE"
                         '''
