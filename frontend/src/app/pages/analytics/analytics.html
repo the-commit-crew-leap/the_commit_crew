@@ -1,0 +1,118 @@
+<section class="analytics-shell">
+  <div class="analytics-workspace">
+    <header class="analytics-heading">
+      <div>
+        <p class="eyebrow">Research desk</p>
+        <h1>Analytics</h1>
+        <p>Compare instruments, inspect risk, and explore portfolio relationships.</p>
+      </div>
+      <div class="run-state" [class.is-loading]="loadingAnalytics">
+        <span class="state-dot" aria-hidden="true"></span>
+        {{ loadingAnalytics ? 'Calculating' : 'Ready' }}
+      </div>
+    </header>
+
+    <section class="controls-panel" aria-label="Analytics controls">
+      <div class="control-block control-block-wide">
+        <label for="asset-class">Asset class</label>
+        <select id="asset-class" [ngModel]="selectedAssetClass" (ngModelChange)="setAssetClass($event)">
+          <option value="ALL">All instruments</option>
+          <option *ngFor="let assetClass of assetClasses" [value]="assetClass">{{ assetClass }}</option>
+        </select>
+      </div>
+      <div class="control-block">
+        <label for="period">Period</label>
+        <select id="period" [(ngModel)]="period">
+          <option value="1y">1 year</option>
+          <option value="5y">5 years</option>
+          <option value="10y">10 years</option>
+          <option value="all">All history</option>
+        </select>
+      </div>
+      <div class="control-block">
+        <label for="window">Volatility window</label>
+        <input id="window" type="number" min="2" step="1" [(ngModel)]="volatilityWindow">
+      </div>
+      <button class="run-button" type="button" [disabled]="loadingAnalytics || loadingInstruments" (click)="runAnalytics()">
+        {{ loadingAnalytics ? 'Running...' : 'Run analytics' }}
+      </button>
+    </section>
+
+    <p *ngIf="loadingInstruments" class="state-message">Loading instruments...</p>
+    <p *ngIf="error" class="state-message error-message" role="alert">{{ error }}</p>
+
+    <section *ngIf="!loadingInstruments" class="symbol-picker" aria-labelledby="symbol-picker-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Universe</p>
+          <h2 id="symbol-picker-title">Choose instruments</h2>
+        </div>
+        <span class="selection-count">{{ selectedSymbols.length }} selected</span>
+      </div>
+      <div class="symbol-grid">
+        <button
+          *ngFor="let instrument of visibleInstruments"
+          type="button"
+          class="symbol-chip"
+          [class.is-selected]="selectedSymbols.includes(instrument.symbol)"
+          [attr.aria-pressed]="selectedSymbols.includes(instrument.symbol)"
+          (click)="toggleSymbol(instrument.symbol)">
+          <strong>{{ instrument.symbol }}</strong>
+          <small>{{ instrument.name }}</small>
+        </button>
+      </div>
+    </section>
+
+    <section *ngIf="insights" class="metric-strip" aria-label="Analytics highlights">
+      <article>
+        <span>Best return</span>
+        <strong>{{ insights.insights.best_return?.ticker || '—' }}</strong>
+        <small>{{ formatPercent(insights.insights.best_return?.value) }}</small>
+      </article>
+      <article>
+        <span>Highest volatility</span>
+        <strong>{{ insights.insights.highest_volatility?.ticker || '—' }}</strong>
+        <small>{{ formatPercent(insights.insights.highest_volatility?.value) }}</small>
+      </article>
+      <article>
+        <span>Best Sharpe</span>
+        <strong>{{ insights.insights.best_sharpe?.ticker || '—' }}</strong>
+        <small>{{ formatRatio(insights.insights.best_sharpe?.value ?? null) }}</small>
+      </article>
+      <article>
+        <span>Coverage</span>
+        <strong>{{ insights.metadata.ticker_count }}</strong>
+        <small>instruments analyzed</small>
+      </article>
+    </section>
+
+    <section class="charts-grid" aria-label="Analytics charts">
+      <article class="chart-card chart-card-wide">
+        <header><div><p class="eyebrow">Relationships</p><h2>Correlation matrix</h2></div></header>
+        <div #correlationChart class="plot-container"></div>
+      </article>
+      <article class="chart-card">
+        <header><div><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></div></header>
+        <div #volatilityChart class="plot-container"></div>
+      </article>
+      <article class="chart-card">
+        <header><div><p class="eyebrow">Distribution</p><h2>Volatility by class</h2></div></header>
+        <div #assetClassChart class="plot-container"></div>
+      </article>
+    </section>
+
+    <section *ngIf="statistics.length" class="statistics-card" aria-labelledby="statistics-title">
+      <header class="section-heading"><div><p class="eyebrow">Readout</p><h2 id="statistics-title">Instrument statistics</h2></div></header>
+      <div class="statistics-table" role="table">
+        <div class="statistics-row statistics-header" role="row"><span>Symbol</span><span>Class</span><span>Return</span><span>Volatility</span><span>Sharpe</span></div>
+        <div *ngFor="let statistic of statistics" class="statistics-row" role="row">
+          <strong>{{ statistic.Ticker }}</strong>
+          <span>{{ statistic['Asset Class'] }}</span>
+          <span [class.positive]="statistic['Annualized Return (%)'] >= 0" [class.negative]="statistic['Annualized Return (%)'] < 0">{{ formatPercent(statistic['Annualized Return (%)']) }}</span>
+          <span>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</span>
+          <span>{{ formatRatio(statistic['Sharpe Ratio']) }}</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</section>

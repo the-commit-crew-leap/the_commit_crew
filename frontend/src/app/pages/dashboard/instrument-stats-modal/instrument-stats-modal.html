@@ -1,0 +1,23 @@
+<div *ngIf="visible" class="modal-backdrop" (click)="close()">
+  <section class="stats-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'stats-title-' + symbol" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <div>
+        <p class="eyebrow">Instrument snapshot</p>
+        <h2 [id]="'stats-title-' + symbol">{{ symbol }}</h2>
+      </div>
+      <button class="close-button" type="button" aria-label="Close statistics" (click)="close()">×</button>
+    </header>
+
+    <p *ngIf="loading" class="modal-state">Loading one-year statistics...</p>
+    <p *ngIf="error" class="modal-state error" role="alert">{{ error }}</p>
+    <div *ngIf="statistic && !loading" class="stat-grid">
+      <article><span>Asset class</span><strong>{{ statistic['Asset Class'] }}</strong></article>
+      <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
+      <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
+      <article><span>Sharpe ratio</span><strong>{{ formatRatio(statistic['Sharpe Ratio']) }}</strong></article>
+      <article><span>Best daily return</span><strong>{{ formatPercent(statistic['Best Daily Return (%)']) }}</strong></article>
+      <article><span>Worst daily return</span><strong>{{ formatPercent(statistic['Worst Daily Return (%)']) }}</strong></article>
+    </div>
+    <footer><span>Based on the last 12 months of available price history.</span><button type="button" (click)="close()">Done</button></footer>
+  </section>
+</div>

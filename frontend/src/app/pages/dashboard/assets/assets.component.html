@@ -17,10 +17,10 @@
     <p *ngIf="!loading && !error && positions.length === 0" class="assets-state">No assets yet.</p>
 
     <div *ngFor="let position of positions" class="assets-row" role="row">
-      <div class="asset-name" role="cell">
+      <button class="asset-name asset-name-button" type="button" role="cell" (click)="selectInstrument(position.symbol)" [attr.aria-label]="'View statistics for ' + position.symbol">
         <strong>{{ position.symbol }}</strong>
         <small>{{ formatQuantity(position.quantity) }}</small>
-      </div>
+      </button>
       <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span
