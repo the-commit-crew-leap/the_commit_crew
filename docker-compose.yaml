@@ -60,6 +60,26 @@ services:
       retries: 5
       start_period: 30s
 
+  analytics:
+    build:
+      context: .
+      dockerfile: analytics/Dockerfile
+    working_dir: /app/analytics
+    command: ["uvicorn", "src.api_module:app", "--host", "0.0.0.0", "--port", "8090"]
+    ports:
+      - "0.0.0.0:${ANALYTICS_API_PORT:-8091}:8090"
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+      ANALYTICS_CORS_ORIGINS: ${ANALYTICS_CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
+    volumes:
+      - ./analytics:/app/analytics
+      - ./analytics/outputs:/app/analytics/outputs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: .

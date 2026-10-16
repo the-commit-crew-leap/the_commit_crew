@@ -62,6 +62,18 @@ pipeline {
                 }
             }
         }
+        stage('Generate Analytics Seeds') {
+            steps {
+                sh '''
+                    set -e
+                    python3 -m venv .analytics-venv
+                    .analytics-venv/bin/python -m pip install --quiet --upgrade pip
+                    .analytics-venv/bin/python -m pip install --quiet -r analytics/requirements.txt
+                    cd analytics
+                    ../.analytics-venv/bin/python -m src.main run
+                '''
+            }
+        }
         stage('Build Image') {
             steps { sh 'docker build -t the-commit-crew:${BUILD_NUMBER} .' }
         }

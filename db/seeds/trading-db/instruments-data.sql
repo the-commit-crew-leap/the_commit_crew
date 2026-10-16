@@ -1,5 +1,5 @@
--- Auto-generated from ticker_metadata.csv
--- Do not edit manually; regenerate with: python python/generate_instruments_seed.py
+-- Auto-generated from symbol_metadata.csv
+-- Do not edit manually; regenerate by running the analytics pipeline.
 
 INSERT INTO instruments (symbol, name, asset_class, currency, tradable) VALUES
     ('AAPL', 'Apple Inc.', 'EQUITY', 'USD', true),

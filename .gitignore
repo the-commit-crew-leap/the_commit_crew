@@ -1,12 +1,18 @@
 target/
 .env.dev
 .env.prod
+.env.*
 .vscode
+
+# Python
+.venv
 **/.venv/
-python/market_data/
 **/__pycache__/
+*/__pycache__
 .pytest_cache/
-python/venv
+__init__.py
+analytics.log
+analytics/outputs/
 
 # Node.js
 node_modules/

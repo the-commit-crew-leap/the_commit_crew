@@ -1,0 +1,15 @@
+pandas
+numpy
+yfinance
+matplotlib
+python-dotenv
+sqlalchemy
+pydantic
+seaborn
+pytest
+pytest-cov
+fastapi
+uvicorn
+apscheduler
+plotly
+psycopg2-binary
