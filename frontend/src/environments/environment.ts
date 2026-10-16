@@ -4,5 +4,6 @@ export const environment = {
   production: false,
   bypassAuth: true,
   authApiBaseUrl: `http://${apiHost}:8082/api/auth`,
-  appApiBaseUrl: `http://${apiHost}:8081/api/v1`
+  appApiBaseUrl: `http://${apiHost}:8081/api/v1`,
+  analyticsApiBaseUrl: `http://${apiHost}:8091`
 };

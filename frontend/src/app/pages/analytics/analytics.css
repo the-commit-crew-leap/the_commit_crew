@@ -1,0 +1,56 @@
+:host { display: block; }
+
+.analytics-shell { min-height: 100vh; padding: 32px; background: #0b0e12; color: #e8ebf0; }
+.analytics-workspace { max-width: 1600px; margin: 0 auto; }
+.analytics-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+.analytics-heading h1, .section-heading h2, .chart-card h2 { margin: 0; }
+.analytics-heading h1 { font-size: 34px; font-weight: 500; letter-spacing: .01em; }
+.analytics-heading > div:first-child > p:last-child { margin: 8px 0 0; color: #8993a3; }
+.eyebrow { margin: 0 0 7px; color: #93a4e8; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.run-state { display: flex; align-items: center; gap: 8px; color: #8993a3; font-size: 12px; }
+.state-dot { width: 8px; height: 8px; border-radius: 50%; background: #53d5ad; }
+.run-state.is-loading .state-dot { background: #f2bf69; }
+.controls-panel, .symbol-picker, .chart-card, .statistics-card { border: 1px solid #29313c; border-radius: 12px; background: #151920; }
+.controls-panel { display: flex; align-items: end; gap: 14px; padding: 18px; }
+.control-block { display: flex; min-width: 150px; flex-direction: column; gap: 7px; }
+.control-block-wide { flex: 1; }
+.control-block label { color: #8993a3; font-size: 11px; }
+.control-block select, .control-block input { height: 38px; box-sizing: border-box; padding: 0 11px; border: 1px solid #36404e; border-radius: 6px; outline: none; background: #0f1318; color: #e8ebf0; font: inherit; }
+.control-block select:focus, .control-block input:focus { border-color: #a7b8fa; }
+.run-button { height: 38px; padding: 0 17px; border: 1px solid #a7b8fa; border-radius: 6px; background: #a7b8fa; color: #0d1015; font-weight: 700; cursor: pointer; }
+.run-button:disabled { cursor: wait; opacity: .55; }
+.symbol-picker, .statistics-card { margin-top: 18px; padding: 20px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.section-heading h2, .chart-card h2 { font-size: 17px; font-weight: 500; }
+.selection-count { color: #8993a3; font-size: 12px; }
+.symbol-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.symbol-chip { display: flex; min-width: 128px; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid #36404e; border-radius: 7px; background: #101419; color: #e8ebf0; text-align: left; cursor: pointer; }
+.symbol-chip:hover, .symbol-chip.is-selected { border-color: #a7b8fa; background: #202638; }
+.symbol-chip small { overflow: hidden; color: #8993a3; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.state-message { margin: 18px 0 0; color: #8993a3; font-size: 13px; }
+.error-message { color: #ff929b; }
+.metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.metric-strip article { display: flex; min-height: 92px; box-sizing: border-box; flex-direction: column; justify-content: space-between; padding: 16px; border: 1px solid #29313c; border-radius: 10px; background: #11151a; }
+.metric-strip span, .metric-strip small { color: #8993a3; font-size: 11px; }
+.metric-strip strong { color: #f0f2f6; font-size: 21px; font-weight: 500; }
+.charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.chart-card { min-width: 0; padding: 18px; }
+.chart-card-wide { grid-column: 1 / -1; }
+.chart-card header { min-height: 37px; }
+.plot-container { min-height: 310px; width: 100%; }
+.chart-card-wide .plot-container { min-height: 440px; }
+.statistics-table { margin-top: 18px; overflow-x: auto; }
+.statistics-row { display: grid; grid-template-columns: 1.2fr 1.2fr repeat(3, 1fr); align-items: center; min-width: 580px; min-height: 48px; padding: 0 14px; border-top: 1px solid #29313c; color: #c2c9d4; font-size: 13px; }
+.statistics-header { min-height: 32px; border-top: 0; color: #8993a3; font-size: 10px; text-transform: uppercase; }
+.statistics-row span:nth-child(n+3), .statistics-row strong ~ span:nth-child(n+3) { text-align: right; }
+.positive { color: #53d5ad; }
+.negative { color: #ed7181; }
+
+@media (max-width: 760px) {
+  .analytics-shell { padding: 22px 16px; }
+  .analytics-heading, .controls-panel { align-items: stretch; flex-direction: column; }
+  .controls-panel { gap: 12px; }
+  .control-block, .run-button { width: 100%; }
+  .metric-strip, .charts-grid { grid-template-columns: 1fr; }
+  .chart-card-wide { grid-column: auto; }
+}
