@@ -55,6 +55,7 @@ INSTRUMENTS_SEED_FILE = REPO_ROOT / "db" / "seeds" / "trading-db" / "instruments
 PRICE_HISTORY_SEED_FILE = REPO_ROOT / "db" / "seeds" / "trading-db" / "price_history-data.sql"
 
 # Price history and metadata files
+ANALYTICS_PRICE_HISTORY_FILE = CSV_DIR / "price_history_analytics.csv"
 PRICE_HISTORY_FILE = CSV_DIR / "price_history.csv"
 SYMBOL_METADATA_FILE = CSV_DIR / "symbol_metadata.csv"
 

@@ -44,12 +44,29 @@ class Loader:
         errors = []
         saved = 0
         
-        # Save merged price history (all tickers combined)
+        # Save merged price history for analytics and the database separately.
         try:
             merged = df.sort_values(["symbol", "date"]).reset_index(drop=True)
             config.PRICE_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-            merged.to_csv(config.PRICE_HISTORY_FILE, index=False)
-            logger.info(f"Saved merged price history to {config.PRICE_HISTORY_FILE}")
+            merged.to_csv(config.ANALYTICS_PRICE_HISTORY_FILE, index=False)
+
+            database_price_history = merged[
+                ["symbol", "date", "open", "high", "low", "close", "volume"]
+            ].rename(
+                columns={
+                    "date": "price_date",
+                    "open": "open_price",
+                    "high": "high_price",
+                    "low": "low_price",
+                    "close": "close_price",
+                }
+            )
+            database_price_history.to_csv(config.PRICE_HISTORY_FILE, index=False)
+            logger.info(
+                "Saved analytics price history to %s and database price history to %s",
+                config.ANALYTICS_PRICE_HISTORY_FILE,
+                config.PRICE_HISTORY_FILE,
+            )
         except Exception as e:
             msg = f"Failed to save price_history.csv: {str(e)}"
             logger.error(msg)

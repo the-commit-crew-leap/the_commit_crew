@@ -83,7 +83,7 @@ class ETLPipeline:
             clean = self.transformer.transform(raw)
             result = self.loader.load(clean)
             if not result["errors"]:
-                self.generate_price_history_seed()
+                self.generate_price_history_seed(config.ANALYTICS_PRICE_HISTORY_FILE)
 
             summary = {
                 "status": ("success" if not result["errors"] else "partial"),

@@ -35,6 +35,11 @@ def test_run_etl_success(monkeypatch, tmp_path):
     price_history_file = tmp_path / "price_history.csv"
     seed_file = tmp_path / "price_history-data.sql"
     monkeypatch.setattr(config, "PRICE_HISTORY_FILE", price_history_file)
+    monkeypatch.setattr(
+        config,
+        "ANALYTICS_PRICE_HISTORY_FILE",
+        tmp_path / "price_history_analytics.csv",
+    )
     monkeypatch.setattr(config, "PRICE_HISTORY_SEED_FILE", seed_file)
 
     # Replace extract() with deterministic test data.
@@ -61,6 +66,12 @@ def test_run_etl_success(monkeypatch, tmp_path):
 
     assert (tmp_path / "AAPL.csv").exists()
     assert (tmp_path / "SPY.csv").exists()
+    assert (tmp_path / "price_history.csv").read_text().splitlines()[0] == (
+        "symbol,price_date,open_price,high_price,low_price,close_price,volume"
+    )
+    assert (tmp_path / "price_history_analytics.csv").read_text().splitlines()[0] == (
+        "symbol,date,open,high,low,close,volume,adj_close,price_change,pct_change,load_timestamp"
+    )
     assert seed_file.exists()
     assert "INSERT INTO price_history (symbol" in seed_file.read_text()
 
