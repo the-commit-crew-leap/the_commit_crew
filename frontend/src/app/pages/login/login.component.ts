@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -16,6 +16,8 @@ import { environment } from '../../../environments/environment';
   imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthHeaderComponent]
 })
 export class LoginComponent {
+  @ViewChild('loginForm') private loginForm?: ElementRef<HTMLFormElement>;
+  @ViewChild('apiError') private apiError?: ElementRef<HTMLParagraphElement>;
   isSubmitting = false;
   errorMessage = '';
   infoMessage = '';
@@ -62,6 +64,7 @@ export class LoginComponent {
   submit(): void {
     if (this.form.invalid || this.isSubmitting) {
       this.form.markAllAsTouched();
+      this.focusFirstInvalidField();
       return;
     }
 
@@ -89,7 +92,25 @@ export class LoginComponent {
         error: (err) => {
           this.errorMessage = getAuthErrorMessage(err, 'Login failed. Please try again.');
           this.cdr.detectChanges();
+          this.focusSubmitError();
         }
       });
+  }
+
+  private focusFirstInvalidField(): void {
+    setTimeout(() => {
+      this.loginForm?.nativeElement
+        .querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus();
+    });
+  }
+
+  private focusSubmitError(): void {
+    setTimeout(() => {
+      const errorElement = this.apiError?.nativeElement;
+      if (errorElement) {
+        errorElement.focus();
+      }
+    });
   }
 }

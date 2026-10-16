@@ -134,6 +134,17 @@
   color: #fff;
 }
 
+.tcc-header .tcc-dropdown-logout:focus-visible {
+  outline: 3px solid #ed7181;
+  outline-offset: 3px;
+}
+
+.tcc-header a:focus-visible,
+.tcc-header button:focus-visible {
+  outline: 3px solid #a7b8fa;
+  outline-offset: 3px;
+}
+
 .tcc-profile {
   display: grid;
   width: 32px;

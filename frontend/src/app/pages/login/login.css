@@ -103,6 +103,30 @@ form {
   gap: 10px;
 }
 
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 label {
   margin-top: 8px;
   color: #8993a3;
@@ -222,9 +246,10 @@ button:disabled {
 }
 
 .field-error {
-  margin: -4px 0 0;
+  margin: 0;
   color: #ed7181;
   font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .hint {
@@ -241,6 +266,13 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #a7b8fa;
+  outline-offset: 3px;
 }
 
 @media (max-width: 480px) {

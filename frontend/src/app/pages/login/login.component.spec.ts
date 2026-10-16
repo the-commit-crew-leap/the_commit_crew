@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
@@ -72,7 +73,7 @@ describe('LoginComponent', () => {
     expect(component.isSubmitting).toBe(false);
   });
 
-  it('displays the backend error', () => {
+  it('moves focus to the backend error', fakeAsync(() => {
     authSession.login.mockReturnValue(
       throwError(() => ({
         error: { message: 'Invalid credentials' }
@@ -89,7 +90,11 @@ describe('LoginComponent', () => {
 
     expect(component.errorMessage).toBe('Invalid credentials');
     expect(component.isSubmitting).toBe(false);
-  });
+    fixture.detectChanges();
+    tick();
+
+    expect(document.activeElement?.id).toBe('login-api-error');
+  }));
 
   it('shows the registration success message', () => {
     queryParams['registered'] = '1';
