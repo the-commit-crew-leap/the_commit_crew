@@ -25,9 +25,14 @@ cors_origins = [
     ).split(",")
     if origin.strip()
 ]
+cors_origin_regex = os.getenv(
+    "ANALYTICS_CORS_ORIGIN_REGEX",
+    r"https?://10\.9\.\d{1,3}\.\d{1,3}:8086",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
