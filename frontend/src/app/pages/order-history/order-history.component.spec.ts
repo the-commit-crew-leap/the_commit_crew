@@ -91,4 +91,28 @@ describe('OrderHistoryComponent', () => {
 
     expect(component.filteredOrders).toEqual([]);
   });
+
+  it('clears an individual active filter', () => {
+    const component = createComponent();
+    component.selectedAssetClass = 'EQUITY';
+    component.selectedSide = 'BUY';
+    component.selectedStatus = 'FILLED';
+
+    component.clearAssetClassFilter();
+    expect(component.selectedAssetClass).toBe('');
+    expect(component.selectedSide).toBe('BUY');
+    expect(component.selectedStatus).toBe('FILLED');
+
+    component.clearSideFilter();
+    expect(component.selectedSide).toBe('');
+
+    component.clearStatusFilter();
+    expect(component.selectedStatus).toBe('');
+  });
+
+  it('does not offer CASH as an asset class filter', () => {
+    const component = createComponent();
+
+    expect(component.assetClasses).toEqual(['EQUITY', 'BOND', 'FUND']);
+  });
 });

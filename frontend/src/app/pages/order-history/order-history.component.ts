@@ -21,7 +21,7 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
   selectedAssetClass: AssetClass | '' = '';
   selectedSide: OrderSide | '' = '';
   selectedStatus: OrderStatus | '' = '';
-  readonly assetClasses: AssetClass[] = ['EQUITY', 'BOND', 'FUND', 'CASH'];
+  readonly assetClasses: AssetClass[] = ['EQUITY', 'BOND', 'FUND'];
   readonly sides: OrderSide[] = ['BUY', 'SELL'];
   readonly statuses: OrderStatus[] = ['NEW', 'FILLED', 'REJECTED', 'CANCELLED'];
   private readonly destroy$ = new Subject<void>();
@@ -106,6 +106,18 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
 
   get filteredOrderValue(): number {
     return this.filteredOrders.reduce((total, order) => total + this.orderValue(order), 0);
+  }
+
+  clearAssetClassFilter(): void {
+    this.selectedAssetClass = '';
+  }
+
+  clearSideFilter(): void {
+    this.selectedSide = '';
+  }
+
+  clearStatusFilter(): void {
+    this.selectedStatus = '';
   }
 
   get filledOrders(): number {

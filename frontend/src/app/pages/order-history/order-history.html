@@ -64,6 +64,20 @@
         </select>
       </label>
     </div>
+    <div class="active-filters" *ngIf="selectedAssetClass || selectedSide || selectedStatus" aria-label="Active order filters">
+      <span class="filter-chip" *ngIf="selectedAssetClass">
+        Asset class: {{ selectedAssetClass }}
+        <button type="button" (click)="clearAssetClassFilter()" aria-label="Clear asset class filter">×</button>
+      </span>
+      <span class="filter-chip" *ngIf="selectedSide">
+        Side: {{ selectedSide }}
+        <button type="button" (click)="clearSideFilter()" aria-label="Clear side filter">×</button>
+      </span>
+      <span class="filter-chip" *ngIf="selectedStatus">
+        Status: {{ selectedStatus }}
+        <button type="button" (click)="clearStatusFilter()" aria-label="Clear status filter">×</button>
+      </span>
+    </div>
 
     <p *ngIf="loading" class="state">Loading order history...</p>
 
