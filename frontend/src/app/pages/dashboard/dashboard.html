@@ -37,11 +37,11 @@
     <main class="portfolio-column">
       <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>
-    </section>
+    </main>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
-</section>
+</main>
 
 <app-instrument-stats-modal
   [symbol]="selectedInstrument"
