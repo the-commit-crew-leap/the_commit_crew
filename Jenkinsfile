@@ -258,7 +258,7 @@ pipeline {
                                 echo "Database check completed"
                             fi
 
-                                                        echo "Starting Kafka..."
+                            echo "Starting Kafka..."
                             docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d kafka
 
                             echo "Waiting for Kafka to become ready..."
@@ -358,7 +358,7 @@ pipeline {
                     
                     withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
                         sh '''
-                            set e
+                            set -eu
 
                             # Extract credentials from env file
                             POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
@@ -372,29 +372,41 @@ pipeline {
 
                             echo "Verifying Kafka is available..."
 
+                            kafka_ready=false
+
                             for i in $(seq 1 30); do
-                                if docker-compose -p the_commit_crew --env-file "$ENV_FILE_PATH" exec -T kafka \
+                                if docker-compose \
+                                    -p the_commit_crew \
+                                    --env-file "$ENV_FILE_PATH" \
+                                    exec -T kafka \
                                     /opt/kafka/bin/kafka-broker-api-versions.sh \
                                     --bootstrap-server localhost:9092 \
                                     >/dev/null 2>&1; then
+                                    kafka_ready=true
                                     echo "Kafka is ready"
                                     break
-                                fi
-
-                                if [ "$i" -eq 30 ]; then
-                                    echo "Kafka is not available"
-                                    docker-compose -p the_commit_crew --env-file "$ENV_FILE_PATH" logs kafka
-                                    exit 1
                                 fi
 
                                 echo "Waiting for Kafka... attempt $i/30"
                                 sleep 2
                             done
 
+                            if [ "$kafka_ready" != "true" ]; then
+                                echo "Kafka did not become ready"
+                                docker-compose \
+                                    -p the_commit_crew \
+                                    --env-file "$ENV_FILE_PATH" \
+                                    logs kafka || true
+                                exit 1
+                            fi
+
+                            CONTAINER_NAME="the-commit-crew-smoke-${BUILD_NUMBER}"
+
                             echo "Starting application smoke-test container..."
 
                             CONTAINER_ID=$(docker run -d \
-                                --name "the-commit-crew-smoke-${BUILD_NUMBER}" \
+                                --name "$CONTAINER_NAME" \
+                                --restart=no \
                                 -p 8081:8081 \
                                 --network=the-commit-crew_default \
                                 -e "SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}" \
@@ -411,7 +423,6 @@ pipeline {
 
                             cleanup() {
                                 echo "Cleaning up smoke-test container..."
-                                docker logs "$CONTAINER_ID" 2>/dev/null || true
                                 docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
                             }
 
@@ -420,34 +431,45 @@ pipeline {
                             echo "Waiting for Spring Boot health endpoint..."
 
                             for i in $(seq 1 90); do
-                                HEALTH_RESPONSE=$(curl -sS \
-                                    --connect-timeout 2 \
-                                    --max-time 5 \
-                                    http://localhost:8081/actuator/health \
-                                    2>/dev/null || true)
-
-                                if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
-                                    echo "Smoke test passed"
-                                    exit 0
-                                fi
-
                                 CONTAINER_RUNNING=$(
                                     docker inspect \
                                         --format '{{.State.Running}}' \
                                         "$CONTAINER_ID" \
-                                        2>/dev/null || echo "false"
+                                        2>/dev/null || echo false
                                 )
 
                                 if [ "$CONTAINER_RUNNING" != "true" ]; then
-                                    echo "Application container stopped unexpectedly"
-                                    echo "Container state:"
+                                    EXIT_CODE=$(
+                                        docker inspect \
+                                            --format '{{.State.ExitCode}}' \
+                                            "$CONTAINER_ID" \
+                                            2>/dev/null || echo 1
+                                    )
+
+                                    echo "Application container exited with code $EXIT_CODE"
+                                    echo "Application container state:"
                                     docker inspect \
                                         --format '{{json .State}}' \
                                         "$CONTAINER_ID" \
                                         2>/dev/null || true
+
                                     echo "Application logs:"
                                     docker logs "$CONTAINER_ID" 2>&1 || true
+
                                     exit 1
+                                fi
+
+                                HEALTH_RESPONSE=$(
+                                    curl -sS \
+                                        --connect-timeout 2 \
+                                        --max-time 5 \
+                                        http://localhost:8081/actuator/health \
+                                        2>/dev/null || true
+                                )
+
+                                if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
+                                    echo "Smoke test passed"
+                                    exit 0
                                 fi
 
                                 echo "Attempt $i/90: application is not ready"
@@ -457,8 +479,10 @@ pipeline {
                             echo "Smoke test failed: application did not become healthy"
                             echo "Last health response:"
                             echo "$HEALTH_RESPONSE"
+
                             echo "Application logs:"
                             docker logs "$CONTAINER_ID" 2>&1 || true
+
                             exit 1
                         '''
                     }
