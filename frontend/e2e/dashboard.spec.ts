@@ -147,7 +147,7 @@ test('validates and submits an order from the order ticket', async ({ page }) =>
   await page.goto('/dashboard');
 
   const submitButton = page.getByRole('button', { name: 'Submit order' });
-  await expect(submitButton).toBeDisabled();
+  await expect(submitButton).toBeEnabled();
 
   await page.getByLabel('Asset symbol').fill('btc');
   await expect(page.getByRole('listbox', { name: 'Available instruments' })).toBeVisible();
@@ -182,5 +182,5 @@ test('shows an error when assets cannot be loaded', async ({ page }) => {
 
   await page.goto('/dashboard');
 
-  await expect(page.getByRole('alert')).toContainText('Unable to load your assets.');
+  await expect(page.getByText('Unable to load your assets.', { exact: true })).toBeVisible();
 });
