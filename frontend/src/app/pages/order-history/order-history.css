@@ -109,6 +109,36 @@
   text-align: right;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #29313c;
+}
+
+.filters label {
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  gap: 6px;
+  color: #8993a3;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.filters select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #3a4553;
+  border-radius: 6px;
+  background: #0f1319;
+  color: #e8ebf0;
+  font: inherit;
+  text-transform: none;
+}
+
 .total-value strong {
   display: block;
   margin-top: 4px;
