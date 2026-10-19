@@ -248,6 +248,29 @@ docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
 docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down -v
 ```
 
+### Enable Alpaca market data
+
+The Spring app can use Alpaca's latest-trade API for current prices. Add your
+paper-trading credentials to the local `.env.dev` file (never commit them):
+
+```text
+ALPACA_ENABLED=true
+ALPACA_API_KEY=your-paper-api-key
+ALPACA_API_SECRET=your-paper-api-secret
+ALPACA_DATA_URL=https://data.alpaca.markets
+ALPACA_FEED=iex
+```
+
+Then restart the app:
+
+```bash
+docker-compose -p commitcrew-dev --env-file .env.dev up -d --build app
+```
+
+When `ALPACA_ENABLED` is `false`, the app continues using the latest stored
+database price. The free Alpaca feed is real-time IEX data, so it may not
+represent every U.S. exchange.
+
 ## Coding Conventions
 
 ### Naming 
