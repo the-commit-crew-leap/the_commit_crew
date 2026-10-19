@@ -30,6 +30,7 @@ import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.InstrumentService;
+import com.thecommitcrew.service.MarketTickerService;
 import com.thecommitcrew.service.PriceService;
 
 @WebMvcTest(InstrumentController.class)
@@ -48,6 +49,9 @@ class InstrumentControllerTest {
 
     @MockBean
     private PriceService priceService;
+
+    @MockBean
+    private MarketTickerService marketTickerService;
 
     @MockBean
     private AuthServiceClient authServiceClient;

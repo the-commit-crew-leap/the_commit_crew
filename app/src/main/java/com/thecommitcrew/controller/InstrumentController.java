@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
+import com.thecommitcrew.domain.dto.MarketTickerResponse;
 import com.thecommitcrew.service.InstrumentService;
+import com.thecommitcrew.service.MarketTickerService;
 import com.thecommitcrew.service.PriceService;
 
 @RestController
@@ -20,16 +22,27 @@ public class InstrumentController {
 
 	private final InstrumentService instrumentService;
 	private final PriceService priceService;
+	private final MarketTickerService marketTickerService;
 
-	public InstrumentController(InstrumentService instrumentService, PriceService priceService) {
+	public InstrumentController(
+		InstrumentService instrumentService,
+		PriceService priceService,
+		MarketTickerService marketTickerService
+	) {
 		this.instrumentService = instrumentService;
 		this.priceService = priceService;
+		this.marketTickerService = marketTickerService;
 	}
 
 	@GetMapping
 	public ResponseEntity<List<InstrumentResponseDTO>> getInstruments(
 		@RequestParam(required = false) Boolean tradable) {
 	return ResponseEntity.ok(instrumentService.getInstruments(tradable));
+	}
+
+	@GetMapping("/markets")
+	public ResponseEntity<List<MarketTickerResponse>> getMarketTicker() {
+		return ResponseEntity.ok(marketTickerService.getDefaultMarkets());
 	}
 
 	@GetMapping("/{symbol}")
