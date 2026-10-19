@@ -83,11 +83,7 @@ public class DeadLetterHandler {
                 """,
                 timestamp, exceptionType, exceptionMessage, originalMessage
             );
-            
-            // TODO: Send to monitoring/alerting system
-            // TODO: Store in dead-letter database for analysis
-            // TODO: Trigger manual review workflow
-            
+
         } catch (Exception e) {
             log.error("Failed to process permanent dead letter message: {}", message, e);
         }
@@ -120,10 +116,6 @@ public class DeadLetterHandler {
                 timestamp, attemptNumber, engineProperties.failure().maxRetries(),
                 exceptionType, exceptionMessage, originalMessage
             );
-            
-            // TODO: Send to monitoring/alerting system
-            // TODO: Store for potential replay once system is healthy
-            // TODO: Trigger incident response if threshold exceeded
             
         } catch (Exception e) {
             log.error("Failed to process retry exhausted dead letter message: {}", message, e);
