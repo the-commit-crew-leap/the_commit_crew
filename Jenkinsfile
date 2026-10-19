@@ -257,6 +257,32 @@ pipeline {
                                 
                                 echo "Database check completed"
                             fi
+
+                                                        echo "Starting Kafka..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d kafka
+
+                            echo "Waiting for Kafka to become ready..."
+                            KAFKA_READY=false
+
+                            for i in {1..30}; do
+                                if docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T kafka \
+                                    /opt/kafka/bin/kafka-broker-api-versions.sh \
+                                    --bootstrap-server localhost:9092 \
+                                    >/dev/null 2>&1; then
+                                    echo "Kafka is ready!"
+                                    KAFKA_READY=true
+                                    break
+                                fi
+
+                                echo "Attempt \$i/30: Waiting for Kafka..."
+                                sleep 2
+                            done
+
+                            if [ "\$KAFKA_READY" != "true" ]; then
+                                echo "Kafka failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs kafka
+                                exit 1
+                            fi
                         """
                     }
                 }
@@ -332,44 +358,89 @@ pipeline {
                     
                     withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
                         sh '''
+                            set e
+
                             # Extract credentials from env file
                             POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
                             POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
                             AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
                             AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs || echo "$POSTGRES_PASSWORD")
                             
+                            if [ -z "$AUTH_PASSWORD" ]; then
+                                AUTH_PASSWORD="$POSTGRES_PASSWORD"
+                            fi
+
+                            echo "Verifying Kafka is available..."
+
+                            for i in $(seq 1 30); do
+                                if docker-compose -p the_commit_crew --env-file "$ENV_FILE_PATH" exec -T kafka \
+                                    /opt/kafka/bin/kafka-broker-api-versions.sh \
+                                    --bootstrap-server localhost:9092 \
+                                    >/dev/null 2>&1; then
+                                    echo "Kafka is ready"
+                                    break
+                                fi
+
+                                if [ "$i" -eq 30 ]; then
+                                    echo "Kafka is not available"
+                                    docker-compose -p the_commit_crew --env-file "$ENV_FILE_PATH" logs kafka
+                                    exit 1
+                                fi
+
+                                echo "Waiting for Kafka... attempt $i/30"
+                                sleep 2
+                            done
+
+                            echo "Starting application smoke-test container..."
+
                             CONTAINER_ID=$(docker run -d \
+                                --name "the-commit-crew-smoke-${BUILD_NUMBER}" \
                                 -p 8081:8081 \
                                 --network=the-commit-crew_default \
-                                -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB} \
-                                -e SPRING_DATASOURCE_USERNAME=postgres \
-                                -e SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD} \
-                                -e SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB} \
-                                -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
-                                -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
-                                -e SPRING_KAFKA_AUTO_STARTUP=false \
-                                -e SPRING_KAFKA_ADMIN_FAIL_FAST=false \
-                                -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
-                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=3000 \
-                                -e SERVER_SHUTDOWN=graceful \
-                                the-commit-crew:${BUILD_NUMBER})
-                            
-                            echo "Waiting for Spring Boot to start..."
-                            sleep 15
-                            
-                            for i in {1..45}; do
-                                if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
-                                    echo "Health check passed"
-                                    docker rm -f $CONTAINER_ID
+                                -e "SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}" \
+                                -e "SPRING_DATASOURCE_USERNAME=postgres" \
+                                -e "SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}" \
+                                -e "SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB}" \
+                                -e "SPRING_AUTH_DATASOURCE_USERNAME=postgres" \
+                                -e "SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD}" \
+                                -e "SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092" \
+                                -e "SPRING_KAFKA_ADMIN_FAIL_FAST=true" \
+                                -e "SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=5000" \
+                                -e "SERVER_SHUTDOWN=graceful" \
+                                "the-commit-crew:${BUILD_NUMBER}")
+
+                            cleanup() {
+                                echo "Cleaning up smoke-test container..."
+                                docker logs "$CONTAINER_ID" 2>/dev/null || true
+                                docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+                            }
+
+                            trap cleanup EXIT
+
+                            echo "Waiting for Spring Boot health endpoint..."
+
+                            for i in $(seq 1 90); do
+                                HEALTH_RESPONSE=$(curl -sS http://localhost:8081/actuator/health 2>/dev/null || true)
+
+                                if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
+                                    echo "Smoke test passed"
                                     exit 0
                                 fi
-                                echo "Attempt $i/45: Waiting for application to be ready..."
-                                sleep 1
+
+                                if ! docker ps --format '{{.ID}}' | grep -q "^${CONTAINER_ID}"; then
+                                    echo "Application container stopped unexpectedly"
+                                    docker logs "$CONTAINER_ID" || true
+                                    exit 1
+                                fi
+
+                                echo "Attempt $i/90: application is not ready"
+                                sleep 2
                             done
-                            
-                            echo "Health check failed"
-                            docker logs $CONTAINER_ID
-                            docker rm -f $CONTAINER_ID
+
+                            echo "Smoke test failed: application did not become healthy"
+                            echo "Last health response:"
+                            echo "$HEALTH_RESPONSE"
+                            docker logs "$CONTAINER_ID" || true
                             exit 1
                         '''
                     }
