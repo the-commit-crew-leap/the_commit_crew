@@ -1,0 +1,145 @@
+.dash-shell {
+  min-height: 100vh;
+  padding: 24px 32px;
+  background: #0b0e12;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  width: 100%;
+  max-width: 1600px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.portfolio-column {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+app-order-ticket {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: start;
+}
+
+.dash-card {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  padding: 4px 0 0 4px;
+  color: #e8ebf0;
+}
+
+.dash-card h1 {
+  margin: 0;
+}
+
+.portfolio-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: 16px;
+}
+
+.overview-card {
+  display: flex;
+  min-height: 110px;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 28px;
+  border: 1px solid #29313c;
+  border-radius: 12px;
+  background: #151920;
+  color: #8993a3;
+}
+
+.overview-card strong {
+  color: #e8ebf0;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.overview-card small {
+  font-size: 13px;
+}
+
+.positive {
+  color: #53d5ad !important;
+}
+
+.negative {
+  color: #ed7181 !important;
+}
+
+.welcome-message {
+  margin: 4px 0 0;
+  color: #8993a3;
+}
+
+.dash-card nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.dash-card nav a {
+  color: #a7b6ff;
+}
+
+.dash-card nav button {
+  margin-top: 0;
+  background: #29313c;
+  color: #e8ebf0;
+}
+
+button {
+  margin-top: 12px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #2d6cdf;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-card,
+  .portfolio-overview,
+  .portfolio-column {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  app-order-ticket {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .portfolio-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .portfolio-overview {
+    grid-template-columns: 1fr;
+  }
+}

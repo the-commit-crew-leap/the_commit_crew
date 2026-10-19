@@ -2,17 +2,22 @@ package com.thecommitcrew.auth;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class AuthServiceClient {
     private final RestTemplate restTemplate;
     private final String authServiceUrl; // http://auth:3000 from docker-compose
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceClient.class);
 
     public AuthServiceClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -27,9 +32,9 @@ public class AuthServiceClient {
     public ValidateResponse validateToken(String token) {
         try {
             // Test basic connectivity first
-            System.out.println("Attempting to reach auth service at: " + authServiceUrl);
+            log.info("Attempting to reach auth service at: {}", authServiceUrl);
             ResponseEntity<String> healthCheck = restTemplate.getForEntity(authServiceUrl + "/api/auth/health", String.class);
-            System.out.println("Auth service health check: " + healthCheck.getBody());
+            log.info("Auth service health check: {}", healthCheck.getBody());
             
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/json");
@@ -51,7 +56,7 @@ public class AuthServiceClient {
         }
     }
 
-    private ValidateResponse parseValidateResponse(String json) throws Exception {
+    private ValidateResponse parseValidateResponse(String json) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         var root = mapper.readTree(json);
         

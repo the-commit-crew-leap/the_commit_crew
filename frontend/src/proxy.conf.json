@@ -1,0 +1,20 @@
+{
+  "/api/auth": {
+    "target": "http://127.0.0.1:8082",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/v1": {
+    "target": "http://127.0.0.1:8081",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api": {
+    "target": "http://127.0.0.1:8081",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api": ""
+    }
+  }
+}

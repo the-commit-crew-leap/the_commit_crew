@@ -1,0 +1,171 @@
+:host {
+  display: block;
+  width: 320px;
+}
+
+.ticket-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.order-ticket {
+  box-sizing: border-box;
+  padding: 24px 20px;
+  border: 1px solid #29313c;
+  border-radius: 16px;
+  background: #151920;
+  color: #e8ebf0;
+}
+
+.ticket-header,
+.balance-row,
+.quote-row,
+.total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ticket-header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.info-icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid #9aa5b5;
+  border-radius: 50%;
+  color: #9aa5b5;
+  font-weight: 700;
+}
+
+form {
+  display: grid;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.side-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 8px;
+  border-radius: 10px;
+  background: #0f1318;
+}
+
+.side-options label {
+  padding: 16px;
+  border-radius: 8px;
+  color: #a8b1c0;
+  cursor: pointer;
+  font-size: 20px;
+  text-align: center;
+}
+
+.side-options label.selected {
+  background: #173d35;
+  color: #53d5ad;
+}
+
+.side-options input {
+  position: absolute;
+  opacity: 0;
+}
+
+.balance-row,
+.quote-row,
+.ticket-note {
+  color: #8f9aaa;
+}
+
+.balance-row strong,
+.quote-row strong,
+.total-row strong {
+  color: #e8ebf0;
+  font-weight: 500;
+}
+
+.total-row {
+  color: #a8b1c0;
+  font-size: 18px;
+}
+
+.field-label {
+  color: #a8b1c0;
+  font-size: 18px;
+}
+
+.input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #2d3642;
+  border-radius: 10px;
+  background: #0f1318;
+}
+
+.input-wrap input {
+  width: 100%;
+  min-width: 0;
+  padding: 14px 12px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e8ebf0;
+  font: inherit;
+  font-size: 20px;
+}
+
+.input-wrap span {
+  padding-right: 12px;
+  color: #8f9aaa;
+}
+
+.submit-order {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #a7b6ff;
+  color: #10151d;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.submit-order span {
+  font-size: 30px;
+  line-height: 1;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ticket-note {
+  margin: 28px 0 0;
+  text-align: center;
+}
+
+.order-error {
+  color: #ff929b;
+}
+
+.order-success {
+  color: #53d5ad;
+}
+
+@media (max-width: 760px) {
+  :host {
+    width: 100%;
+  }
+}

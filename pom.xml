@@ -65,11 +65,12 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>9.0.0</version>
+                <version>12.1.0</version>
                 <configuration>
                     <format>JSON</format>
                     <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     <failBuildOnCVSS>5.0</failBuildOnCVSS>
+                    <nvdApiDelay>6000</nvdApiDelay>
                 </configuration>
             </plugin>
         </plugins>

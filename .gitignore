@@ -1,12 +1,24 @@
 target/
 .env.dev
 .env.prod
+.env.*
 .vscode
+
+# Python
+.venv
 **/.venv/
-python/market_data/
 **/__pycache__/
+*/__pycache__
 .pytest_cache/
-python/venv
+__init__.py
+analytics.log
+
+# Ignore analytics outputs except database CSV inputs
+analytics/outputs/**
+!analytics/outputs/csv/
+analytics/outputs/csv/*
+!analytics/outputs/csv/price_history.csv
+!analytics/outputs/csv/symbol_metadata.csv
 
 # Node.js
 node_modules/
@@ -20,3 +32,15 @@ yarn-error.log*
 .eslintcache
 coverage/
 .nyc_output/
+
+# Frontend
+.angular/
+.angular/cache
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+
+playwright-report/
+test-results/
+blob-report/

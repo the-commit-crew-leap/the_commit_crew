@@ -3,8 +3,6 @@ package com.thecommitcrew.domain.dto;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.math.BigDecimal;
-
 import com.thecommitcrew.domain.enums.OrderSide;
 
 import jakarta.validation.Validator;

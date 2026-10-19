@@ -8,6 +8,7 @@
 \i /docker-entrypoint-initdb.d/schema/trading-db/accounts.sql
 \i /docker-entrypoint-initdb.d/schema/trading-db/positions.sql
 \i /docker-entrypoint-initdb.d/schema/trading-db/orders.sql
+\i /docker-entrypoint-initdb.d/schema/trading-db/watchlist.sql
 
 -- Step 2: Create indexes for performance
 \i /docker-entrypoint-initdb.d/indexes/indexes.sql

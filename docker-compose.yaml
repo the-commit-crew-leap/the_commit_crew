@@ -10,17 +10,22 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       NODE_ENV: ${NODE_ENV:-development}
       # Auth Database
-      AUTH_DB_HOST: ${AUTH_DB_HOST:-db}
-      AUTH_DB_PORT: ${AUTH_DB_PORT:-5432}
-      AUTH_DB_USER: ${AUTH_DB_USER:-postgres}
-      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
-      AUTH_DB_NAME: ${AUTH_DB_NAME:-auth_db-dev}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTH_DB: ${AUTH_DB:?}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8082/api/auth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8086/login}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
       # Trading Database
-      TRADING_DB_HOST: ${TRADING_DB_HOST:-db}
-      TRADING_DB_PORT: ${TRADING_DB_PORT:-5432}
-      TRADING_DB_USER: ${TRADING_DB_USER:-postgres}
-      TRADING_DB_PASSWORD: ${TRADING_DB_PASSWORD}
-      TRADING_DB_NAME: ${TRADING_DB_NAME:-the-commit-crew-dev}
+      TRADING_DB_HOST: db
+      TRADING_DB_PORT: 5432
+      TRADING_DB_USER: postgres
+      TRADING_DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      TRADING_DB_NAME: ${POSTGRES_DB:?}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/auth/health"]
       interval: 10s
@@ -47,7 +52,52 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       AUTH_SERVICE_URL: http://auth:3000
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://*,https://*}
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  analytics:
+    build:
+      context: .
+      dockerfile: analytics/Dockerfile
+    working_dir: /app/analytics
+    command: ["uvicorn", "src.api_module:app", "--host", "0.0.0.0", "--port", "8090"]
+    ports:
+      - "0.0.0.0:${ANALYTICS_API_PORT:-8091}:8090"
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+      ANALYTICS_CORS_ORIGINS: ${ANALYTICS_CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
+    volumes:
+      - ./analytics:/app/analytics
+      - ./analytics/outputs:/app/analytics/outputs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "0.0.0.0:8086:80"
+    environment:
+      - ANGULAR_API_URL=http://app:8081
+    depends_on:
+      app:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
   db:
     build: 
       context: .
@@ -61,10 +111,11 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres && psql -U postgres -d ${POSTGRES_DB} -c 'SELECT 1' > /dev/null 2>&1"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 30
+      start_period: 60s
     volumes:
       - db_data:/var/lib/postgresql/data
 

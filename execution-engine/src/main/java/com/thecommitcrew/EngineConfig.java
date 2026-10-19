@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.apache.kafka.clients.admin.NewTopic;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
@@ -38,15 +37,31 @@ public class EngineConfig {
 
     @SuppressWarnings("null")
     @Bean
-    public NewTopic ordersTopic(@Value("${engine.topics.orders}") String name,
-                                @Value("${engine.topics.partitions}") int partitions) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+    public NewTopic ordersTopic(EngineProperties properties) {
+        return TopicBuilder.name(properties.topics().orders())
+                .partitions(properties.topics().partitions())
+                .replicas(1)
+                .build();
     }
 
     @SuppressWarnings("null")
     @Bean
-    public NewTopic executionsTopic(@Value("${engine.topics.executions}") String name,
-                                    @Value("${engine.topics.partitions}") int partitions) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+    public NewTopic executionsTopic(EngineProperties properties) {
+        return TopicBuilder.name(properties.topics().executions())
+                .partitions(properties.topics().partitions())
+                .replicas(1)
+                .build();
+    }
+    
+    @SuppressWarnings("null")
+    @Bean 
+    public FailureStrategy failureStrategy(EngineProperties properties) {
+        return new FailureStrategy(properties.failure());
+    }
+
+    @SuppressWarnings("null")
+    @Bean
+    public DeadLetterHandler deadLetterHandler(ObjectMapper objectMapper, EngineProperties properties) {
+        return new DeadLetterHandler(objectMapper, properties);
     }
 }

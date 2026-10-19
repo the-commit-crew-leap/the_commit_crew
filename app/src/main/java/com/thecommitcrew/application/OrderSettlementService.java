@@ -129,7 +129,11 @@ public class OrderSettlementService {
             accountEntity.setCashBalance(updatedAccount.getCashBalance().getAmount());
             accountRepository.save(accountEntity);
 
-            positionMapper.save(updatedPosition);
+            if (updatedPosition.getQuantity() == 0) {
+                positionMapper.deleteByAccountIdAndSymbol(accountId, order.getSymbol());
+            } else {
+                positionMapper.save(updatedPosition);
+            }
 
             order.setStatus(OrderStatus.FILLED);
             orderMapper.save(order);

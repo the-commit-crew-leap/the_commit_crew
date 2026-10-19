@@ -30,6 +30,8 @@ JWT_SECRET=<generate-a-real-random-jwt-secret-online-and-paste-here>
 POSTGRES_DB=the-commit-crew-dev
 AUTH_DB=auth_db-dev
 POSTGRES_PASSWORD=<paste-db-password>
+AUTH_DB_PASSWORD=<paste-db-password>
+TRADING_DB_PASSWORD=<paste-db-password>
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
 ENVIRONMENT=dev
@@ -39,23 +41,31 @@ KAFKA_UI_PORT=8090
 ENGINE_MIN_DELAY=500ms
 ENGINE_MAX_DELAY=2000ms
 ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
+
+ANGULAR_API_URL=http://app:8081
+ANGULAR_AUTH_URL=http://auth:3000
 ```
 
 .env.prod:
 ```bash
 JWT_SECRET=<generate-a-real-random-jwt-secret-online-and-paste-here>
 POSTGRES_DB=the-commit-crew-prod
-AUTH_DB=auth_db-dev
+AUTH_DB=auth_db-prod
 POSTGRES_PASSWORD=<paste-db-password>
+AUTH_DB_PASSWORD=<paste-db-password>
+TRADING_DB_PASSWORD=<paste-db-password>
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
-ENVIRONMENT=dev
+ENVIRONMENT=prod
 
 KAFKA_PORT=9094
 KAFKA_UI_PORT=8090
 ENGINE_MIN_DELAY=500ms
 ENGINE_MAX_DELAY=2000ms
 ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
+
+ANGULAR_API_URL=http://app:8081
+ANGULAR_AUTH_URL=http://auth:3000
 ```  
 
 2.2 Run docker-compose:<br />
@@ -80,6 +90,61 @@ prod:
 docker-compose -p commitcrew-prod --env-file .env.prod exec db psql -U postgres -d the-commit-crew-prod -c "\dt"
 ```
 You should see the list of tables for each database.
+
+## Frontend:
+
+Angular 22 standalone components with routing infrastructure.
+
+### Quick Start
+
+#### Local Development
+```bash
+cd frontend
+npm install --legacy-peer-deps
+ng serve
+```
+Access at: [http://localhost:8086](http://localhost:8086)<br />
+When run as part of docker-compose: [http://your-linux-ip:8086](http://your-linux-ip:8086)
+
+### Current pages:
+
+- [http://localhost:8086/](http://localhost:8086) Routes to "dashboard"
+- [http://localhost:8086/orders](http://localhost:8086) Routes to "order history"
+- [http://localhost:8086/anything-else](http://localhost:8086) Routes to "page not found"
+
+## Playwright tests
+
+### First install:
+```bash
+cd frontend
+npx playwright install --with-deps chromium
+```
+```bash
+sudo dnf install -y   atk   at-spi2-atk   cups-libs   libdrm   libXcomposite   libXdamage   libXfixes   libXrandr   mesa-libgbm   pango   alsa-lib   nss   gtk3
+```
+
+### If you get an error saying you need Node.js 20+:
+```bash
+nvm install 20
+nvm use 20
+```
+
+#### Verify: 
+```bash
+node --version
+```
+
+### Start the frontend service:
+```bash
+cd frontend
+ng serve
+```
+
+### Run the playwright tests (in a different terminal):
+```bash
+cd frontend
+npm test
+```
 
 ## Using auth:
 
@@ -135,6 +200,31 @@ For testing, copy the access token and navigate to swagger:
 [http://your-linux-ip:8081/swagger-ui/index.html#/]
 
 Click the green Authorize button and paste your JWT token.
+
+### Refresh tokens and revocation
+
+- Access tokens expire after 15 minutes.
+- Refresh tokens expire after 7 days.
+- Refreshing a session issues a new access token and refresh token.
+- Rotated refresh tokens are not revoked or tracked server-side.
+- If a refresh token is stolen, it may be replayed until it expires.
+- Token revocation is currently out of scope.
+- Users should log out and administrators should rotate authentication secrets if token compromise is suspected.
+
+
+### JWT claims
+
+Access and refresh tokens contain these claims:
+
+- `username`
+- `sub`
+- `accountId`
+- `role`
+- `iss`
+- `iat`
+- `exp`
+
+The issuer is configured as `the-commit-crew-auth`.
 
 ## SonarCube
 

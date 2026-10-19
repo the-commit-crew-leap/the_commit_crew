@@ -19,7 +19,7 @@ class SimulatedMarketTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private static SimulatedMarket market(int maxBps, long seed) {
-        EngineProperties props = new EngineProperties(Duration.ofMillis(500), Duration.ofMillis(2000), maxBps, "SIM");
+        EngineProperties props = new EngineProperties(Duration.ofMillis(500), Duration.ofMillis(2000), maxBps, "SIM", null, null);
         return new SimulatedMarket(props, new Random(seed), CLOCK);
     }
 

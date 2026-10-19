@@ -1,138 +1,230 @@
-import { Injectable, BadRequestException, UnauthorizedException, OnModuleInit, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, BadRequestException, ConflictException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { OAuth2Client } from 'google-auth-library';
+import { JwtService } from '@nestjs/jwt';
 import { TokenService } from './token.service';
 import { DatabaseService } from './database.service';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
-import { User } from './entities/user.entity';
-import { Credential } from './entities/credential.entity';
-import { UserTradingAccount } from './entities/user-trading-account.entity';
+import { UsersRepository } from './repositories/users.repository';
+import { SecureLoggerService } from '../common/services/secure-logger.service';
+
+const DUMMY_PASSWORD_HASH =
+  '$2b$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  private readonly logger = new Logger(AuthService.name);
+  private readonly bcryptCostFactor: number;
+  private readonly logger = new SecureLoggerService(AuthService.name);
 
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
-    @InjectRepository(Credential) private credentialRepository: Repository<Credential>,
-    @InjectRepository(UserTradingAccount)
-    private userTradingAccountRepository: Repository<UserTradingAccount>,
     private tokenService: TokenService,
+    private usersRepository: UsersRepository,
     private databaseService: DatabaseService,
-  ) {}
+    private jwtService: JwtService,
+  ) {
+    // Read cost factor from environment variable or default to 12
+    this.bcryptCostFactor = parseInt(process.env.BCRYPT_COST_FACTOR || '12', 10);
+  }
+
+  getGoogleAuthorizationUrl(): string {
+    const client = this.googleClient();
+    const state = this.jwtService.sign(
+      { purpose: 'google-oauth', nonce: uuidv4() },
+      { expiresIn: '10m' },
+    );
+
+    return client.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['openid', 'email', 'profile'],
+      state,
+      prompt: 'select_account',
+    });
+  }
+
+  async loginWithGoogle(code: string, state: string): Promise<any> {
+    const statePayload = this.jwtService.verify<{ purpose?: string }>(state);
+    if (statePayload.purpose !== 'google-oauth') {
+      throw new UnauthorizedException('Invalid Google sign-in state');
+    }
+
+    const client = this.googleClient();
+    const { tokens } = await client.getToken(code);
+    if (!tokens.id_token) {
+      throw new UnauthorizedException('Google did not return an identity token');
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload?.email?.trim().toLowerCase();
+
+    if (!email || payload?.email_verified !== true) {
+      throw new UnauthorizedException('Google email is not verified');
+    }
+
+    let user = await this.usersRepository.findByEmail(email);
+    if (!user) {
+      user = await this.createGoogleUser(email, payload.name || email);
+    }
+
+    const userWithAccounts =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(user.username);
+    const linkedAccount = userWithAccounts?.tradingAccounts?.[0];
+
+    if (!linkedAccount) {
+      throw new UnauthorizedException('No trading account linked to user');
+    }
+
+    const tokensResponse = this.tokenService.issue(
+      user.username,
+      linkedAccount.accountId,
+      linkedAccount.role,
+    );
+
+    return {
+      ...tokensResponse,
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
+    };
+  }
+
+  private googleClient(): OAuth2Client {
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+      throw new BadRequestException('Google sign-in is not configured');
+    }
+
+    return new OAuth2Client(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+      GOOGLE_REDIRECT_URI,
+    );
+  }
+
+  private async createGoogleUser(email: string, fullName: string) {
+    const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24) || 'google_user';
+    let username = baseUsername.length >= 3 ? baseUsername : `${baseUsername}_user`;
+    let suffix = 0;
+
+    while (await this.usersRepository.findByUsername(username)) {
+      suffix += 1;
+      username = `${baseUsername.slice(0, 30 - String(suffix).length - 1)}_${suffix}`;
+    }
+
+    const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const passwordHash = await bcrypt.hash(uuidv4(), this.bcryptCostFactor);
+    let accountCreated = false;
+
+    try {
+      await this.databaseService.createAccount(accountId, fullName);
+      accountCreated = true;
+      return await this.usersRepository.createUserWithCredentialAndTradingLink({
+        username,
+        email,
+        fullName,
+        passwordHash,
+        accountId,
+        role: 'CLIENT',
+      });
+    } catch (error) {
+      if (accountCreated) {
+        await this.compensateCreatedAccount(accountId);
+      }
+      throw error;
+    }
+  }
 
   async onModuleInit() {
-    // Create default test user if it doesn't exist
-    const testUserExists = await this.userRepository.findOne({
-      where: { username: 'testuser' },
-    });
+    const testUserExists = await this.usersRepository.findByUsername('testuser');
 
     if (!testUserExists) {
-      const hashedPassword = await bcrypt.hash('testpass', 10);
+      const hashedPassword = await bcrypt.hash('testpass', this.bcryptCostFactor);
       const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+      let accountCreated = false;
 
       try {
-        // Create account in trading database
         await this.databaseService.createAccount(accountId, 'Test User');
+        accountCreated = true;
 
-        // Create user in auth database
-        const user = this.userRepository.create({
+        await this.usersRepository.createUserWithCredentialAndTradingLink({
           username: 'testuser',
           email: 'test@example.com',
-          fullName: 'Test User',
-          status: 'ACTIVE',
-        });
-
-        const savedUser = await this.userRepository.save(user);
-
-        // Create credential record for the user
-        const credential = this.credentialRepository.create({
-          userId: savedUser.userId,
           passwordHash: hashedPassword,
-          algorithm: 'bcrypt',
-        });
-
-        await this.credentialRepository.save(credential);
-
-        // Link user to account
-        const userTrading = this.userTradingAccountRepository.create({
-          userId: savedUser.userId,
           accountId,
           role: 'CLIENT',
         });
 
-        await this.userTradingAccountRepository.save(userTrading);
-
-        this.logger.log('Default test user created: testuser/testpass');
+        this.logger.log('Default test user created: testuser/testpass', undefined, {
+          username: 'testuser',
+          accountId,
+        });
       } catch (error) {
-        this.logger.error('Failed to create default test user', error);
+        this.logger.error('Failed to create default test user', String(error));
+        if (accountCreated) {
+          await this.compensateCreatedAccount(accountId);
+        }
       }
     }
   }
 
   async register(registerDto: RegisterDto): Promise<any> {
     const { username, email, password, fullName } = registerDto;
+    const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if user exists
-    const existingUser = await this.userRepository.findOne({
-      where: [{ username }, { email }],
-    });
+    this.logger.log('Attempting to register user', undefined, { username, email });
 
+    const existingUser = await this.usersRepository.findByUsername(username);
     if (existingUser) {
-      throw new BadRequestException('User already exists');
+      this.logger.warn(`Registration failed: user already exists`, undefined, { username });
+      throw new ConflictException('Username or email already exists');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const existingEmail = await this.usersRepository.findByEmail(normalizedEmail);
+    if (existingEmail) {
+      this.logger.warn('Registration failed: email already exists', undefined, {
+        email: normalizedEmail,
+      });
+      throw new ConflictException('Username or email already exists');
+    }
 
-    // Generate unique account ID
+    const hashedPassword = await bcrypt.hash(password, this.bcryptCostFactor);
     const accountId = `ACC-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const linkedRole: 'CLIENT' = 'CLIENT';
+    let accountCreated = false;
 
     try {
-      // Create account in trading database FIRST
       await this.databaseService.createAccount(accountId, fullName || username);
+      accountCreated = true;
 
-      // Create user in auth database
-      const user = this.userRepository.create({
+      const user = await this.usersRepository.createUserWithCredentialAndTradingLink({
         username,
-        email,
+        email: normalizedEmail,
         fullName,
-        status: 'ACTIVE',
-      });
-
-      const savedUser = await this.userRepository.save(user);
-
-      // Create credential record for the user
-      const credential = this.credentialRepository.create({
-        userId: savedUser.userId,
         passwordHash: hashedPassword,
-        algorithm: 'bcrypt',
-      });
-
-      await this.credentialRepository.save(credential);
-
-      // Link user to account with CLIENT role
-      const userTrading = this.userTradingAccountRepository.create({
-        userId: savedUser.userId,
         accountId,
-        role: 'CLIENT',
+        role: linkedRole,
       });
 
-      await this.userTradingAccountRepository.save(userTrading);
-
-      this.logger.log(`User registered: ${username} with account: ${accountId}`);
+      this.logger.logAuthEvent('REGISTER_SUCCESS', username);
 
       return {
-        id: savedUser.userId,
-        username: savedUser.username,
-        email: savedUser.email,
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
         accountId,
-        createdAt: savedUser.createdAt,
+        role: linkedRole,
+        createdAt: user.createdAt,
       };
     } catch (error: unknown) {
-      this.logger.error(`Registration failed for user ${username}:`, error);
+      this.logger.error(`Registration failed for user ${username}:`, String(error));
+
+      if (accountCreated) {
+        await this.compensateCreatedAccount(accountId);
+      }
+
       throw new BadRequestException('Registration failed. Please try again.');
     }
   }
@@ -140,58 +232,70 @@ export class AuthService implements OnModuleInit {
   async login(loginDto: LoginDto): Promise<any> {
     const { username, password } = loginDto;
 
-    // Find user with credential and trading accounts
-    const user = await this.userRepository.findOne({
-      where: { username },
-      relations: { tradingAccounts: true },
-    });
+    this.logger.log(`Login attempt`, undefined, { username });
+
+    // Find user in database with credential
+    const user =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(username);
 
     if (!user) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+
+      this.logger.warn(`Login failed: user not found`, undefined, { username });
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user is active
+    // Check if account is locked due to failed login attempts
+    if (user.credential?.lockedUntil && new Date() < user.credential.lockedUntil) {
+      this.logger.warn(`Login failed: account locked`, undefined, { username });
+      throw new UnauthorizedException('Account is locked. Please try again later.');
+    }
+
+    // Auto-reactivate temporary lockouts once the lock window has passed.
+    if (user.credential?.lockedUntil && new Date() >= user.credential.lockedUntil) {
+      await this.usersRepository.resetFailedLoginAttempts(user.userId);
+      user.status = 'ACTIVE';
+      user.credential.failedLoginAttempts = 0;
+    }
+
+    // Check if user account is active
     if (user.status !== 'ACTIVE') {
+      this.logger.warn(`Login failed: user not active`, undefined, { username });
       throw new UnauthorizedException('User account is not active');
     }
 
-    // Get credential for this user
-    const credential = await this.credentialRepository.findOne({
-      where: { userId: user.userId },
-    });
-
-    if (!credential) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    // Verify password
-    const isValid = await bcrypt.compare(password, credential.passwordHash);
+    // Verify password against stored hash
+    const isValid = await bcrypt.compare(password, user.credential?.passwordHash || '');
     if (!isValid) {
+      // Increment failed login attempts
+      await this.usersRepository.incrementFailedLoginAttempts(user.userId);
+      this.logger.warn(
+        `Login failed: invalid password`,
+        undefined,
+        { username, attempt: user.credential?.failedLoginAttempts },
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Get primary trading account
-    const primaryAccount = user.tradingAccounts?.[0];
-    if (!primaryAccount) {
+    // Reset failed login attempts and update last login on successful login
+    await this.usersRepository.resetFailedLoginAttempts(user.userId);
+    await this.usersRepository.updateLastLogin(user.userId);
+
+    this.logger.logAuthEvent('LOGIN_SUCCESS', username);
+
+    const linkedAccount = user.tradingAccounts?.[0];
+
+    if (!linkedAccount) {
+      this.logger.warn(`Login failed: no linked trading account`, undefined, { username });
       throw new UnauthorizedException('No trading account linked to user');
     }
 
-    // Generate tokens with accountId and role
-    const tokens = this.tokenService.issue(
-      username,
-      primaryAccount.accountId,
-      primaryAccount.role,
-    );
-
+    // Generate tokens and include account metadata in response body.
+    const tokens = this.tokenService.issue(username, linkedAccount.accountId, linkedAccount.role);
     return {
       ...tokens,
-      user: {
-        id: user.userId,
-        username: user.username,
-        email: user.email,
-        accountId: primaryAccount.accountId,
-        role: primaryAccount.role,
-      },
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
     };
   }
 
@@ -200,14 +304,25 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const decoded: any = this.tokenService.decode(refreshToken);
-    const tokens = this.tokenService.issue(
-      decoded.username,
-      decoded.accountId,
-      decoded.role,
-    );
+    const decoded = this.tokenService.decode(refreshToken) as
+      | { username?: string; accountId?: string; role?: string }
+      | null;
 
-    return tokens;
+    if (!decoded?.username) {
+      throw new UnauthorizedException('Invalid refresh token payload');
+    }
+
+    let accountId = decoded.accountId;
+    let role = decoded.role;
+
+    if (!accountId) {
+      const user = await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(decoded.username);
+      const linkedAccount = user?.tradingAccounts?.[0];
+      accountId = linkedAccount?.accountId;
+      role = linkedAccount?.role;
+    }
+
+    return this.tokenService.issue(decoded.username, accountId, role);
   }
 
   async validate(token: string): Promise<any> {
@@ -215,47 +330,51 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Invalid token');
     }
 
-    const decoded: any = this.tokenService.decode(token);
+    const decoded = this.tokenService.decode(token) as
+      | { username?: string; accountId?: string; role?: string }
+      | null;
+
+    if (!decoded?.username || !decoded.accountId) {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+
+    const user =
+      await this.usersRepository.findByUsernameWithCredentialAndTradingAccounts(
+        decoded.username
+      );
+
+    const linkedAccount = user?.tradingAccounts?.find(
+      account => account.accountId === decoded.accountId
+    );
+
+    if (!user || user.status !== 'ACTIVE' || !linkedAccount) {
+      throw new UnauthorizedException('Session is no longer valid');
+    }
+
     return {
-      username: decoded.username,
-      accountId: decoded.accountId,
-      role: decoded.role,
-      valid: true,
+      username: user.username,
+      accountId: linkedAccount.accountId,
+      role: linkedAccount.role,
+      valid: true
     };
   }
 
   async deleteUser(userId: number): Promise<{ message: string }> {
-    // Find the user and their trading account
-    const user = await this.userRepository.findOne({
-      where: { userId },
-      relations: { tradingAccounts: true },
-    });
+    throw new BadRequestException('User deletion is not implemented yet');
+  }
 
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-
-    // Get the associated account ID before marking user as deleted
-    const accountId = user.tradingAccounts?.[0]?.accountId;
-
+  private async compensateCreatedAccount(accountId: string): Promise<void> {
     try {
-      // Mark user status as DELETED instead of deleting the record
-      await this.userRepository.update(
-        { userId },
-        { status: 'DELETED' }
-      );
-
-      // Close the associated trading account
-      if (accountId) {
+      await this.databaseService.deleteAccount(accountId);
+      this.logger.warn('Compensation succeeded: deleted dangling trading account', undefined, { accountId });
+    } catch (deleteError) {
+      this.logger.error('Compensation delete failed, attempting closeAccount fallback', String(deleteError), accountId);
+      try {
         await this.databaseService.closeAccount(accountId);
+        this.logger.warn('Compensation fallback succeeded: account closed', undefined, { accountId });
+      } catch (closeError) {
+        this.logger.error('Compensation fallback failed: account may remain dangling', String(closeError), accountId);
       }
-
-      this.logger.log(`User marked as deleted: ${user.username}, account closed: ${accountId}`);
-
-      return { message: `User ${user.username} marked as deleted and account ${accountId} closed` };
-    } catch (error: unknown) {
-      this.logger.error(`Failed to mark user as deleted ${userId}:`, error);
-      throw new BadRequestException('Failed to mark user as deleted');
     }
   }
 }

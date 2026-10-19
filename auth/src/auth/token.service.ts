@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { JWT_ISSUER } from './constants';
 
 @Injectable()
 export class TokenService {
@@ -17,8 +18,16 @@ export class TokenService {
       ...(role && { role }),
     };
     
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '15m',
+      issuer: JWT_ISSUER,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '7d',
+      issuer: JWT_ISSUER,
+    });
+
     return {
       accessToken,
       refreshToken,
@@ -28,7 +37,7 @@ export class TokenService {
 
   verify(token: string): boolean {
     try {
-      this.jwtService.verify(token);
+      this.jwtService.verify(token, { issuer: JWT_ISSUER });
       return true;
     } catch {
       return false;

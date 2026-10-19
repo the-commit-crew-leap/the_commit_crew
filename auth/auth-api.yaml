@@ -26,11 +26,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/RegisterResponse'
         '400':
-          description: Invalid input data
+          description: Invalid input data or registration failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /login:
     post:
@@ -49,11 +57,42 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Invalid credentials
-        '404':
-          description: User not found
+          description: Invalid credentials or inactive account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /google:
+    get:
+      summary: Start Google sign-in
+      tags:
+        - Authentication
+      responses:
+        '302':
+          description: Redirects to Google authorization
+
+  /google/callback:
+    get:
+      summary: Complete Google sign-in
+      tags:
+        - Authentication
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects to the frontend with an authenticated session
 
   /refresh:
     post:
@@ -72,9 +111,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/AuthResponse'
         '401':
           description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /validate:
     post:
@@ -93,47 +136,36 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: 'SUCCESS'
-                  data:
-                    type: object
-                    properties:
-                      valid:
-                        type: boolean
+                $ref: '#/components/schemas/ValidateResponse'
         '401':
           description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /delete/{id}:
+  /delete/{userId}:
     delete:
-      summary: Mark a user account as deleted and close associated trading account
+      summary: Delete a user account
       tags:
         - Authentication
       parameters:
-        - name: id
+        - name: userId
           in: path
           required: true
-          description: User ID to mark as deleted
+          description: User ID to delete
           schema:
             type: integer
             format: int64
       responses:
         '200':
-          description: User successfully marked as deleted and associated trading account closed
+          description: User successfully deleted and trading account closed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteUserResponse'
         '400':
-          description: Bad request - user not found or marking failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: User not found
+          description: User deletion is not implemented or the request is invalid
           content:
             application/json:
               schema:
@@ -150,11 +182,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: 'ok'
+                $ref: '#/components/schemas/HealthResponse'
 
 components:
   schemas:
@@ -210,7 +238,7 @@ components:
         refreshToken:
           type: string
           format: jwt
-          description: Refresh token received from login/register
+          description: Refresh token received from login or registration
 
     ValidateDto:
       type: object
@@ -226,6 +254,7 @@ components:
       type: object
       required:
         - accessToken
+        - refreshToken
         - expiresIn
       properties:
         accessToken:
@@ -235,14 +264,65 @@ components:
         refreshToken:
           type: string
           format: jwt
-          nullable: true
-          description: Refresh token (optional, only in login/register)
+          description: JWT refresh token
         expiresIn:
           type: integer
           minimum: 1
-          description: Token expiration time in seconds
+          description: Access token expiration time in seconds
+        accountId:
+          type: string
+          description: Linked trading account ID, when available
+        role:
+          type: string
+          description: Role on the linked trading account, when available
 
-    SuccessResponse:
+    RegisterResponseData:
+      type: object
+      required:
+        - userId
+        - username
+        - email
+        - accountId
+        - role
+        - createdAt
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID of the newly registered user
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        accountId:
+          type: string
+          description: Linked trading account ID
+        role:
+          type: string
+          description: Role on the linked trading account
+        createdAt:
+          type: string
+          format: date-time
+
+    ValidateResponseData:
+      type: object
+      required:
+        - username
+        - valid
+      properties:
+        username:
+          type: string
+        accountId:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        valid:
+          type: boolean
+
+    RegisterResponse:
       type: object
       required:
         - status
@@ -250,9 +330,36 @@ components:
       properties:
         status:
           type: string
-          example: 'SUCCESS'
+          enum:
+            - SUCCESS
         data:
-          type: object
+          $ref: '#/components/schemas/RegisterResponseData'
+
+    AuthResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          $ref: '#/components/schemas/AuthResponseDto'
+
+    ValidateResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum:
+            - SUCCESS
+        data:
+          $ref: '#/components/schemas/ValidateResponseData'
 
     DeleteUserResponse:
       type: object
@@ -262,7 +369,8 @@ components:
       properties:
         status:
           type: string
-          example: 'SUCCESS'
+          enum:
+            - SUCCESS
         data:
           type: object
           required:
@@ -270,18 +378,38 @@ components:
           properties:
             message:
               type: string
-              example: 'User john_doe marked as deleted and account ACC-12345678 closed'
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
 
     ErrorResponse:
       type: object
       required:
-        - errorCode
+        - status
         - message
+        - data
       properties:
-        errorCode:
+        status:
           type: string
+          enum:
+            - ERROR
         message:
-          type: string
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        data:
+          type: object
+          nullable: true
+          description: Error payload, currently always null
 
 tags:
   - name: Authentication
