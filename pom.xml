@@ -24,6 +24,10 @@
         <module>execution-engine</module>
     </modules>
 
+    <properties>
+        <tomcat.version>10.1.61</tomcat.version>
+    </properties>
+
     <build>
         <plugins>
             <!-- SonarQube Scanner -->
