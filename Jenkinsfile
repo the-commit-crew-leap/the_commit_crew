@@ -361,11 +361,11 @@ pipeline {
                             set -eu
 
                             # Extract credentials from env file
-                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs || echo "$POSTGRES_PASSWORD")
-                            
+                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            AUTH_DB=$(grep "^AUTH_DB=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs || true)
+
                             if [ -z "$AUTH_PASSWORD" ]; then
                                 AUTH_PASSWORD="$POSTGRES_PASSWORD"
                             fi
@@ -423,7 +423,18 @@ pipeline {
 
                             cleanup() {
                                 echo "Cleaning up smoke-test container..."
-                                docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+
+                                if docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
+                                    echo "Final container state:"
+                                    docker inspect \
+                                        --format '{{json .State}}' \
+                                        "$CONTAINER_ID" || true
+
+                                    echo "Final application logs:"
+                                    docker logs "$CONTAINER_ID" 2>&1 || true
+
+                                    docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+                                fi
                             }
 
                             trap cleanup EXIT
@@ -446,16 +457,9 @@ pipeline {
                                             2>/dev/null || echo 1
                                     )
 
-                                    echo "Application container exited with code $EXIT_CODE"
-                                    echo "Application container state:"
-                                    docker inspect \
-                                        --format '{{json .State}}' \
-                                        "$CONTAINER_ID" \
-                                        2>/dev/null || true
-
+                                    echo "Application container exited with code: $EXIT_CODE"
                                     echo "Application logs:"
                                     docker logs "$CONTAINER_ID" 2>&1 || true
-
                                     exit 1
                                 fi
 
@@ -476,13 +480,9 @@ pipeline {
                                 sleep 2
                             done
 
-                            echo "Smoke test failed: application did not become healthy"
+                            echo "Smoke test failed"
                             echo "Last health response:"
                             echo "$HEALTH_RESPONSE"
-
-                            echo "Application logs:"
-                            docker logs "$CONTAINER_ID" 2>&1 || true
-
                             exit 1
                         '''
                     }
