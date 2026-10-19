@@ -420,16 +420,33 @@ pipeline {
                             echo "Waiting for Spring Boot health endpoint..."
 
                             for i in $(seq 1 90); do
-                                HEALTH_RESPONSE=$(curl -sS http://localhost:8081/actuator/health 2>/dev/null || true)
+                                HEALTH_RESPONSE=$(curl -sS \
+                                    --connect-timeout 2 \
+                                    --max-time 5 \
+                                    http://localhost:8081/actuator/health \
+                                    2>/dev/null || true)
 
                                 if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
                                     echo "Smoke test passed"
                                     exit 0
                                 fi
 
-                                if ! docker ps --format '{{.ID}}' | grep -q "^${CONTAINER_ID}"; then
+                                CONTAINER_RUNNING=$(
+                                    docker inspect \
+                                        --format '{{.State.Running}}' \
+                                        "$CONTAINER_ID" \
+                                        2>/dev/null || echo "false"
+                                )
+
+                                if [ "$CONTAINER_RUNNING" != "true" ]; then
                                     echo "Application container stopped unexpectedly"
-                                    docker logs "$CONTAINER_ID" || true
+                                    echo "Container state:"
+                                    docker inspect \
+                                        --format '{{json .State}}' \
+                                        "$CONTAINER_ID" \
+                                        2>/dev/null || true
+                                    echo "Application logs:"
+                                    docker logs "$CONTAINER_ID" 2>&1 || true
                                     exit 1
                                 fi
 
@@ -440,7 +457,8 @@ pipeline {
                             echo "Smoke test failed: application did not become healthy"
                             echo "Last health response:"
                             echo "$HEALTH_RESPONSE"
-                            docker logs "$CONTAINER_ID" || true
+                            echo "Application logs:"
+                            docker logs "$CONTAINER_ID" 2>&1 || true
                             exit 1
                         '''
                     }
