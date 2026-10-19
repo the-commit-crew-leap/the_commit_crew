@@ -4,6 +4,7 @@ const accountId = 'ACC-F92249B8';
 const balanceUrl = `**/api/v1/accounts/${accountId}/balance`;
 const positionsUrl = `**/api/v1/accounts/${accountId}/positions`;
 const ordersUrl = `**/api/v1/accounts/${accountId}/orders`;
+const instrumentsUrl = '**/api/v1/instruments**';
 const placeOrderUrl = '**/api/v1/orders';
 
 const balance = {
@@ -33,6 +34,16 @@ const orders = [
     price: 150.25,
     status: 'NEW',
     createdOn: '2026-10-12T12:00:00'
+  }
+];
+
+const instruments = [
+  {
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    assetClass: 'CRYPTO',
+    currency: 'USD',
+    tradable: true
   }
 ];
 
@@ -66,6 +77,11 @@ async function seedSession(page: Page): Promise<void> {
 }
 
 async function mockDashboardApi(page: Page): Promise<void> {
+  await page.route(instrumentsUrl, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(instruments)
+  }));
   await page.route(balanceUrl, (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -134,6 +150,8 @@ test('validates and submits an order from the order ticket', async ({ page }) =>
   await expect(submitButton).toBeDisabled();
 
   await page.getByLabel('Asset symbol').fill('btc');
+  await expect(page.getByRole('listbox', { name: 'Available instruments' })).toBeVisible();
+  await page.getByRole('option', { name: 'BTC' }).click();
   await page.getByLabel('Quantity').fill('2');
   await expect(submitButton).toBeEnabled();
   await submitButton.click();

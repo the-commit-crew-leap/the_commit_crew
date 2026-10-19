@@ -40,7 +40,7 @@ describe('OrderTicketComponent', () => {
 
     fixture = TestBed.createComponent(OrderTicketComponent);
     component = fixture.componentInstance;
-    component.ngOnInit();
+    fixture.detectChanges();
   });
 
   it('rejects a missing symbol and invalid quantity', () => {
@@ -61,8 +61,6 @@ describe('OrderTicketComponent', () => {
   });
 
   it('marks invalid fields and focuses the first invalid field', fakeAsync(() => {
-    fixture.detectChanges();
-
     component.symbol = '';
     component.quantity = 0;
     fixture.detectChanges();
@@ -77,8 +75,6 @@ describe('OrderTicketComponent', () => {
   }));
 
   it('focuses the quantity field when the symbol is valid', fakeAsync(() => {
-    fixture.detectChanges();
-
     component.symbol = 'BTC';
     component.quantity = 0;
     fixture.detectChanges();
@@ -132,14 +128,22 @@ describe('OrderTicketComponent', () => {
   });
 
   it('renders available instruments in the styled picker', () => {
-    fixture.detectChanges();
-
     const symbolInput = fixture.nativeElement.querySelector('#ticket-symbol');
     symbolInput.dispatchEvent(new Event('focus'));
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.instrument-options')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.instrument-option strong').textContent).toContain('BTC');
+    expect(fixture.nativeElement.querySelector('.instrument-option').textContent).toContain('BTC');
+  });
+
+  it('closes the picker when clicking outside the picker', () => {
+    fixture.detectChanges();
+    component.instrumentPickerOpen = true;
+    fixture.detectChanges();
+
+    component.closePickerOnOutsideClick(new MouseEvent('click', { bubbles: true }));
+
+    expect(component.instrumentPickerOpen).toBe(false);
   });
 
   it('shows an error when order submission fails', () => {
