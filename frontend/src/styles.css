@@ -14,3 +14,58 @@ body {
 body {
   font-size: 14px;
 }
+
+.instrument-picker {
+  position: relative;
+}
+
+.instrument-options {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #29313c;
+  border-radius: 10px;
+  background: #151920;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+}
+
+.instrument-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid #29313c;
+  background: transparent;
+  color: #e8ebf0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.instrument-option span {
+  color: #8f9aaa;
+  font-size: 0.875rem;
+}
+
+.instrument-option:last-child {
+  border-bottom: 0;
+}
+
+.instrument-option.highlighted,
+.instrument-option:hover {
+  background: #173d35;
+  color: #53d5ad;
+}
+
+.instrument-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: #8f9aaa;
+  font-size: 0.875rem;
+}

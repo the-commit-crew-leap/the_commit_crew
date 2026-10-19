@@ -9,7 +9,8 @@
     </header>
 
     <form (ngSubmit)="placeOrder()" #orderForm="ngForm">
-      <div class="side-options" role="group" aria-label="Order side">
+      <fieldset class="side-options">
+        <legend>Order side</legend>
         <label [class.selected]="side === 'BUY'">
           <input type="radio" name="side" [(ngModel)]="side" value="BUY">
           Buy
@@ -18,7 +19,7 @@
           <input type="radio" name="side" [(ngModel)]="side" value="SELL">
           Sell
         </label>
-      </div>
+      </fieldset>
 
       <div class="balance-row">
         <span>Available balance</span>
@@ -29,24 +30,63 @@
       </div>
 
       <label class="field-label" for="ticket-symbol">Asset symbol</label>
-      <div class="input-wrap">
-        <input
-          id="ticket-symbol"
-          name="symbol"
-          type="text"
-          [(ngModel)]="symbol"
-          placeholder="BTC"
-          autocomplete="off"
-          maxlength="20"
-          (ngModelChange)="onSymbolChange($event)"
-          (blur)="loadMarketPrice()"
-          required>
-        <span>Asset</span>
+      <div #instrumentPicker class="instrument-picker">
+        <div class="input-wrap">
+          <input
+            #symbolInput
+            id="ticket-symbol"
+            name="symbol"
+            type="text"
+            [(ngModel)]="symbol"
+            placeholder="Search symbol"
+            autocomplete="off"
+            maxlength="20"
+            role="combobox"
+            aria-controls="tradable-instruments"
+            [attr.aria-expanded]="instrumentPickerOpen"
+            (ngModelChange)="onSymbolChange($event)"
+            (focus)="openInstrumentPicker()"
+            (blur)="loadMarketPrice(); closeInstrumentPicker()"
+            (keydown)="onInstrumentKeydown($event)"
+            required
+            [attr.aria-invalid]="symbolInvalid ? 'true' : null"
+            [attr.aria-describedby]="symbolInvalid ? 'ticket-symbol-error' : null">
+          <span>Asset</span>
+        </div>
+        <div
+          *ngIf="instrumentPickerOpen"
+          id="tradable-instruments"
+          class="instrument-options"
+          role="listbox"
+          aria-label="Available instruments">
+          <button
+            *ngFor="let instrument of filteredInstruments; let index = index"
+            type="button"
+            class="instrument-option"
+            [class.highlighted]="index === highlightedInstrumentIndex"
+            (mousedown)="$event.preventDefault()"
+            (click)="selectInstrument(instrument)"
+            role="option"
+            [attr.aria-selected]="index === highlightedInstrumentIndex">
+            {{ instrument.symbol }}
+          </button>
+          <p *ngIf="filteredInstruments.length === 0" class="instrument-empty">
+            No matching instruments
+          </p>
+        </div>
       </div>
+      <p *ngIf="instrumentsLoading" class="field-help">Loading available instruments...</p>
+      <p *ngIf="!instrumentsLoading && instrumentsError" class="field-error" role="alert">
+        {{ instrumentsError }}
+      </p>
+      <p *ngIf="symbolInvalid" id="ticket-symbol-error" class="field-error" role="alert">
+        {{ symbolError }}
+      </p>
 
       <label class="field-label" for="ticket-quantity">Quantity</label>
       <div class="input-wrap">
         <input
+          #quantityInput
           id="ticket-quantity"
           name="quantity"
           type="number"
@@ -54,9 +94,14 @@
           min="1"
           step="1"
           placeholder="0"
-          required>
+          required
+          [attr.aria-invalid]="quantityInvalid ? 'true' : null"
+          [attr.aria-describedby]="quantityInvalid ? 'ticket-quantity-error' : null">
         <span>Units</span>
       </div>
+      <p *ngIf="quantityInvalid" id="ticket-quantity-error" class="field-error" role="alert">
+        {{ quantityError }}
+      </p>
 
       <div *ngIf="priceLoading" class="quote-row">
         <span>Loading current price...</span>
@@ -70,13 +115,23 @@
         <strong>${{ estimatedOrderValue | number:'1.2-2' }}</strong>
       </div>
 
-      <button class="submit-order" type="submit" [disabled]="orderSubmitting || orderForm.invalid">
+      <button
+        class="submit-order"
+        type="submit"
+        [disabled]="orderSubmitting || instrumentsLoading || !!instrumentsError">
         {{ orderSubmitting ? 'Submitting...' : 'Submit order' }}
       </button>
     </form>
 
     <p class="ticket-note">Your order will be reviewed before placing.</p>
-    <p *ngIf="orderError" class="order-error" role="alert">{{ orderError }}</p>
+    <p
+      #orderErrorElement
+      *ngIf="orderError"
+      class="order-error"
+      role="alert"
+      tabindex="-1">
+      {{ orderError }}
+    </p>
     <p *ngIf="priceError" class="order-error" role="alert">{{ priceError }}</p>
     <p *ngIf="submittedOrder" class="order-success" role="status">
       Order submitted: {{ submittedOrder.side }} {{ submittedOrder.quantity }} {{ submittedOrder.symbol }}.

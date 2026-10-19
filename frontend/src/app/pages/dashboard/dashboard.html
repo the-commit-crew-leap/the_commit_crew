@@ -1,4 +1,4 @@
-<section class="dash-shell">
+<main id="main-content" class="dash-shell">
   <div class="workspace">
     <div class="dash-card">
       <p class="eyebrow">Account overview</p>
@@ -6,7 +6,8 @@
       <p class="welcome-message">Welcome back. Here's what's in your account.</p>
     </div>
 
-    <section class="portfolio-overview" aria-label="Portfolio overview">
+    <section class="portfolio-overview" aria-labelledby="portfolio-overview-title">
+      <h2 id="portfolio-overview-title" class="sr-only">Portfolio overview</h2>
       <article class="overview-card">
         <span>Total portfolio value</span>
         <strong>${{ formatCurrency(portfolioValue) }}</strong>
@@ -36,7 +37,7 @@
     <main class="portfolio-column">
       <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>
-    </main>
+    </section>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>

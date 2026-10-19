@@ -49,7 +49,7 @@ describe('WatchlistComponent', () => {
 
     fixture = TestBed.createComponent(WatchlistComponent);
     component = fixture.componentInstance;
-    component.ngOnInit();
+    fixture.detectChanges();
   });
 
   it('loads the watchlist and excludes already-added instruments', () => {
@@ -61,11 +61,27 @@ describe('WatchlistComponent', () => {
     expect(component.getLatestPrice('BTC')).toBe(50000);
   });
 
-  it('renders the instrument dropdown without a search field', () => {
-    fixture.detectChanges();
-
+  it('renders the styled instrument picker', () => {
     expect(fixture.nativeElement.querySelector('#instrument-search')).toBeNull();
     expect(fixture.nativeElement.querySelector('#instrument-select')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.instrument-picker')).not.toBeNull();
+
+    component.openPicker();
+    expect(component.pickerOpen).toBe(true);
+    fixture.detectChanges();
+    expect(component.pickerOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('.instrument-options')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.instrument-option').textContent).toContain('ETH');
+  });
+
+  it('closes the picker when clicking outside the picker', () => {
+    fixture.detectChanges();
+    component.openPicker();
+    fixture.detectChanges();
+
+    component.closePickerOnOutsideClick(new MouseEvent('click', { bubbles: true }));
+
+    expect(component.pickerOpen).toBe(false);
   });
 
   it('disables the add button until an instrument is selected', () => {
@@ -74,10 +90,13 @@ describe('WatchlistComponent', () => {
     const addButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(addButton.disabled).toBe(true);
 
-    component.selectedSymbol = 'ETH';
+    const input = fixture.nativeElement.querySelector('#instrument-select') as HTMLInputElement;
+    input.value = 'ETH';
+    input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+    const updatedAddButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-    expect(addButton.disabled).toBe(false);
+    expect(updatedAddButton.disabled).toBe(false);
   });
 
   it('displays asset and latest price columns', () => {
@@ -89,7 +108,7 @@ describe('WatchlistComponent', () => {
   });
 
   it('adds and removes an instrument for the current account', () => {
-    component.selectedSymbol = 'ETH';
+    component.selectInstrument(ethereum);
     component.addInstrument();
 
     expect(tradingApi.addToWatchlist).toHaveBeenCalledWith('ACC-1001', 'ETH');
@@ -106,7 +125,7 @@ describe('WatchlistComponent', () => {
 
     const failedFixture = TestBed.createComponent(WatchlistComponent);
     const failedComponent = failedFixture.componentInstance;
-    failedComponent.ngOnInit();
+    failedFixture.detectChanges();
 
     expect(failedComponent.error).toBe('Unable to load your watchlist.');
     expect(failedComponent.loading).toBe(false);
@@ -117,7 +136,7 @@ describe('WatchlistComponent', () => {
 
     const failedPriceFixture = TestBed.createComponent(WatchlistComponent);
     const failedPriceComponent = failedPriceFixture.componentInstance;
-    failedPriceComponent.ngOnInit();
+    failedPriceFixture.detectChanges();
 
     expect(failedPriceComponent.watchlist).toEqual([bitcoin]);
     expect(failedPriceComponent.isPriceUnavailable('BTC')).toBe(true);

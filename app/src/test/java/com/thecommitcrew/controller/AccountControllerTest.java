@@ -39,6 +39,7 @@ import com.thecommitcrew.domain.model.Position;
 import com.thecommitcrew.service.AccountService;
 import com.thecommitcrew.service.PositionService;
 import com.thecommitcrew.service.PriceService;
+import com.thecommitcrew.service.InstrumentService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -69,6 +70,9 @@ class AccountControllerTest {
     @MockBean
     private PositionService positionService;
 
+    @MockBean
+    private InstrumentService instrumentService;
+
     private static final String TEST_ACCOUNT_ID = "ACC-1001";
     private static final String TEST_ACCOUNT_HOLDER = "John Doe";
 
@@ -94,7 +98,7 @@ class AccountControllerTest {
     class GetAccountEndpoint {
         @BeforeEach
         void setup() {
-            reset(accountService);
+            reset(accountService, instrumentService);
         }
 
         @Test
@@ -249,6 +253,9 @@ class AccountControllerTest {
             List<Order> orders = List.of(order);
 
             when(accountService.getOrders(TEST_ACCOUNT_ID)).thenReturn(orders);
+            when(instrumentService.getInstrument("AAPL")).thenReturn(
+                new com.thecommitcrew.domain.dto.InstrumentResponseDTO(
+                    "AAPL", "Apple Inc.", com.thecommitcrew.domain.enums.AssetClass.EQUITY, "USD", true));
 
             mockMvc.perform(get("/api/v1/accounts/{id}/orders", TEST_ACCOUNT_ID))
                 .andExpect(status().isOk())

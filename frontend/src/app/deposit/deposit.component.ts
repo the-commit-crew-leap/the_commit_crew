@@ -1,8 +1,11 @@
 import {
   Component,
+  ElementRef,
   EventEmitter,
   Input,
+  AfterViewChecked,
   Output,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -19,8 +22,9 @@ import { DepositService } from '../services/deposit.service';
   templateUrl: './deposit.html',
   styleUrl: './deposit.css',
 })
-export class DepositModalComponent implements OnChanges {
+export class DepositModalComponent implements OnChanges, AfterViewChecked {
   private readonly depositService = inject(DepositService);
+  private shouldFocusDialog = false;
 
   @Input() visible = false;
 
@@ -37,14 +41,60 @@ export class DepositModalComponent implements OnChanges {
   readonly balanceRefreshFailed = signal(false);
   readonly balance = this.depositService.balance;
   readonly balanceLoading = this.depositService.balanceLoading;
+  @ViewChild('dialog') private dialog?: ElementRef<HTMLElement>;
+  @ViewChild('closeButton') private closeButton?: ElementRef<HTMLButtonElement>;
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['visible']?.currentValue === true) {
+      this.shouldFocusDialog = true;
+    }
+
     if (changes['visible']?.currentValue === true && this.accountId) {
       this.depositService.getBalance(this.accountId).subscribe({
         error: () => {
           this.errorMessage.set('Unable to load your current balance.');
         },
       });
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    if (!this.shouldFocusDialog || !this.visible || !this.closeButton) {
+      return;
+    }
+
+    this.shouldFocusDialog = false;
+    this.closeButton.nativeElement.focus();
+  }
+
+  onDialogKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close();
+      return;
+    }
+
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const focusableElements = this.getFocusableElements();
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      this.dialog?.nativeElement.focus();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    const activeElement = document.activeElement;
+
+    if (event.shiftKey && activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
     }
   }
 
@@ -133,5 +183,18 @@ export class DepositModalComponent implements OnChanges {
     this.errorMessage.set('');
     this.success.set(false);
     this.balanceRefreshFailed.set(false);
+  }
+
+  private getFocusableElements(): HTMLElement[] {
+    const dialog = this.dialog?.nativeElement;
+    if (!dialog) {
+      return [];
+    }
+
+    return Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
   }
 }

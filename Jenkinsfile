@@ -4,12 +4,7 @@ pipeline {
         jdk "JDK21"
         maven "Maven3"
     }
-    stages {  
-        stage('Checkout') { 
-            steps { 
-                checkout scm 
-            } 
-        }
+    stages {
         stage('Secret Detection') {
             steps {
                 script {
@@ -43,22 +38,86 @@ pipeline {
         }
         stage('Dependency Scanning') {
             steps {
-                script {
-                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                        sh '''
-                            mvn -B dependency-check:check \
-                                -DnvdApiKey="\$NVD_API_KEY" \
-                                -Ddependency-check.fail.build.on.cvss=5.0 || EXIT_CODE=$?
-                            
-                            # Always pass to allow pipeline to continue
-                            exit 0
-                        '''
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    echo 'Dependency Scanning: entering catchError'
+
+                    withCredentials([
+                        string(
+                            credentialsId: 'nvd-api-key',
+                            variable: 'NVD_API_KEY'
+                        )
+                    ]) {
+                        echo 'Dependency Scanning: credentials bound'
+
+                        sh(
+                            script: '''
+                                set +e
+
+                                echo "Dependency Scanning: shell started"
+
+                                mvn -B -e dependency-check:check \
+                                    -DnvdApiKey="$NVD_API_KEY" \
+                                    -Ddependency-check.fail.build.on.cvss=5.0
+
+                                EXIT_CODE=$?
+
+                                echo "Dependency-Check exit code: $EXIT_CODE"
+                                find . -type f -path '*target/dependency-check/*' -print
+
+                                python3 - <<'PY'
+                        import json
+                        from pathlib import Path
+
+                        reports = list(Path(".").glob("**/dependency-check-report.json"))
+
+                        with Path("dependency-check-summary.txt").open("w", encoding="utf-8") as output:
+                            total = 0
+
+                            for report in reports:
+                                data = json.loads(report.read_text(encoding="utf-8"))
+                                output.write(f"Report: {report}\\n")
+
+                                for dependency in data.get("dependencies", []):
+                                    file_name = dependency.get("fileName", "unknown")
+
+                                    for vulnerability in dependency.get("vulnerabilities", []):
+                                        cvss3 = vulnerability.get("cvssv3") or {}
+                                        cvss2 = vulnerability.get("cvssv2") or {}
+                                        score = cvss3.get(
+                                            "baseScore",
+                                            cvss2.get("score", "N/A")
+                                        )
+
+                                        output.write(
+                                            f"{score} | "
+                                            f"{vulnerability.get('severity', 'unknown')} | "
+                                            f"{vulnerability.get('name', 'unknown')} | "
+                                            f"{file_name}\\n"
+                                        )
+                                        total += 1
+
+                                output.write("\\n")
+
+                        print(f"Dependency findings written to summary: {total}")
+                        PY
+
+                                echo "Summary file:"
+                                ls -lh dependency-check-summary.txt
+                                cat dependency-check-summary.txt
+
+                                exit "$EXIT_CODE"
+                            '''.stripIndent()
+                        )
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: '**/dependency-check/*.json', allowEmptyArchive: true
+                    archiveArtifacts(
+                        artifacts: '**/dependency-check-report.json,dependency-check-summary.txt',
+                        allowEmptyArchive: true,
+                        fingerprint: true
+                    )
                 }
             }
         }
@@ -193,6 +252,7 @@ pipeline {
                                 
                                 echo "Database check completed"
                             fi
+
                         """
                     }
                 }
@@ -200,6 +260,100 @@ pipeline {
             post {
                 failure {
                     sh 'docker-compose -p the_commit_crew logs db 2>/dev/null || true'
+                }
+            }
+        }
+        stage('Start Application Dependencies') {
+            steps {
+                script {
+                    def environment = 'dev'
+                    if (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main') {
+                        environment = 'prod'
+                    }
+                    echo "Starting application dependencies for ${environment}..."
+
+                    def credentialsId = (environment == 'prod') ? 'env-prod-file' : 'env-dev-file'
+
+                    withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
+                        sh """
+                            set -e
+
+                            echo "Starting Kafka..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d kafka
+
+                            echo "Waiting for Kafka to become ready..."
+                            KAFKA_READY=false
+                            for i in {1..30}; do
+                                if docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T kafka \
+                                    /opt/kafka/bin/kafka-broker-api-versions.sh \
+                                    --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+                                    echo "Kafka is ready!"
+                                    KAFKA_READY=true
+                                    break
+                                fi
+                                echo "Attempt \$i/30: Waiting for Kafka..."
+                                sleep 2
+                            done
+
+                            if [ "\$KAFKA_READY" != "true" ]; then
+                                echo "Kafka failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs kafka
+                                exit 1
+                            fi
+
+                            echo "Starting execution engine..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d --build execution-engine
+
+                            echo "Waiting for execution engine to become ready..."
+                            EXECUTION_ENGINE_READY=false
+                            for i in {1..30}; do
+                                EXECUTION_ENGINE_ID=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps -q execution-engine)
+                                if [ -n "\$EXECUTION_ENGINE_ID" ] &&
+                                   [ "\$(docker inspect --format '{{.State.Running}}' "\$EXECUTION_ENGINE_ID" 2>/dev/null || echo false)" = "true" ]; then
+                                    echo "Execution engine is ready!"
+                                    EXECUTION_ENGINE_READY=true
+                                    break
+                                fi
+                                echo "Attempt \$i/30: Waiting for execution engine..."
+                                sleep 2
+                            done
+
+                            if [ "\$EXECUTION_ENGINE_READY" != "true" ]; then
+                                echo "Execution engine failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs execution-engine
+                                exit 1
+                            fi
+
+                            echo "Starting auth service..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d --build auth
+
+                            echo "Waiting for auth service to become ready..."
+                            AUTH_READY=false
+                            for i in {1..30}; do
+                                if curl -fsS --connect-timeout 2 --max-time 5 \
+                                    http://localhost:8082/api/auth/health >/dev/null 2>&1; then
+                                    echo "Auth service is ready!"
+                                    AUTH_READY=true
+                                    break
+                                fi
+                                echo "Attempt \$i/30: Waiting for auth service..."
+                                sleep 2
+                            done
+
+                            if [ "\$AUTH_READY" != "true" ]; then
+                                echo "Auth service failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs auth
+                                exit 1
+                            fi
+                        """
+                    }
+                }
+            }
+            post {
+                failure {
+                    sh '''
+                        docker-compose -p the_commit_crew logs kafka execution-engine auth 2>/dev/null || true
+                    '''
                 }
             }
         }
@@ -268,44 +422,134 @@ pipeline {
                     
                     withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
                         sh '''
+                            set -eu
+
                             # Extract credentials from env file
-                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            AUTH_DB=$(grep "^AUTH_DB=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs)
-                            AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "\${ENV_FILE_PATH}" | cut -d'=' -f2 | tr -d '\r' | xargs || echo "$POSTGRES_PASSWORD")
-                            
+                            POSTGRES_DB=$(grep "^POSTGRES_DB=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            AUTH_DB=$(grep "^AUTH_DB=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs)
+                            AUTH_PASSWORD=$(grep "^AUTH_DB_PASSWORD=" "$ENV_FILE_PATH" | cut -d'=' -f2- | tr -d '\r' | xargs || true)
+
+                            if [ -z "$AUTH_PASSWORD" ]; then
+                                AUTH_PASSWORD="$POSTGRES_PASSWORD"
+                            fi
+
+                            echo "Verifying Kafka is available..."
+
+                            kafka_ready=false
+
+                            for i in $(seq 1 30); do
+                                if docker-compose \
+                                    -p the_commit_crew \
+                                    --env-file "$ENV_FILE_PATH" \
+                                    exec -T kafka \
+                                    /opt/kafka/bin/kafka-broker-api-versions.sh \
+                                    --bootstrap-server localhost:9092 \
+                                    >/dev/null 2>&1; then
+                                    kafka_ready=true
+                                    echo "Kafka is ready"
+                                    break
+                                fi
+
+                                echo "Waiting for Kafka... attempt $i/30"
+                                sleep 2
+                            done
+
+                            if [ "$kafka_ready" != "true" ]; then
+                                echo "Kafka did not become ready"
+                                docker-compose \
+                                    -p the_commit_crew \
+                                    --env-file "$ENV_FILE_PATH" \
+                                    logs kafka || true
+                                exit 1
+                            fi
+
+                            CONTAINER_NAME="the-commit-crew-smoke-${BUILD_NUMBER}"
+
+                            echo "Starting application smoke-test container..."
+
                             CONTAINER_ID=$(docker run -d \
+                                --name "$CONTAINER_NAME" \
                                 -p 8081:8081 \
                                 --network=the-commit-crew_default \
-                                -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB} \
-                                -e SPRING_DATASOURCE_USERNAME=postgres \
-                                -e SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD} \
-                                -e SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB} \
-                                -e SPRING_AUTH_DATASOURCE_USERNAME=postgres \
-                                -e SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD} \
-                                -e SPRING_KAFKA_AUTO_STARTUP=false \
-                                -e SPRING_KAFKA_ADMIN_FAIL_FAST=false \
-                                -e SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9999 \
-                                -e SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=3000 \
-                                -e SERVER_SHUTDOWN=graceful \
-                                the-commit-crew:${BUILD_NUMBER})
-                            
-                            echo "Waiting for Spring Boot to start..."
-                            sleep 15
-                            
-                            for i in {1..45}; do
-                                if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
-                                    echo "Health check passed"
-                                    docker rm -f $CONTAINER_ID
+                                -e "SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}" \
+                                -e "SPRING_DATASOURCE_USERNAME=postgres" \
+                                -e "SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}" \
+                                -e "SPRING_AUTH_DATASOURCE_URL=jdbc:postgresql://db:5432/${AUTH_DB}" \
+                                -e "SPRING_AUTH_DATASOURCE_USERNAME=postgres" \
+                                -e "SPRING_AUTH_DATASOURCE_PASSWORD=${AUTH_PASSWORD}" \
+                                -e "SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092" \
+                                -e "SPRING_KAFKA_ADMIN_FAIL_FAST=true" \
+                                -e "SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=5000" \
+                                "the-commit-crew:${BUILD_NUMBER}")
+
+                            cleanup() {
+                                echo "Cleaning up smoke-test container..."
+                                docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
+                            }
+
+                            trap cleanup EXIT
+
+                            echo "Waiting for Spring Boot health endpoint..."
+
+                            for i in $(seq 1 90); do
+                                CONTAINER_RUNNING=$(
+                                    docker inspect \
+                                        --format '{{.State.Running}}' \
+                                        "$CONTAINER_ID" \
+                                        2>/dev/null || echo false
+                                )
+
+                                if [ "$CONTAINER_RUNNING" != "true" ]; then
+                                    EXIT_CODE=$(
+                                        docker inspect \
+                                            --format '{{.State.ExitCode}}' \
+                                            "$CONTAINER_ID" \
+                                            2>/dev/null || echo 1
+                                    )
+
+                                    echo "Application container exited with code: $EXIT_CODE"
+                                    echo "Application logs:"
+                                    docker logs "$CONTAINER_ID" 2>&1 || true
+                                    exit 1
+                                fi
+
+                                HEALTH_RESPONSE=$(
+                                    curl -sS \
+                                        --connect-timeout 2 \
+                                        --max-time 5 \
+                                        -w '\nHTTP_STATUS:%{http_code}' \
+                                        http://localhost:8081/actuator/health \
+                                        2>&1 || true
+                                )
+
+                                HTTP_STATUS=$(printf '%s\n' "$HEALTH_RESPONSE" |
+                                    sed -n 's/^HTTP_STATUS://p')
+
+                                HEALTH_BODY=$(printf '%s\n' "$HEALTH_RESPONSE" |
+                                    sed '/^HTTP_STATUS:/d')
+
+                                if [ "$HTTP_STATUS" = "200" ] &&
+                                   printf '%s\n' "$HEALTH_BODY" |
+                                   grep -q '"status":"UP"'; then
+                                    echo "Smoke test passed"
                                     exit 0
                                 fi
-                                echo "Attempt $i/45: Waiting for application to be ready..."
-                                sleep 1
+
+                                echo "Attempt $i/90: application is not ready"
+                                echo "HTTP status: ${HTTP_STATUS:-unavailable}"
+                                echo "Health response:"
+                                printf '%s\n' "$HEALTH_BODY"
+
+                                sleep 2
                             done
-                            
-                            echo "Health check failed"
-                            docker logs $CONTAINER_ID
-                            docker rm -f $CONTAINER_ID
+
+                            echo "Smoke test failed"
+                            echo "HTTP status: ${HTTP_STATUS:-unavailable}"
+                            echo "Last health response:"
+                            printf '%s\n' "$HEALTH_BODY"
+                            echo "Application logs:"
+                            docker logs "$CONTAINER_ID" 2>&1 || true
                             exit 1
                         '''
                     }

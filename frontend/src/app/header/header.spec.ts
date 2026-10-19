@@ -55,4 +55,14 @@ describe('TCC_HeaderComponent', () => {
     expect(authSession.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
+
+  it('closes the account menu when clicking outside the header', () => {
+    component.accountMenuOpen = true;
+
+    component.closeAccountMenuOnOutsideClick(
+      new MouseEvent('click', { bubbles: true }),
+    );
+
+    expect(component.accountMenuOpen).toBe(false);
+  });
 });

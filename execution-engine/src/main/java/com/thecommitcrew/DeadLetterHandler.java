@@ -83,7 +83,7 @@ public class DeadLetterHandler {
                 """,
                 timestamp, exceptionType, exceptionMessage, originalMessage
             );
-            
+
         } catch (Exception e) {
             log.error("Failed to process permanent dead letter message: {}", message, e);
         }

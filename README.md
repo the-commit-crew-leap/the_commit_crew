@@ -125,8 +125,8 @@ sudo dnf install -y   atk   at-spi2-atk   cups-libs   libdrm   libXcomposite   l
 
 ### If you get an error saying you need Node.js 20+:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 #### Verify: 
@@ -137,7 +137,7 @@ node --version
 ### Start the frontend service:
 ```bash
 cd frontend
-ng serve
+npm start
 ```
 
 ### Run the playwright tests (in a different terminal):

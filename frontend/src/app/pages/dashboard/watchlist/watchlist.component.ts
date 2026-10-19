@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TimeoutError, catchError, forkJoin, map, of, timeout } from 'rxjs';
 
@@ -18,6 +26,7 @@ export class WatchlistComponent implements OnInit {
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
 
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
@@ -29,6 +38,15 @@ export class WatchlistComponent implements OnInit {
   removingSymbol = '';
   error = '';
   success = '';
+  pickerOpen = false;
+  highlightedInstrumentIndex = 0;
+
+  @HostListener('document:click', ['$event'])
+  closePickerOnOutsideClick(event: MouseEvent): void {
+    if (!this.instrumentPicker?.nativeElement.contains(event.target as Node)) {
+      this.pickerOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     const accountId = this.authSession.getAccountId();
@@ -63,9 +81,70 @@ export class WatchlistComponent implements OnInit {
     return this.instruments.filter((instrument) => !symbols.has(instrument.symbol));
   }
 
+  get filteredAvailableInstruments(): InstrumentResponse[] {
+    const query = this.selectedSymbol.trim().toLowerCase();
+    if (!query) {
+      return this.availableInstruments;
+    }
+
+    return this.availableInstruments.filter((instrument) =>
+      instrument.symbol.toLowerCase().includes(query) ||
+      instrument.name.toLowerCase().includes(query)
+    );
+  }
+
+  openPicker(): void {
+    if (!this.loading && !this.error && !this.saving) {
+      this.pickerOpen = true;
+    }
+  }
+
+  closePicker(): void {
+    setTimeout(() => {
+      this.pickerOpen = false;
+    }, 150);
+  }
+
+  onPickerKeydown(event: KeyboardEvent): void {
+    const instruments = this.filteredAvailableInstruments;
+    if (!this.pickerOpen && event.key !== 'ArrowDown') {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.pickerOpen = true;
+      this.highlightedInstrumentIndex = Math.min(
+        this.highlightedInstrumentIndex + 1,
+        Math.max(instruments.length - 1, 0)
+      );
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightedInstrumentIndex = Math.max(this.highlightedInstrumentIndex - 1, 0);
+    } else if (event.key === 'Enter' && instruments[this.highlightedInstrumentIndex]) {
+      event.preventDefault();
+      this.selectInstrument(instruments[this.highlightedInstrumentIndex]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.pickerOpen = false;
+    }
+  }
+
+  selectInstrument(instrument: InstrumentResponse): void {
+    this.selectedSymbol = instrument.symbol;
+    this.highlightedInstrumentIndex = 0;
+    this.pickerOpen = false;
+  }
+
   addInstrument(): void {
     const accountId = this.authSession.getAccountId();
-    if (!accountId || !this.selectedSymbol || this.saving) {
+    const selectedInstrument = this.availableInstruments.find(
+      (instrument) => instrument.symbol === this.selectedSymbol.trim().toUpperCase()
+    );
+    if (!accountId || !selectedInstrument || this.saving) {
+      if (accountId && this.selectedSymbol && !selectedInstrument) {
+        this.error = 'Select a valid instrument from the list.';
+      }
       return;
     }
 
@@ -102,6 +181,12 @@ export class WatchlistComponent implements OnInit {
       this.saving = false;
       this.cdr.detectChanges();
     });
+  }
+
+  onSelectedSymbolChange(value: string): void {
+    this.selectedSymbol = value;
+    this.highlightedInstrumentIndex = 0;
+    this.pickerOpen = true;
   }
 
   private reconcileTimedOutAdd(accountId: string, symbol: string): void {

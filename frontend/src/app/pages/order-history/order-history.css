@@ -123,6 +123,75 @@
   text-align: right;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #29313c;
+}
+
+.filters label {
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  gap: 6px;
+  color: #8993a3;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.filters select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #3a4553;
+  border-radius: 6px;
+  background: #0f1319;
+  color: #e8ebf0;
+  font: inherit;
+  text-transform: none;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid #3a4553;
+  border-radius: 999px;
+  background: #202733;
+  color: #d8dde6;
+  font-size: 12px;
+}
+
+.filter-chip button {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #a8b1c0;
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.filter-chip button:hover,
+.filter-chip button:focus-visible {
+  background: #3a4553;
+  color: #e8ebf0;
+}
+
 .total-value strong {
   display: block;
   margin-top: 4px;

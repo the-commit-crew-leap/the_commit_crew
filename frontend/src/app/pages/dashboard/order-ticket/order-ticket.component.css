@@ -58,12 +58,31 @@ form {
   margin-top: 32px;
 }
 
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .side-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 8px;
   border-radius: 10px;
   background: #0f1318;
+}
+
+.side-options legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .side-options label {
@@ -109,11 +128,18 @@ form {
 }
 
 .input-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   border: 1px solid #2d3642;
   border-radius: 10px;
   background: #0f1318;
+}
+
+.input-wrap:focus-within {
+  border-color: #a7b6ff;
+  outline: 3px solid rgb(167 182 255 / 35%);
+  outline-offset: 2px;
 }
 
 .input-wrap input {
@@ -167,6 +193,26 @@ button:disabled {
 
 .order-error {
   color: #ff929b;
+}
+
+.field-error {
+  margin: -8px 0 0;
+  color: #ff929b;
+  font-size: 0.875rem;
+}
+
+.field-help {
+  margin: -8px 0 0;
+  color: #8f9aaa;
+  font-size: 0.875rem;
+}
+
+.input-wrap:has(input[aria-invalid="true"]) {
+  border-color: #ff929b;
+}
+
+.input-wrap input:focus-visible {
+  outline: none;
 }
 
 .order-success {

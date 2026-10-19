@@ -1,6 +1,8 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order, OrderStatus } from '../../models/order.model';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { AssetClass, Order, OrderSide, OrderStatus } from '../../models/order.model';
 import { OrderHistoryService } from '../../services/order-history.service';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
@@ -8,7 +10,7 @@ import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-order-history',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './order-history.html',
   styleUrl: './order-history.css'
 })
@@ -16,6 +18,12 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
   loading = true;
   error = '';
   orders: Order[] = [];
+  selectedAssetClass: AssetClass | '' = '';
+  selectedSide: OrderSide | '' = '';
+  selectedStatus: OrderStatus | '' = '';
+  readonly assetClasses: AssetClass[] = ['EQUITY', 'BOND', 'FUND'];
+  readonly sides: OrderSide[] = ['BUY', 'SELL'];
+  readonly statuses: OrderStatus[] = ['NEW', 'FILLED', 'REJECTED', 'CANCELLED'];
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -86,6 +94,30 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
 
   get totalOrderValue(): number {
     return this.orders.reduce((total, order) => total + this.orderValue(order), 0);
+  }
+
+  get filteredOrders(): Order[] {
+    return this.orders.filter((order) =>
+      (!this.selectedAssetClass || order.assetClass === this.selectedAssetClass) &&
+      (!this.selectedSide || order.side === this.selectedSide) &&
+      (!this.selectedStatus || order.status === this.selectedStatus)
+    );
+  }
+
+  get filteredOrderValue(): number {
+    return this.filteredOrders.reduce((total, order) => total + this.orderValue(order), 0);
+  }
+
+  clearAssetClassFilter(): void {
+    this.selectedAssetClass = '';
+  }
+
+  clearSideFilter(): void {
+    this.selectedSide = '';
+  }
+
+  clearStatusFilter(): void {
+    this.selectedStatus = '';
   }
 
   get filledOrders(): number {

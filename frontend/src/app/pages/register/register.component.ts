@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { EMPTY, finalize, catchError, timeout } from 'rxjs';
@@ -15,6 +15,8 @@ import { AuthHeaderComponent } from '../../auth-header/auth-header.component';
   imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthHeaderComponent]
 })
 export class RegisterComponent {
+  @ViewChild('registerForm') private registerForm?: ElementRef<HTMLFormElement>;
+  @ViewChild('apiError') private apiError?: ElementRef<HTMLParagraphElement>;
   isSubmitting = false;
   hasSubmitError = false;
   errorMessage = '';
@@ -51,6 +53,7 @@ export class RegisterComponent {
   submit(): void {
     if (this.form.invalid || this.isSubmitting) {
       this.form.markAllAsTouched();
+      this.focusFirstInvalidField();
       return;
     }
 
@@ -76,7 +79,25 @@ export class RegisterComponent {
           this.hasSubmitError = true;
           this.errorMessage = getAuthErrorMessage(err, 'Could not register. Please try again.');
           this.cdr.detectChanges();
+          this.focusSubmitError();
         },
       });
+  }
+
+  private focusFirstInvalidField(): void {
+    setTimeout(() => {
+      this.registerForm?.nativeElement
+        .querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus();
+    });
+  }
+
+  private focusSubmitError(): void {
+    setTimeout(() => {
+      const errorElement = this.apiError?.nativeElement;
+      if (errorElement) {
+        errorElement.focus();
+      }
+    });
   }
 }
