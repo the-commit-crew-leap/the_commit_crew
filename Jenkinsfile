@@ -4,12 +4,7 @@ pipeline {
         jdk "JDK21"
         maven "Maven3"
     }
-    stages {  
-        stage('Checkout') { 
-            steps { 
-                checkout scm 
-            } 
-        }
+    stages {
         stage('Secret Detection') {
             steps {
                 script {
