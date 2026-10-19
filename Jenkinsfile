@@ -406,7 +406,6 @@ pipeline {
 
                             CONTAINER_ID=$(docker run -d \
                                 --name "$CONTAINER_NAME" \
-                                --restart=no \
                                 -p 8081:8081 \
                                 --network=the-commit-crew_default \
                                 -e "SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}" \
@@ -418,23 +417,11 @@ pipeline {
                                 -e "SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092" \
                                 -e "SPRING_KAFKA_ADMIN_FAIL_FAST=true" \
                                 -e "SPRING_KAFKA_PROPERTIES_REQUEST_TIMEOUT_MS=5000" \
-                                -e "SERVER_SHUTDOWN=graceful" \
                                 "the-commit-crew:${BUILD_NUMBER}")
 
                             cleanup() {
                                 echo "Cleaning up smoke-test container..."
-
-                                if docker inspect "$CONTAINER_ID" >/dev/null 2>&1; then
-                                    echo "Final container state:"
-                                    docker inspect \
-                                        --format '{{json .State}}' \
-                                        "$CONTAINER_ID" || true
-
-                                    echo "Final application logs:"
-                                    docker logs "$CONTAINER_ID" 2>&1 || true
-
-                                    docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
-                                fi
+                                docker rm -f "$CONTAINER_ID" >/dev/null 2>&1 || true
                             }
 
                             trap cleanup EXIT
