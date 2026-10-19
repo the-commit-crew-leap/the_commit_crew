@@ -43,6 +43,15 @@ app-order-ticket {
   margin: 0;
 }
 
+.eyebrow {
+  margin: 0 0 7px;
+  color: #93a4e8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
 .portfolio-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

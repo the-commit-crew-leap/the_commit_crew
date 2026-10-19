@@ -1,6 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { Order, OrderStatus } from '../../models/order.model';
 import { OrderHistoryService } from '../../services/order-history.service';
 import { AuthSessionService } from '../../auth/auth-session.service';
@@ -9,7 +8,7 @@ import { Subject, interval, startWith, switchMap, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-order-history',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './order-history.html',
   styleUrl: './order-history.css'
 })
