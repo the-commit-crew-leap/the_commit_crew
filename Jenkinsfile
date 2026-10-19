@@ -283,6 +283,29 @@ pipeline {
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs kafka
                                 exit 1
                             fi
+
+                            echo "Starting auth service..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d --build auth
+
+                            echo "Waiting for auth service to become ready..."
+                            AUTH_READY=false
+                            for i in {1..30}; do
+                                if curl -fsS --connect-timeout 2 --max-time 5 \
+                                    http://localhost:8082/api/auth/health >/dev/null 2>&1; then
+                                    echo "Auth service is ready!"
+                                    AUTH_READY=true
+                                    break
+                                fi
+
+                                echo "Attempt \$i/30: Waiting for auth service..."
+                                sleep 2
+                            done
+
+                            if [ "\$AUTH_READY" != "true" ]; then
+                                echo "Auth service failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs auth
+                                exit 1
+                            fi
                         """
                     }
                 }
