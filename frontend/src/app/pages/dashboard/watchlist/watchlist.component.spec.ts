@@ -176,6 +176,7 @@ describe('WatchlistComponent', () => {
     jest.advanceTimersByTime(5000);
 
     expect(refreshComponent.getLatestPrice('BTC')).toBe(51000);
+    expect(refreshComponent.isPricePending('BTC')).toBe(false);
     expect(priceRequests).toHaveBeenCalledTimes(2);
     expect(refreshComponent.lastUpdated).not.toBeNull();
     jest.useRealTimers();

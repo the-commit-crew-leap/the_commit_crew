@@ -77,3 +77,12 @@ export interface PriceResponse {
     live: boolean;
     updatedAt: string;
 }
+
+export interface MarketTickerResponse {
+    symbol: string;
+    price: number | null;
+    changePercent: number | null;
+    source: string | null;
+    live: boolean;
+    updatedAt: string | null;
+}

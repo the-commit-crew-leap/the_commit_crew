@@ -131,4 +131,27 @@ describe('DashboardComponent', () => {
     expect(refreshComponent.todayReturn).toBe(500);
     jest.useRealTimers();
   });
+
+  it('marks a negative today return as negative', () => {
+    component.ngOnDestroy();
+    tradingApi.getPositions.mockReturnValue(of([{
+      symbol: 'AAPL',
+      quantity: 1,
+      averageCost: 100,
+      currentPrice: 90,
+      marketValue: 90,
+      unrealizedPnL: -10,
+      unrealizedPnLPercent: -10
+    }]));
+
+    const negativeFixture = TestBed.createComponent(DashboardComponent);
+    const negativeComponent = negativeFixture.componentInstance;
+    negativeComponent.ngOnInit();
+    negativeFixture.detectChanges();
+
+    const returnValues = negativeFixture.nativeElement.querySelectorAll('.overview-card strong');
+    expect(returnValues[2].className).toContain('negative');
+    expect(returnValues[2].className).not.toContain('positive');
+    negativeComponent.ngOnDestroy();
+  });
 });

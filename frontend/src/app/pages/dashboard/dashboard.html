@@ -29,8 +29,10 @@
       </article>
       <article class="overview-card">
         <span>Today's return</span>
-        <strong class="positive">{{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}</strong>
-        <small class="positive">Across your portfolio</small>
+        <strong [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
+          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}
+        </strong>
+        <small>Across your portfolio</small>
       </article>
       <article class="overview-card">
         <span>Open orders</span>
