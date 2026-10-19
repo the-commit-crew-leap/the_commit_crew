@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
-import com.thecommitcrew.domain.dto.PriceResponseDTO;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.service.InstrumentService;
 import com.thecommitcrew.service.PriceService;
 
@@ -38,11 +38,8 @@ public class InstrumentController {
 	}
 
 	@GetMapping("/{symbol}/price")
-	public ResponseEntity<PriceResponseDTO> getCurrentPrice(@PathVariable String symbol) {
+	public ResponseEntity<LivePriceResponse> getCurrentPrice(@PathVariable String symbol) {
 		String normalizedSymbol = symbol.trim().toUpperCase();
-		return ResponseEntity.ok(new PriceResponseDTO(
-			normalizedSymbol,
-			priceService.getCurrentPrice(normalizedSymbol)
-		));
+		return ResponseEntity.ok(priceService.getCurrentLivePrice(normalizedSymbol));
 	}
 }

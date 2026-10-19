@@ -267,9 +267,11 @@ Then restart the app:
 docker-compose -p commitcrew-dev --env-file .env.dev up -d --build app
 ```
 
-When `ALPACA_ENABLED` is `false`, the app continues using the latest stored
-database price. The free Alpaca feed is real-time IEX data, so it may not
-represent every U.S. exchange.
+The live-price endpoint requires Alpaca to be enabled and configured. If live
+data is unavailable, it returns an error instead of presenting an old database
+price as current market data. The free Alpaca feed is real-time IEX data, so it
+may not represent every U.S. exchange. Simulated order processing remains
+unchanged.
 
 ## Coding Conventions
 

@@ -53,7 +53,16 @@ describe('DashboardComponent', () => {
           status: 'FILLED',
           createdOn: '2026-10-15T07:00:00'
         }
-      ]))
+      ])),
+      getInstruments: jest.fn().mockReturnValue(of([])),
+      getWatchlist: jest.fn().mockReturnValue(of([])),
+      getInstrumentPrice: jest.fn().mockReturnValue(of({
+        symbol: 'AAPL',
+        price: 100,
+        source: 'ALPACA_IEX',
+        live: true,
+        updatedAt: '2026-10-19T10:00:00Z'
+      }))
     } as unknown as jest.Mocked<TradingApiService>;
     depositService = {
       balance: signal({
@@ -86,5 +95,40 @@ describe('DashboardComponent', () => {
     expect(component.todayReturn).toBe(5000);
     expect(component.openOrders).toBe(1);
     expect(component.balance()?.cashBalance.amount).toBe('10000.00');
+  });
+
+  it('updates portfolio value when the live position price changes', () => {
+    component.ngOnDestroy();
+    jest.useFakeTimers();
+    tradingApi.getPositions.mockReset()
+      .mockReturnValueOnce(of([{
+        symbol: 'AAPL',
+        quantity: 50,
+        averageCost: 100,
+        currentPrice: 100,
+        marketValue: 5000,
+        unrealizedPnL: 0,
+        unrealizedPnLPercent: 0
+      }]))
+      .mockReturnValue(of([{
+        symbol: 'AAPL',
+        quantity: 50,
+        averageCost: 100,
+        currentPrice: 110,
+        marketValue: 5500,
+        unrealizedPnL: 500,
+        unrealizedPnLPercent: 10
+      }]));
+
+    const refreshFixture = TestBed.createComponent(DashboardComponent);
+    const refreshComponent = refreshFixture.componentInstance;
+    refreshComponent.ngOnInit();
+
+    expect(refreshComponent.portfolioValue).toBe(5000);
+    jest.advanceTimersByTime(5000);
+
+    expect(refreshComponent.portfolioValue).toBe(5500);
+    expect(refreshComponent.todayReturn).toBe(500);
+    jest.useRealTimers();
   });
 });

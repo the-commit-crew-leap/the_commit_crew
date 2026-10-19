@@ -1,6 +1,7 @@
 package com.thecommitcrew.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,7 +32,11 @@ public class AlpacaMarketDataClient {
         return properties.isConfigured();
     }
 
-    public BigDecimal getLatestTradePrice(String symbol) {
+    public String feed() {
+        return properties.feed();
+    }
+
+    public LatestTrade getLatestTrade(String symbol) {
         LatestTradeResponse response = restClient.get()
             .uri(uriBuilder -> uriBuilder
                 .path("/v2/stocks/{symbol}/trades/latest")
@@ -44,12 +49,15 @@ public class AlpacaMarketDataClient {
             throw new IllegalStateException("Alpaca returned no latest trade for symbol: " + symbol);
         }
 
-        return response.trade().price();
+        return response.trade();
     }
 
-    private record LatestTradeResponse(@JsonProperty("trade") Trade trade) {
+    private record LatestTradeResponse(@JsonProperty("trade") LatestTrade trade) {
     }
 
-    private record Trade(@JsonProperty("p") BigDecimal price) {
+    public record LatestTrade(
+        @JsonProperty("p") BigDecimal price,
+        @JsonProperty("t") Instant timestamp
+    ) {
     }
 }

@@ -73,4 +73,7 @@ export interface InstrumentResponse {
 export interface PriceResponse {
     symbol: string;
     price: number;
+    source: string;
+    live: boolean;
+    updatedAt: string;
 }

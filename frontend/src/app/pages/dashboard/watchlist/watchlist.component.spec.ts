@@ -34,7 +34,13 @@ describe('WatchlistComponent', () => {
     tradingApi = {
       getInstruments: jest.fn().mockReturnValue(of([bitcoin, ethereum])),
       getWatchlist: jest.fn().mockReturnValue(of([bitcoin])),
-      getInstrumentPrice: jest.fn().mockReturnValue(of({ symbol: 'BTC', price: 50000 })),
+      getInstrumentPrice: jest.fn().mockReturnValue(of({
+        symbol: 'BTC',
+        price: 50000,
+        source: 'ALPACA_IEX',
+        live: true,
+        updatedAt: '2026-10-19T10:00:00Z'
+      })),
       addToWatchlist: jest.fn().mockReturnValue(of(ethereum)),
       removeFromWatchlist: jest.fn().mockReturnValue(of(void 0))
     } as unknown as jest.Mocked<TradingApiService>;
@@ -140,5 +146,55 @@ describe('WatchlistComponent', () => {
 
     expect(failedPriceComponent.watchlist).toEqual([bitcoin]);
     expect(failedPriceComponent.isPriceUnavailable('BTC')).toBe(true);
+  });
+
+  it('refreshes live prices every five seconds', () => {
+    component.ngOnDestroy();
+    jest.useFakeTimers();
+    const priceRequests = tradingApi.getInstrumentPrice as jest.Mock;
+    priceRequests.mockReset()
+      .mockReturnValueOnce(of({
+        symbol: 'BTC',
+        price: 50000,
+        source: 'ALPACA_IEX',
+        live: true,
+        updatedAt: '2026-10-19T10:00:00Z'
+      }))
+      .mockReturnValue(of({
+        symbol: 'BTC',
+        price: 51000,
+        source: 'ALPACA_IEX',
+        live: true,
+        updatedAt: '2026-10-19T10:05:00Z'
+      }));
+
+    const refreshFixture = TestBed.createComponent(WatchlistComponent);
+    const refreshComponent = refreshFixture.componentInstance;
+    refreshComponent.ngOnInit();
+
+    expect(refreshComponent.getLatestPrice('BTC')).toBe(50000);
+    jest.advanceTimersByTime(5000);
+
+    expect(refreshComponent.getLatestPrice('BTC')).toBe(51000);
+    expect(priceRequests).toHaveBeenCalledTimes(2);
+    expect(refreshComponent.lastUpdated).not.toBeNull();
+    jest.useRealTimers();
+  });
+
+  it('does not display a database fallback as a live price', () => {
+    tradingApi.getInstrumentPrice.mockReturnValue(of({
+      symbol: 'BTC',
+      price: 121.26,
+      source: 'DATABASE',
+      live: false,
+      updatedAt: '2021-02-26T00:00:00Z'
+    }));
+
+    const fallbackFixture = TestBed.createComponent(WatchlistComponent);
+    const fallbackComponent = fallbackFixture.componentInstance;
+    fallbackComponent.ngOnInit();
+
+    expect(fallbackComponent.getLatestPrice('BTC')).toBeNull();
+    expect(fallbackComponent.isPriceUnavailable('BTC')).toBe(true);
   });
 });

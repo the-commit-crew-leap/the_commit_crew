@@ -1,14 +1,17 @@
 package com.thecommitcrew.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.thecommitcrew.domain.model.PriceHistory;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.exception.PriceNotFoundException;
+import com.thecommitcrew.domain.exception.LivePriceUnavailableException;
 import com.thecommitcrew.persistence.mapper.PriceHistoryMapper;
 
 @Service 
@@ -31,7 +34,7 @@ public class PriceService {
 
     public BigDecimal getCurrentPrice(String symbol) {
         if (alpacaMarketDataClient != null && alpacaMarketDataClient.isConfigured()) {
-            return validatePrice(symbol, alpacaMarketDataClient.getLatestTradePrice(symbol));
+            return validatePrice(symbol, alpacaMarketDataClient.getLatestTrade(symbol).price());
         }
 
         Optional<PriceHistory> priceHistory = priceHistoryMapper.findLatestPriceBySymbol(symbol);
@@ -41,6 +44,34 @@ public class PriceService {
         }
 
         return validatePrice(symbol, priceHistory.get().getClosePrice());
+    }
+
+    public LivePriceResponse getCurrentLivePrice(String symbol) {
+        if (alpacaMarketDataClient == null || !alpacaMarketDataClient.isConfigured()) {
+            throw new LivePriceUnavailableException(
+                "Live Alpaca market data is not configured for symbol: " + symbol
+            );
+        }
+
+        try {
+            AlpacaMarketDataClient.LatestTrade trade = alpacaMarketDataClient.getLatestTrade(symbol);
+            BigDecimal price = validatePrice(symbol, trade.price());
+            Instant updatedAt = trade.timestamp() == null ? Instant.now() : trade.timestamp();
+            return new LivePriceResponse(
+                symbol,
+                price,
+                "ALPACA_" + alpacaMarketDataClient.feed().toUpperCase(),
+                true,
+                updatedAt
+            );
+        } catch (LivePriceUnavailableException | NegativePriceException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new LivePriceUnavailableException(
+                "Live price is unavailable for symbol: " + symbol,
+                exception
+            );
+        }
     }
 
     private BigDecimal validatePrice(String symbol, BigDecimal price) {

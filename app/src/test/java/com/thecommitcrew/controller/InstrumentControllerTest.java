@@ -26,6 +26,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.InstrumentService;
@@ -174,13 +175,22 @@ class InstrumentControllerTest {
         @Test
         @DisplayName("Returns the latest price for an instrument")
         void returnsCurrentPrice() throws Exception {
-            when(priceService.getCurrentPrice(TEST_SYMBOL))
-                .thenReturn(new java.math.BigDecimal("195.50"));
+            when(priceService.getCurrentLivePrice(TEST_SYMBOL))
+                .thenReturn(new LivePriceResponse(
+                    TEST_SYMBOL,
+                    new java.math.BigDecimal("195.50"),
+                    "ALPACA_IEX",
+                    true,
+                    java.time.Instant.parse("2026-10-19T10:00:00Z")
+                ));
 
             mockMvc.perform(get("/api/v1/instruments/{symbol}/price", "aapl"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value(TEST_SYMBOL))
-                .andExpect(jsonPath("$.price").value(195.50));
+                .andExpect(jsonPath("$.price").value(195.50))
+                .andExpect(jsonPath("$.source").value("ALPACA_IEX"))
+                .andExpect(jsonPath("$.live").value(true))
+                .andExpect(jsonPath("$.updatedAt").value("2026-10-19T10:00:00Z"));
         }
     }
 
