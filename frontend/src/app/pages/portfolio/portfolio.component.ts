@@ -5,7 +5,7 @@ import { forkJoin, Subject, takeUntil } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { InstrumentResponse, PositionResponse } from '../../api/trading.models';
 import { TradingApiService } from '../../api/trading-api.service';
-import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario } from '../../services/analytics-api.service';
+import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario, PortfolioTransaction } from '../../services/analytics-api.service';
 
 @Component({
   selector: 'app-portfolio',
@@ -25,10 +25,12 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     { value: '1y', label: '1Y' }, { value: '5y', label: '5Y' }, { value: '10y', label: '10Y' }
   ];
   positions: PositionResponse[] = [];
+  transactions: PortfolioTransaction[] = [];
   instruments: InstrumentResponse[] = [];
   scenarioSymbol = '';
   scenarioQuantity = 1;
   scenario?: PortfolioScenario;
+  cashBalance = 0;
   scenarioLoading = false;
   selectedPeriod = '1y';
   volatilityWindow = 30;
@@ -51,11 +53,22 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     forkJoin({
       positions: this.tradingApi.getPositions(accountId),
-      instruments: this.tradingApi.getInstruments(true)
+      orders: this.tradingApi.getAccountOrders(accountId),
+      instruments: this.tradingApi.getInstruments(true),
+      balance: this.tradingApi.getBalance(accountId)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ positions, instruments }) => {
+      next: ({ positions, orders, instruments, balance }) => {
         this.positions = positions.filter((position) => (position.marketValue ?? 0) > 0);
+        this.transactions = orders
+          .filter((order) => order.status === 'FILLED')
+          .map((order) => ({
+            symbol: order.symbol,
+            side: order.side,
+            quantity: order.quantity,
+            createdOn: order.createdOn
+          }));
         this.instruments = instruments;
+        this.cashBalance = Number(balance.cashBalance.amount) || 0;
         this.scenarioSymbol = instruments[0]?.symbol ?? this.positions[0]?.symbol ?? '';
         this.runPortfolioAnalytics();
       },
@@ -68,13 +81,14 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    if (!this.pendingFigures || !this.allChartsReady()) return;
-    const figures = this.pendingFigures;
-    this.pendingFigures = undefined;
-    this.renderFigure(this.allocationChart!.nativeElement, figures.allocation);
-    this.renderFigure(this.cumulativeChart!.nativeElement, figures.cumulative);
-    this.renderFigure(this.volatilityChart!.nativeElement, figures.volatility);
-    this.renderFigure(this.drawdownChart!.nativeElement, figures.drawdown);
+    if (this.pendingFigures && this.allChartsReady()) {
+      const figures = this.pendingFigures;
+      this.pendingFigures = undefined;
+      this.renderFigure(this.allocationChart!.nativeElement, figures.allocation);
+      this.renderFigure(this.cumulativeChart!.nativeElement, figures.cumulative);
+      this.renderFigure(this.volatilityChart!.nativeElement, figures.volatility);
+      this.renderFigure(this.drawdownChart!.nativeElement, figures.drawdown);
+    }
   }
 
   ngOnDestroy(): void {
@@ -94,7 +108,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   runScenario(): void {
     const symbols = this.positions.map((position) => position.symbol);
     const values = this.positions.map((position) => position.marketValue ?? 0);
-    if (!symbols.length || !this.scenarioSymbol || this.scenarioQuantity <= 0) {
+    if (!symbols.length || !this.scenarioSymbol || this.scenarioQuantity <= 0 || !Number.isInteger(this.scenarioQuantity)) {
       this.error = 'Choose an instrument and enter a positive quantity.';
       return;
     }
@@ -102,7 +116,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.error = '';
     this.analyticsApi.getPortfolioScenario(
       symbols, values, this.scenarioSymbol, this.scenarioQuantity,
-      this.selectedPeriod, this.getVolatilityWindow()
+      this.selectedPeriod, this.cashBalance, this.getVolatilityWindow()
     ).pipe(takeUntil(this.destroy$)).subscribe({
       next: (scenario) => {
         this.scenario = scenario;
@@ -137,15 +151,18 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     const weights = values.map((value) => value / total);
+    const allocationTotal = total + this.cashBalance;
+    const allocationSymbols = [...symbols, 'CASH'];
+    const allocationWeights = [...values, this.cashBalance].map((value) => value / allocationTotal);
     const window = this.getVolatilityWindow();
     this.loading = true;
     this.error = '';
     forkJoin({
-      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window),
-      allocation: this.analyticsApi.getPortfolioAllocation(symbols, weights),
-      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod),
-      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window),
-      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod)
+      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window, this.transactions),
+      allocation: this.analyticsApi.getPortfolioAllocation(allocationSymbols, allocationWeights),
+      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod, this.transactions),
+      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window, this.transactions),
+      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod, this.transactions)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ insights, allocation, cumulative, volatility, drawdown }) => {
         this.statistics = insights.statistics;

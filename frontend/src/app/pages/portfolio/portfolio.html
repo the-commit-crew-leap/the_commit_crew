@@ -8,7 +8,7 @@
     <p *ngIf="error" class="state-message" role="alert">{{ error }}</p>
     <p *ngIf="loading && !error" class="state-message">Loading portfolio analytics...</p>
     <ng-container *ngIf="!loading && !error">
-      <section class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue | number:'1.0-0' }} USD</span></article></section>
+      <section class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue | number:'1.0-0' }} USD</span></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
       <section *ngIf="statistics[0] as statistic" class="metric-strip" aria-label="Portfolio statistics">
         <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
         <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
@@ -19,7 +19,7 @@
         <div class="section-heading"><div><p class="eyebrow">What if?</p><h2 id="scenario-title">Simulate an additional purchase</h2></div><span class="scenario-note">Historical risk comparison</span></div>
         <div class="scenario-controls">
           <label>Instrument<select [(ngModel)]="scenarioSymbol"><option *ngFor="let instrument of instruments" [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option></select></label>
-          <label>Shares<input type="number" min="0.01" step="0.01" [(ngModel)]="scenarioQuantity"></label>
+          <label>Whole shares<input type="number" min="1" step="1" [(ngModel)]="scenarioQuantity"></label>
           <button type="button" class="scenario-button" [disabled]="scenarioLoading" (click)="runScenario()">{{ scenarioLoading ? 'Calculating...' : 'Compare scenario' }}</button>
         </div>
         <div *ngIf="scenario" class="scenario-result">

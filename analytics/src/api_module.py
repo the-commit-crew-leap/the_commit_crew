@@ -89,6 +89,31 @@ def _portfolio_inputs(
     return symbols, weights
 
 
+def _portfolio_transactions(
+    symbols: Optional[List[str]],
+    sides: Optional[List[str]],
+    quantities: Optional[List[float]],
+    dates: Optional[List[str]],
+) -> Optional[list[dict]]:
+    """Validate and normalize the filled orders supplied by the portfolio UI."""
+    values = [symbols, sides, quantities, dates]
+    if not any(values):
+        return None
+    if not all(values) or len({len(value) for value in values if value is not None}) != 1:
+        raise HTTPException(status_code=400, detail="Portfolio transactions are incomplete")
+    transactions = []
+    for symbol, side, quantity, date in zip(symbols, sides, quantities, dates):
+        if side not in {"BUY", "SELL"} or quantity <= 0:
+            raise HTTPException(status_code=400, detail="Portfolio transactions are invalid")
+        transactions.append({
+            "symbol": symbol,
+            "side": side,
+            "quantity": quantity,
+            "created_on": date,
+        })
+    return transactions
+
+
 def _portfolio_period(period: str, symbols: list[str]) -> None:
     _validate_period(period)
     if not symbols:
@@ -279,11 +304,20 @@ def get_portfolio_insights(
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
+    transaction_symbols: Optional[List[str]] = Query(default=None),
+    transaction_sides: Optional[List[str]] = Query(default=None),
+    transaction_quantities: Optional[List[float]] = Query(default=None),
+    transaction_dates: Optional[List[str]] = Query(default=None),
 ):
     """Return weighted statistics for the user's current holdings snapshot."""
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    statistics = analysis_engine.get_portfolio_statistics(symbols, weights, period, volatility_window)
+    transactions = _portfolio_transactions(
+        transaction_symbols, transaction_sides, transaction_quantities, transaction_dates
+    )
+    statistics = analysis_engine.get_portfolio_statistics(
+        symbols, weights, period, volatility_window, transactions
+    )
     if statistics.empty:
         raise HTTPException(status_code=404, detail="No portfolio data available")
     return {
@@ -299,10 +333,17 @@ def get_portfolio_cumulative_chart(
     symbols: Optional[List[str]] = Query(default=None),
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
+    transaction_symbols: Optional[List[str]] = Query(default=None),
+    transaction_sides: Optional[List[str]] = Query(default=None),
+    transaction_quantities: Optional[List[float]] = Query(default=None),
+    transaction_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    return _figure_response(analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period))
+    transactions = _portfolio_transactions(
+        transaction_symbols, transaction_sides, transaction_quantities, transaction_dates
+    )
+    return _figure_response(analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period, transactions))
 
 
 @app.get("/portfolio/charts/volatility")
@@ -311,12 +352,19 @@ def get_portfolio_volatility_chart(
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
+    transaction_symbols: Optional[List[str]] = Query(default=None),
+    transaction_sides: Optional[List[str]] = Query(default=None),
+    transaction_quantities: Optional[List[float]] = Query(default=None),
+    transaction_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
+    transactions = _portfolio_transactions(
+        transaction_symbols, transaction_sides, transaction_quantities, transaction_dates
+    )
     return _figure_response(
         analysis_engine.create_portfolio_volatility_figure(
-            symbols, weights, period, volatility_window
+            symbols, weights, period, volatility_window, transactions
         )
     )
 
@@ -326,10 +374,17 @@ def get_portfolio_drawdown_chart(
     symbols: Optional[List[str]] = Query(default=None),
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
+    transaction_symbols: Optional[List[str]] = Query(default=None),
+    transaction_sides: Optional[List[str]] = Query(default=None),
+    transaction_quantities: Optional[List[float]] = Query(default=None),
+    transaction_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    return _figure_response(analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period))
+    transactions = _portfolio_transactions(
+        transaction_symbols, transaction_sides, transaction_quantities, transaction_dates
+    )
+    return _figure_response(analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period, transactions))
 
 
 @app.get("/portfolio/charts/allocation")
@@ -346,7 +401,8 @@ def get_portfolio_scenario(
     symbols: Optional[List[str]] = Query(default=None),
     values: Optional[List[float]] = Query(default=None),
     scenario_symbol: str = Query(...),
-    additional_quantity: float = Query(..., gt=0),
+    additional_quantity: int = Query(..., gt=0),
+    cash_value: float = Query(default=0.0, ge=0),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
 ):
@@ -361,6 +417,7 @@ def get_portfolio_scenario(
             scenario_symbol,
             additional_quantity,
             period,
+            cash_value,
             volatility_window,
         )
     except ValueError as error:
