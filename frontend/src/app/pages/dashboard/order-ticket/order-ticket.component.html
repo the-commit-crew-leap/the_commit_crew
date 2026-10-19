@@ -27,23 +27,55 @@
       </div>
 
       <label class="field-label" for="ticket-symbol">Asset symbol</label>
-      <div class="input-wrap">
-        <input
-          #symbolInput
-          id="ticket-symbol"
-          name="symbol"
-          type="text"
-          [(ngModel)]="symbol"
-          placeholder="BTC"
-          autocomplete="off"
-          maxlength="20"
-          (ngModelChange)="onSymbolChange($event)"
-          (blur)="loadMarketPrice()"
-          required
-          [attr.aria-invalid]="symbolInvalid ? 'true' : null"
-          [attr.aria-describedby]="symbolInvalid ? 'ticket-symbol-error' : null">
-        <span>Asset</span>
+      <div #instrumentPicker class="instrument-picker">
+        <div class="input-wrap">
+          <input
+            #symbolInput
+            id="ticket-symbol"
+            name="symbol"
+            type="text"
+            [(ngModel)]="symbol"
+            placeholder="Search symbol"
+            autocomplete="off"
+            maxlength="20"
+            role="combobox"
+            aria-controls="tradable-instruments"
+            [attr.aria-expanded]="instrumentPickerOpen"
+            (ngModelChange)="onSymbolChange($event)"
+            (focus)="openInstrumentPicker()"
+            (blur)="loadMarketPrice(); closeInstrumentPicker()"
+            (keydown)="onInstrumentKeydown($event)"
+            required
+            [attr.aria-invalid]="symbolInvalid ? 'true' : null"
+            [attr.aria-describedby]="symbolInvalid ? 'ticket-symbol-error' : null">
+          <span>Asset</span>
+        </div>
+        <div
+          *ngIf="instrumentPickerOpen"
+          id="tradable-instruments"
+          class="instrument-options"
+          role="listbox"
+          aria-label="Available instruments">
+          <button
+            *ngFor="let instrument of filteredInstruments; let index = index"
+            type="button"
+            class="instrument-option"
+            [class.highlighted]="index === highlightedInstrumentIndex"
+            (mousedown)="$event.preventDefault()"
+            (click)="selectInstrument(instrument)"
+            role="option"
+            [attr.aria-selected]="index === highlightedInstrumentIndex">
+            {{ instrument.symbol }}
+          </button>
+          <p *ngIf="filteredInstruments.length === 0" class="instrument-empty">
+            No matching instruments
+          </p>
+        </div>
       </div>
+      <p *ngIf="instrumentsLoading" class="field-help">Loading available instruments...</p>
+      <p *ngIf="!instrumentsLoading && instrumentsError" class="field-error" role="alert">
+        {{ instrumentsError }}
+      </p>
       <p *ngIf="symbolInvalid" id="ticket-symbol-error" class="field-error" role="alert">
         {{ symbolError }}
       </p>
@@ -80,7 +112,10 @@
         <strong>${{ estimatedOrderValue | number:'1.2-2' }}</strong>
       </div>
 
-      <button class="submit-order" type="submit" [disabled]="orderSubmitting">
+      <button
+        class="submit-order"
+        type="submit"
+        [disabled]="orderSubmitting || instrumentsLoading || !!instrumentsError">
         {{ orderSubmitting ? 'Submitting...' : 'Submit order' }}
       </button>
     </form>

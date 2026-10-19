@@ -3,7 +3,7 @@
 }
 
 .watchlist-card {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;
@@ -26,10 +26,16 @@
 }
 
 .watchlist-form {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 50%) auto;
   gap: 8px;
   padding: 0 20px 16px;
+}
+
+.watchlist-form .instrument-options {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .watchlist-form label {
@@ -39,16 +45,32 @@
   text-transform: uppercase;
 }
 
-.watchlist-form select {
+.watchlist-input-wrap {
   min-width: 0;
   border: 1px solid #29313c;
   border-radius: 6px;
   background: #0b0e12;
   color: #e8ebf0;
-  padding: 9px 10px;
 }
 
-.watchlist-form button {
+.watchlist-input-wrap:focus-within {
+  border-color: #a7b6ff;
+  outline: 3px solid rgb(167 182 255 / 35%);
+  outline-offset: 2px;
+}
+
+.watchlist-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.watchlist-form > button {
   display: flex;
   align-items: center;
   justify-content: center;

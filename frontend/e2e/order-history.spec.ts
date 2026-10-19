@@ -85,15 +85,16 @@ test('shows order history rows and statuses', async ({ page }) => {
   await expect(totalValue).toContainText('$2,728.00');
   await expect(page.getByRole('columnheader', { name: 'Order / Date' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Quantity' })).toBeVisible();
-  await expect(page.getByRole('columnheader', { name: 'Price (USD)' })).toBeVisible();
-  await expect(page.getByRole('columnheader', { name: 'Total (USD)' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Price' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Total value' })).toBeVisible();
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('TSLA')).toBeVisible();
   await expect(page.getByText('$1,502.50')).toBeVisible();
   await expect(page.getByText('$1,225.50')).toBeVisible();
   await expect(page.getByText('$2,728.00')).toBeVisible();
-  await expect(page.getByText('FILLED', { exact: true })).toBeVisible();
-  await expect(page.getByText('NEW', { exact: true })).toBeVisible();
+  const orderTable = page.getByRole('table');
+  await expect(orderTable.getByText('FILLED', { exact: true })).toBeVisible();
+  await expect(orderTable.getByText('NEW', { exact: true })).toBeVisible();
 });
 
 test('shows error state when API fails', async ({ page }) => {
