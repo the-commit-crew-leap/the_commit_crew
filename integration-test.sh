@@ -161,13 +161,43 @@ ORDER_RESPONSE=$(curl -sS -X POST "$API_BASE/orders" \
   -d "{\"accountId\":\"$ACCOUNT_ID\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10}")
 echo "Order response: $ORDER_RESPONSE"
 
-echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
-echo "PASS: order placed and persisted"
+ORDER_ID=$(printf '%s' "$ORDER_RESPONSE" | sed -n 's/.*"orderId":"\([^"]*\)".*/\1/p')
+if [ -z "$ORDER_ID" ]; then
+  echo "FAIL: order response did not contain an order ID"
+  exit 1
+fi
+
+echo "== Stage: Wait for Order Execution =="
+for i in $(seq 1 30); do
+  ORDERS_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID/orders")
+  case "$ORDERS_RESPONSE" in
+    *"orderId\":\"$ORDER_ID\""*"status\":\"FILLED"*)
+      echo "Order $ORDER_ID filled (attempt $i/30)"
+      break
+      ;;
+    *"orderId\":\"$ORDER_ID\""*"status\":\"REJECTED"*)
+      echo "FAIL: order $ORDER_ID was rejected"
+      echo "Orders response: $ORDERS_RESPONSE"
+      exit 1
+      ;;
+    *)
+      if [ "$i" -eq 30 ]; then
+        echo "FAIL: order $ORDER_ID was not filled after 30 attempts"
+        echo "Orders response: $ORDERS_RESPONSE"
+        exit 1
+      fi
+      echo "Waiting for order execution... (attempt $i/30)"
+      sleep 1
+      ;;
+  esac
+done
+
+echo "PASS: order placed, executed, and persisted"
 
 echo "== Stage: Test Get Account Orders =="
-ORDERS_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID/orders")
 echo "Orders response (with data): $ORDERS_RESPONSE"
-echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order not in response"; exit 1; }
+echo "$ORDERS_RESPONSE" | grep -q "\"orderId\":\"$ORDER_ID\"" || { echo "FAIL: order not in response"; exit 1; }
+echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order symbol not in response"; exit 1; }
 echo "PASS: orders endpoint returns placed order"
 
 echo "== Stage: Test Get Account Positions =="
