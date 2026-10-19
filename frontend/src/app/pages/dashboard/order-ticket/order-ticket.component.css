@@ -119,6 +119,7 @@ fieldset {
 }
 
 .input-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   border: 1px solid #2d3642;
@@ -188,6 +189,12 @@ button:disabled {
 .field-error {
   margin: -8px 0 0;
   color: #ff929b;
+  font-size: 0.875rem;
+}
+
+.field-help {
+  margin: -8px 0 0;
+  color: #8f9aaa;
   font-size: 0.875rem;
 }
 

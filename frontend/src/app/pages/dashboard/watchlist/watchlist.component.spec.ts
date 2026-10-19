@@ -61,11 +61,17 @@ describe('WatchlistComponent', () => {
     expect(component.getLatestPrice('BTC')).toBe(50000);
   });
 
-  it('renders the instrument dropdown without a search field', () => {
+  it('renders the styled instrument picker', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('#instrument-search')).toBeNull();
     expect(fixture.nativeElement.querySelector('#instrument-select')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.instrument-picker')).not.toBeNull();
+
+    component.pickerOpen = true;
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.instrument-options')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.instrument-option').textContent).toContain('ETH');
   });
 
   it('disables the add button until an instrument is selected', () => {

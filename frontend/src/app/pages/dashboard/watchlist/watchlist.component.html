@@ -8,17 +8,44 @@
 
   <form class="watchlist-form" (ngSubmit)="addInstrument()">
     <label for="instrument-select">Add an instrument</label>
-    <select
-      id="instrument-select"
-      name="selectedSymbol"
-      [(ngModel)]="selectedSymbol"
-      [disabled]="loading || saving || availableInstruments.length === 0"
-      aria-label="Instrument to add">
-      <option value="">Select an instrument</option>
-      <option *ngFor="let instrument of availableInstruments" [value]="instrument.symbol">
-        {{ instrument.symbol }} · {{ instrument.name }}
-      </option>
-    </select>
+    <div class="instrument-picker">
+      <div class="watchlist-input-wrap">
+        <input
+          id="instrument-select"
+          name="selectedSymbol"
+          type="text"
+          [(ngModel)]="selectedSymbol"
+          (ngModelChange)="onSelectedSymbolChange($event)"
+          placeholder="Search symbol"
+          autocomplete="off"
+          [disabled]="loading || saving || availableInstruments.length === 0"
+          aria-label="Instrument to add"
+          (focus)="openPicker()"
+          (blur)="closePicker()"
+          (keydown)="onPickerKeydown($event)">
+      </div>
+      <div
+        *ngIf="pickerOpen"
+        class="instrument-options"
+        role="listbox"
+        aria-label="Available instruments">
+        <button
+          *ngFor="let instrument of filteredAvailableInstruments; let index = index"
+          type="button"
+          class="instrument-option"
+          [class.highlighted]="index === highlightedInstrumentIndex"
+          (mousedown)="$event.preventDefault()"
+          (click)="selectInstrument(instrument)"
+          role="option"
+          [attr.aria-selected]="index === highlightedInstrumentIndex">
+          <strong>{{ instrument.symbol }}</strong>
+          <span>{{ instrument.name }}</span>
+        </button>
+        <p *ngIf="filteredAvailableInstruments.length === 0" class="instrument-empty">
+          No matching instruments
+        </p>
+      </div>
+    </div>
     <button type="submit" [disabled]="loading || saving || !selectedSymbol">
       {{ saving ? 'Adding...' : 'Add' }}
     </button>
