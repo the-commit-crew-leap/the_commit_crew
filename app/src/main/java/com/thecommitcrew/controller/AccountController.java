@@ -16,6 +16,7 @@ import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.AccountService;
 import com.thecommitcrew.service.PositionService;
 import com.thecommitcrew.service.PriceService;
+import com.thecommitcrew.service.InstrumentService;
 import com.thecommitcrew.auth.CheckAuth;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -38,13 +39,16 @@ public class AccountController {
     private final AccountService accountService;
     private final PriceService priceService;
     private final PositionService positionService;
+    private final InstrumentService instrumentService;
 
     private static final String ACCOUNT_ID_ATTRIBUTE = "accountId";
 
-    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService) {
+    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService,
+            InstrumentService instrumentService) {
         this.accountService = accountService;
         this.priceService = priceService;
         this.positionService = positionService;
+        this.instrumentService = instrumentService;
     }
 
     @GetMapping
@@ -148,7 +152,8 @@ public class AccountController {
                 order.getQuantity(),
                 order.getPrice(),
                 order.getStatus(),
-                order.getCreatedOn()
+                order.getCreatedOn(),
+                instrumentService.getInstrument(order.getSymbol()).assetClass()
             ))
             .toList();
         return ResponseEntity.ok(response);
