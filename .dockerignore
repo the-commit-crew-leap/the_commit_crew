@@ -1,0 +1,25 @@
+# Local dependencies and build output
+**/node_modules
+**/target
+**/dist
+**/build
+**/.angular
+**/coverage
+**/.venv
+**/__pycache__
+
+# Test and tooling output
+**/test-results
+**/playwright-report
+**/.pytest_cache
+**/*.log
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Repository and editor metadata
+.git
+.github
+.vscode

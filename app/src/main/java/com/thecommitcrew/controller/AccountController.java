@@ -6,9 +6,11 @@ import com.thecommitcrew.domain.dto.AccountResponseDTO;
 import com.thecommitcrew.domain.dto.BalanceResponseDTO;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.dto.PositionResponseDTO;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.dto.TransactionRequestDTO;
 import com.thecommitcrew.domain.dto.TransactionResponseDTO;
 import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
+import com.thecommitcrew.domain.exception.LivePriceUnavailableException;
 import com.thecommitcrew.domain.model.Account;
 import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Position;
@@ -110,7 +112,22 @@ public class AccountController {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
             .map(pos -> {
-                BigDecimal currentPrice = priceService.getCurrentPrice(pos.getSymbol());
+                LivePriceResponse livePrice;
+                try {
+                    livePrice = priceService.getCurrentLivePrice(pos.getSymbol());
+                } catch (LivePriceUnavailableException exception) {
+                    return new PositionResponseDTO(
+                        pos.getSymbol(),
+                        pos.getQuantity(),
+                        pos.getAverageCost(),
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+                }
+
+                BigDecimal currentPrice = livePrice.price();
                 BigDecimal marketValue = positionService.marketValue(pos, currentPrice);
                 BigDecimal unrealizedPnL = positionService.unrealizedProfitLoss(pos, currentPrice);
                 BigDecimal unrealizedPnLPercent = positionService.unrealizedPnLPercent(pos, currentPrice);

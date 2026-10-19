@@ -6,7 +6,7 @@ import { DepositService } from '../../services/deposit.service';
 import { TradingApiService } from '../../api/trading-api.service';
 import { BalanceResponse, PositionResponse } from '../../api/trading.models';
 import { Order } from '../../models/order.model';
-import { Subject, exhaustMap, forkJoin, interval, startWith, takeUntil } from 'rxjs';
+import { EMPTY, Subject, catchError, exhaustMap, forkJoin, interval, startWith, takeUntil } from 'rxjs';
 import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 import { AssetsComponent } from './assets/assets.component';
 import { WatchlistComponent } from './watchlist/watchlist.component';
@@ -26,6 +26,7 @@ export class DashboardComponent implements OnDestroy, OnInit {
   positions: PositionResponse[] = [];
   orders: Order[] = [];
   overviewError = false;
+  lastUpdated: Date | null = null;
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -50,13 +51,21 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(1000).pipe(
+    interval(5000).pipe(
       startWith(0),
       exhaustMap(() => forkJoin({
         balance: this.depositService.getBalance(accountId, false),
         positions: this.tradingApi.getPositions(accountId),
         orders: this.tradingApi.getAccountOrders(accountId)
-      })),
+      }).pipe(
+        catchError((error) => {
+          console.error('Failed to refresh dashboard data', error);
+          this.balanceError = true;
+          this.overviewError = true;
+          this.cdr.detectChanges();
+          return EMPTY;
+        })
+      )),
       takeUntil(this.destroy$)
     ).subscribe({
       next: ({ positions, orders }) => {
@@ -64,12 +73,7 @@ export class DashboardComponent implements OnDestroy, OnInit {
         this.orders = orders;
         this.balanceError = false;
         this.overviewError = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Failed to refresh dashboard data', error);
-        this.balanceError = true;
-        this.overviewError = true;
+        this.lastUpdated = new Date();
         this.cdr.detectChanges();
       }
     });
@@ -82,6 +86,10 @@ export class DashboardComponent implements OnDestroy, OnInit {
 
     get portfolioValue(): number {
       return this.positions.reduce((total, position) => total + (position.marketValue ?? 0), 0);
+    }
+
+    get portfolioValueAvailable(): boolean {
+      return this.positions.length > 0 && this.positions.every((position) => position.marketValue !== null);
     }
 
     get todayReturn(): number {

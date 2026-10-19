@@ -53,6 +53,11 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       AUTH_SERVICE_URL: http://auth:3000
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://*,https://*}
+      ALPACA_ENABLED: ${ALPACA_ENABLED:-false}
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
+      ALPACA_DATA_URL: ${ALPACA_DATA_URL:-https://data.alpaca.markets}
+      ALPACA_FEED: ${ALPACA_FEED:-iex}
     healthcheck:
       test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
       interval: 10s

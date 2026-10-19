@@ -3,14 +3,16 @@ import { RouterOutlet } from '@angular/router';
 import { TCC_HeaderComponent } from './header/header.component';
 import { NgIf } from '@angular/common';
 import { AuthSessionService } from './auth/auth-session.service';
+import { MarketTickerComponent } from './market-ticker/market-ticker.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, TCC_HeaderComponent, NgIf],
+  imports: [RouterOutlet, TCC_HeaderComponent, MarketTickerComponent, NgIf],
   template: `
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <app-header *ngIf="authSession.isAuthenticated()"></app-header>
+  <app-market-ticker *ngIf="authSession.isAuthenticated()"></app-market-ticker>
   <router-outlet></router-outlet>
   `,
   styles: [`

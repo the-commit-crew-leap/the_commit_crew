@@ -162,7 +162,10 @@ describe('OrderTicketComponent', () => {
   it('loads the current price and calculates the estimated order value', () => {
     tradingApi.getInstrumentPrice.mockReturnValue(of({
       symbol: 'BTC',
-      price: 50000
+      price: 50000,
+      source: 'ALPACA_IEX',
+      live: true,
+      updatedAt: '2026-10-19T10:00:00Z'
     }));
     component.symbol = 'btc';
     component.quantity = 2;

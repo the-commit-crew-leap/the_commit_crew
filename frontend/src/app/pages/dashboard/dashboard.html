@@ -3,13 +3,19 @@
     <div class="dash-card">
       <h1>Trading overview</h1>
       <p class="welcome-message">Welcome back. Here's what's in your account.</p>
+      <p class="market-update" *ngIf="lastUpdated">
+        Live prices updated {{ lastUpdated | date:'shortTime' }}
+      </p>
+      <p class="market-update" *ngIf="overviewError" role="alert">
+        Live prices are temporarily unavailable. Retrying automatically.
+      </p>
     </div>
 
     <section class="portfolio-overview" aria-labelledby="portfolio-overview-title">
       <h2 id="portfolio-overview-title" class="sr-only">Portfolio overview</h2>
       <article class="overview-card">
         <span>Total portfolio value</span>
-        <strong>${{ formatCurrency(portfolioValue) }}</strong>
+        <strong>{{ portfolioValueAvailable ? '$' + formatCurrency(portfolioValue) : '—' }}</strong>
         <small [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
           {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }} today
         </small>
@@ -23,8 +29,10 @@
       </article>
       <article class="overview-card">
         <span>Today's return</span>
-        <strong class="positive">{{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}</strong>
-        <small class="positive">Across your portfolio</small>
+        <strong [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
+          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}
+        </strong>
+        <small>Across your portfolio</small>
       </article>
       <article class="overview-card">
         <span>Open orders</span>

@@ -1,0 +1,31 @@
+<section class="market-ticker" aria-label="Cryptocurrency market prices">
+  <div class="market-ticker-scroll">
+    <div
+      *ngFor="let market of marketData; trackBy: trackBySymbol"
+      class="market-ticker-item"
+      [attr.aria-label]="market.symbol + ' market price'">
+      <strong>{{ market.symbol }}</strong>
+      <span class="market-ticker-price" [class.is-unavailable]="!market.live">
+        <ng-container *ngIf="market.price !== null; else unavailablePrice">
+          {{ market.price | number: '1.2-2' }}
+        </ng-container>
+        <ng-template #unavailablePrice>—</ng-template>
+      </span>
+      <span class="market-ticker-change" [ngClass]="changeClass(market)">
+        <ng-container *ngIf="market.changePercent !== null; else unavailableChange">
+          {{ market.changePercent >= 0 ? '+' : '−' }}{{ absoluteChange(market.changePercent) | number: '1.2-2' }}%
+        </ng-container>
+        <ng-template #unavailableChange>—</ng-template>
+      </span>
+    </div>
+  </div>
+
+  <span class="market-ticker-status">Crypto markets open 24/7</span>
+  <span class="sr-only" aria-live="polite">
+    <ng-container *ngIf="loading">Loading market prices.</ng-container>
+    <ng-container *ngIf="!loading && error">{{ error }}</ng-container>
+    <ng-container *ngIf="!loading && !error && lastUpdated">
+      Market prices updated {{ lastUpdated | date: 'shortTime' }}.
+    </ng-container>
+  </span>
+</section>
