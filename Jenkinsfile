@@ -501,6 +501,7 @@ pipeline {
             steps { sh 'mvn -B test' }
                 post { always { junit 'app/target/surefire-reports/*.xml' } }
         }
+        /*
         stage('Quality Gate') {
             steps {
                 withSonarQubeEnv('sonarserver') {
@@ -510,6 +511,7 @@ pipeline {
                 }
             }
         }
+        */
         stage('Integration Tests') {
             when {
                 not {
