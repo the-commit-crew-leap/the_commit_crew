@@ -150,131 +150,21 @@ class AnalysisEngine:
         portfolio_returns.name = "Portfolio"
         return portfolio_returns.dropna()
 
-    def get_portfolio_returns_from_transactions(
-        self,
-        symbols: list[str],
-        weights: list[float],
-        transactions: list[dict],
-        start_date: str,
-        end_date: str,
-    ) -> pd.Series:
-        """Calculate daily returns using the holdings created by filled orders."""
-        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date)
-        if returns_df.empty:
-            return pd.Series(dtype="float64", name="Portfolio")
-
-        normalized_symbols = [self.helper.normalize_ticker(symbol) for symbol in symbols]
-        price_data = {}
-        for symbol in normalized_symbols:
-            price_df = self.loader.load_price_data(
-                symbol,
-                (pd.Timestamp(start_date) - pd.Timedelta(days=7)).strftime("%Y-%m-%d"),
-                end_date,
-            )
-            if price_df.empty:
-                continue
-            prices = pd.to_numeric(price_df.get("adj_close"), errors="coerce")
-            if prices is None or not prices.notna().any():
-                prices = pd.to_numeric(price_df["close"], errors="coerce")
-            price_data[symbol] = prices.set_axis(pd.to_datetime(price_df["date"])).sort_index()
-        prices_df = pd.DataFrame(price_data).reindex(returns_df.index)
-
-        holdings = {symbol: 0.0 for symbol in normalized_symbols}
-        ordered_transactions = sorted(
-            [
-                transaction for transaction in transactions
-                if pd.Timestamp(transaction["created_on"]).normalize() <= pd.Timestamp(end_date)
-            ],
-            key=lambda transaction: pd.Timestamp(transaction["created_on"]),
-        )
-        transaction_index = 0
-        portfolio_returns = []
-
-        for index in range(1, len(returns_df.index)):
-            date = returns_df.index[index]
-            previous_date = returns_df.index[index - 1]
-            while transaction_index < len(ordered_transactions):
-                transaction = ordered_transactions[transaction_index]
-                transaction_date = pd.Timestamp(transaction["created_on"]).normalize()
-                if transaction_date >= date.normalize():
-                    break
-                symbol = self.helper.normalize_ticker(transaction["symbol"])
-                if symbol in holdings:
-                    quantity = float(transaction["quantity"])
-                    holdings[symbol] += quantity if transaction["side"] == "BUY" else -quantity
-                    holdings[symbol] = max(holdings[symbol], 0.0)
-                transaction_index += 1
-
-            active = {symbol: quantity for symbol, quantity in holdings.items() if quantity > 0}
-            if not active:
-                continue
-
-            current_values = {
-                symbol: quantity * prices_df.at[date, symbol]
-                for symbol, quantity in active.items()
-                if symbol in prices_df and pd.notna(prices_df.at[date, symbol])
-            }
-            previous_values = {
-                symbol: active[symbol] * prices_df.at[previous_date, symbol]
-                for symbol in current_values
-                if pd.notna(prices_df.at[previous_date, symbol])
-            }
-            if not previous_values:
-                continue
-
-            previous_total = sum(previous_values.values())
-            current_total = sum(current_values[symbol] for symbol in previous_values)
-            if previous_total > 0:
-                portfolio_returns.append((date, current_total / previous_total - 1))
-
-        if not portfolio_returns:
-            return pd.Series(dtype="float64", name="Portfolio")
-        return pd.Series(dict(portfolio_returns), name="Portfolio")
-
     def _portfolio_figure_period(
         self,
         symbols: list[str],
         period: str,
-        transactions: Optional[list[dict]] = None,
     ) -> AnalysisPeriod:
-        analysis_period = self._resolve_period(period, symbols)
-        if transactions:
-            end_date = pd.Timestamp(analysis_period.end_date)
-            relevant_transactions = [
-                item for item in transactions
-                if pd.Timestamp(item["created_on"]).normalize() <= end_date
-            ]
-            if not relevant_transactions:
-                return AnalysisPeriod(analysis_period.label, analysis_period.end_date, analysis_period.end_date)
-            first_transaction = min(pd.Timestamp(item["created_on"]) for item in relevant_transactions)
-            start_date = max(pd.Timestamp(analysis_period.start_date), first_transaction.normalize())
-            return AnalysisPeriod(analysis_period.label, start_date.strftime("%Y-%m-%d"), analysis_period.end_date)
-        return analysis_period
-
-    def _get_portfolio_returns(
-        self,
-        symbols: list[str],
-        weights: list[float],
-        period: str,
-        transactions: Optional[list[dict]] = None,
-    ) -> pd.Series:
-        analysis_period = self._portfolio_figure_period(symbols, period, transactions)
-        if transactions:
-            return self.get_portfolio_returns_from_transactions(
-                symbols, weights, transactions, analysis_period.start_date, analysis_period.end_date
-            )
-        return self.get_portfolio_returns(
-            symbols, weights, analysis_period.start_date, analysis_period.end_date
-        )
+        return self._resolve_period(period, symbols)
 
     def create_portfolio_cumulative_figure(
         self,
         symbols: list[str],
         weights: list[float],
         period: str,
-        transactions: Optional[list[dict]] = None,
     ) -> Optional[go.Figure]:
-        returns = self._get_portfolio_returns(symbols, weights, period, transactions)
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
         if returns.empty:
             return None
 
@@ -301,12 +191,12 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         window: int = 30,
-        transactions: Optional[list[dict]] = None,
     ) -> Optional[go.Figure]:
         if window < 2:
             raise ValueError("Volatility window must be at least 2 trading days")
 
-        returns = self._get_portfolio_returns(symbols, weights, period, transactions)
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
         rolling = returns.rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
         rolling = rolling.dropna()
         if rolling.empty:
@@ -333,9 +223,9 @@ class AnalysisEngine:
         symbols: list[str],
         weights: list[float],
         period: str,
-        transactions: Optional[list[dict]] = None,
     ) -> Optional[go.Figure]:
-        returns = self._get_portfolio_returns(symbols, weights, period, transactions)
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
         if returns.empty:
             return None
 
@@ -381,9 +271,9 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         volatility_window: int = 30,
-        transactions: Optional[list[dict]] = None,
     ) -> pd.DataFrame:
-        returns = self._get_portfolio_returns(symbols, weights, period, transactions)
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
         if returns.empty:
             return pd.DataFrame()
         return self.statistics_calculator.calculate(pd.DataFrame({"Portfolio": returns}))

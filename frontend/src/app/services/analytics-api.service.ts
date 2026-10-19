@@ -74,13 +74,6 @@ export interface PortfolioScenario {
   proposed: PortfolioScenarioSnapshot;
 }
 
-export interface PortfolioTransaction {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: number;
-  createdOn: string;
-}
-
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly baseUrl = environment.analyticsApiBaseUrl;
@@ -111,27 +104,27 @@ export class AnalyticsApiService {
     });
   }
 
-  getPortfolioInsights(symbols: string[], weights: number[], period: string, volatilityWindow: number, transactions: PortfolioTransaction[] = []): Observable<PortfolioInsights> {
+  getPortfolioInsights(symbols: string[], weights: number[], period: string, volatilityWindow: number): Observable<PortfolioInsights> {
     return this.http.get<PortfolioInsights>(`${this.baseUrl}/portfolio/insights`, {
-      params: this.buildPortfolioParams(symbols, weights, period, volatilityWindow, transactions)
+      params: this.buildPortfolioParams(symbols, weights, period, volatilityWindow)
     });
   }
 
-  getPortfolioCumulative(symbols: string[], weights: number[], period: string, transactions: PortfolioTransaction[] = []): Observable<PlotlyFigure> {
+  getPortfolioCumulative(symbols: string[], weights: number[], period: string): Observable<PlotlyFigure> {
     return this.http.get<PlotlyFigure>(`${this.baseUrl}/portfolio/charts/cumulative`, {
-      params: this.buildPortfolioParams(symbols, weights, period, undefined, transactions)
+      params: this.buildPortfolioParams(symbols, weights, period)
     });
   }
 
-  getPortfolioVolatility(symbols: string[], weights: number[], period: string, volatilityWindow: number, transactions: PortfolioTransaction[] = []): Observable<PlotlyFigure> {
+  getPortfolioVolatility(symbols: string[], weights: number[], period: string, volatilityWindow: number): Observable<PlotlyFigure> {
     return this.http.get<PlotlyFigure>(`${this.baseUrl}/portfolio/charts/volatility`, {
-      params: this.buildPortfolioParams(symbols, weights, period, volatilityWindow, transactions)
+      params: this.buildPortfolioParams(symbols, weights, period, volatilityWindow)
     });
   }
 
-  getPortfolioDrawdown(symbols: string[], weights: number[], period: string, transactions: PortfolioTransaction[] = []): Observable<PlotlyFigure> {
+  getPortfolioDrawdown(symbols: string[], weights: number[], period: string): Observable<PlotlyFigure> {
     return this.http.get<PlotlyFigure>(`${this.baseUrl}/portfolio/charts/drawdown`, {
-      params: this.buildPortfolioParams(symbols, weights, period, undefined, transactions)
+      params: this.buildPortfolioParams(symbols, weights, period)
     });
   }
 
@@ -180,20 +173,12 @@ export class AnalyticsApiService {
     weights: number[],
     period: string,
     volatilityWindow?: number,
-    transactions: PortfolioTransaction[] = [],
   ): HttpParams {
     let params = new HttpParams().set('period', period);
     symbols.forEach((symbol, index) => {
       params = params.append('symbols', symbol).append('weights', weights[index]);
     });
     if (volatilityWindow !== undefined) params = params.set('volatility_window', volatilityWindow);
-    transactions.forEach((transaction) => {
-      params = params
-        .append('transaction_symbols', transaction.symbol)
-        .append('transaction_sides', transaction.side)
-        .append('transaction_quantities', transaction.quantity)
-        .append('transaction_dates', transaction.createdOn);
-    });
     return params;
   }
 }

@@ -5,7 +5,7 @@ import { forkJoin, Subject, takeUntil } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { InstrumentResponse, PositionResponse } from '../../api/trading.models';
 import { TradingApiService } from '../../api/trading-api.service';
-import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario, PortfolioTransaction } from '../../services/analytics-api.service';
+import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario } from '../../services/analytics-api.service';
 
 @Component({
   selector: 'app-portfolio',
@@ -25,7 +25,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     { value: '1y', label: '1Y' }, { value: '5y', label: '5Y' }, { value: '10y', label: '10Y' }
   ];
   positions: PositionResponse[] = [];
-  transactions: PortfolioTransaction[] = [];
   instruments: InstrumentResponse[] = [];
   scenarioSymbol = '';
   scenarioQuantity = 1;
@@ -53,20 +52,11 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     forkJoin({
       positions: this.tradingApi.getPositions(accountId),
-      orders: this.tradingApi.getAccountOrders(accountId),
       instruments: this.tradingApi.getInstruments(true),
       balance: this.tradingApi.getBalance(accountId)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ positions, orders, instruments, balance }) => {
+      next: ({ positions, instruments, balance }) => {
         this.positions = positions.filter((position) => (position.marketValue ?? 0) > 0);
-        this.transactions = orders
-          .filter((order) => order.status === 'FILLED')
-          .map((order) => ({
-            symbol: order.symbol,
-            side: order.side,
-            quantity: order.quantity,
-            createdOn: order.createdOn
-          }));
         this.instruments = instruments;
         this.cashBalance = Number(balance.cashBalance.amount) || 0;
         this.scenarioSymbol = instruments[0]?.symbol ?? this.positions[0]?.symbol ?? '';
@@ -158,11 +148,11 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.loading = true;
     this.error = '';
     forkJoin({
-      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window, this.transactions),
+      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window),
       allocation: this.analyticsApi.getPortfolioAllocation(allocationSymbols, allocationWeights),
-      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod, this.transactions),
-      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window, this.transactions),
-      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod, this.transactions)
+      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod),
+      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window),
+      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ insights, allocation, cumulative, volatility, drawdown }) => {
         this.statistics = insights.statistics;

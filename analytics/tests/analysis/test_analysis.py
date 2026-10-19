@@ -89,58 +89,6 @@ def test_get_returns_uses_close_when_adj_close_has_no_values(monkeypatch):
     assert result.loc[pd.Timestamp("2026-01-02"), "AAPL"] == pytest.approx(0.02)
 
 
-def test_portfolio_returns_start_when_holding_is_purchased(monkeypatch):
-    dates = pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03"])
-    returns = pd.DataFrame({"AAPL": [np.nan, 0.10, 0.10]}, index=dates)
-    prices = pd.DataFrame({
-        "date": dates,
-        "close": [100, 110, 121],
-        "adj_close": [100, 110, 121],
-    })
-
-    monkeypatch.setattr(engine, "get_returns_for_tickers", lambda *args: returns)
-    monkeypatch.setattr(data_loader, "load_price_data", lambda *args, **kwargs: prices.copy())
-
-    result = engine.get_portfolio_returns_from_transactions(
-        ["AAPL"],
-        [1.0],
-        [{"symbol": "AAPL", "side": "BUY", "quantity": 1, "created_on": "2026-01-02"}],
-        "2026-01-01",
-        "2026-01-03",
-    )
-
-    assert list(result.index) == [pd.Timestamp("2026-01-03")]
-    assert result.iloc[0] == pytest.approx(0.10)
-
-
-def test_portfolio_returns_stop_after_sale(monkeypatch):
-    dates = pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04"])
-    returns = pd.DataFrame({"AAPL": [np.nan, 0.10, 0.10, 0.10]}, index=dates)
-    prices = pd.DataFrame({
-        "date": dates,
-        "close": [100, 110, 121, 133.1],
-        "adj_close": [100, 110, 121, 133.1],
-    })
-
-    monkeypatch.setattr(engine, "get_returns_for_tickers", lambda *args: returns)
-    monkeypatch.setattr(data_loader, "load_price_data", lambda *args, **kwargs: prices.copy())
-
-    result = engine.get_portfolio_returns_from_transactions(
-        ["AAPL"],
-        [1.0],
-        [
-            {"symbol": "AAPL", "side": "BUY", "quantity": 1, "created_on": "2026-01-01"},
-            {"symbol": "AAPL", "side": "SELL", "quantity": 1, "created_on": "2026-01-03"},
-        ],
-        "2026-01-01",
-        "2026-01-04",
-    )
-
-    assert list(result.index) == [pd.Timestamp("2026-01-02"), pd.Timestamp("2026-01-03")]
-    assert result.iloc[0] == pytest.approx(0.10)
-    assert result.iloc[1] == pytest.approx(0.10)
-
-
 # SUMMARY STATISTICS
 def test_calculate_summary_statistics(monkeypatch, csv_file):
     monkeypatch.setattr(
