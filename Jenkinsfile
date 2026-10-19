@@ -4,12 +4,7 @@ pipeline {
         jdk "JDK21"
         maven "Maven3"
     }
-    stages {  
-        stage('Checkout') { 
-            steps { 
-                checkout scm 
-            } 
-        }
+    stages {
         stage('Secret Detection') {
             steps {
                 script {
@@ -258,22 +253,44 @@ pipeline {
                                 echo "Database check completed"
                             fi
 
+                        """
+                    }
+                }
+            }
+            post {
+                failure {
+                    sh 'docker-compose -p the_commit_crew logs db 2>/dev/null || true'
+                }
+            }
+        }
+        stage('Start Application Dependencies') {
+            steps {
+                script {
+                    def environment = 'dev'
+                    if (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main') {
+                        environment = 'prod'
+                    }
+                    echo "Starting application dependencies for ${environment}..."
+
+                    def credentialsId = (environment == 'prod') ? 'env-prod-file' : 'env-dev-file'
+
+                    withCredentials([file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')]) {
+                        sh """
+                            set -e
+
                             echo "Starting Kafka..."
                             docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d kafka
 
                             echo "Waiting for Kafka to become ready..."
                             KAFKA_READY=false
-
                             for i in {1..30}; do
                                 if docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" exec -T kafka \
                                     /opt/kafka/bin/kafka-broker-api-versions.sh \
-                                    --bootstrap-server localhost:9092 \
-                                    >/dev/null 2>&1; then
+                                    --bootstrap-server localhost:9092 >/dev/null 2>&1; then
                                     echo "Kafka is ready!"
                                     KAFKA_READY=true
                                     break
                                 fi
-
                                 echo "Attempt \$i/30: Waiting for Kafka..."
                                 sleep 2
                             done
@@ -283,13 +300,60 @@ pipeline {
                                 docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs kafka
                                 exit 1
                             fi
+
+                            echo "Starting execution engine..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d --build execution-engine
+
+                            echo "Waiting for execution engine to become ready..."
+                            EXECUTION_ENGINE_READY=false
+                            for i in {1..30}; do
+                                EXECUTION_ENGINE_ID=\$(docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" ps -q execution-engine)
+                                if [ -n "\$EXECUTION_ENGINE_ID" ] &&
+                                   [ "\$(docker inspect --format '{{.State.Running}}' "\$EXECUTION_ENGINE_ID" 2>/dev/null || echo false)" = "true" ]; then
+                                    echo "Execution engine is ready!"
+                                    EXECUTION_ENGINE_READY=true
+                                    break
+                                fi
+                                echo "Attempt \$i/30: Waiting for execution engine..."
+                                sleep 2
+                            done
+
+                            if [ "\$EXECUTION_ENGINE_READY" != "true" ]; then
+                                echo "Execution engine failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs execution-engine
+                                exit 1
+                            fi
+
+                            echo "Starting auth service..."
+                            docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" up -d --build auth
+
+                            echo "Waiting for auth service to become ready..."
+                            AUTH_READY=false
+                            for i in {1..30}; do
+                                if curl -fsS --connect-timeout 2 --max-time 5 \
+                                    http://localhost:8082/api/auth/health >/dev/null 2>&1; then
+                                    echo "Auth service is ready!"
+                                    AUTH_READY=true
+                                    break
+                                fi
+                                echo "Attempt \$i/30: Waiting for auth service..."
+                                sleep 2
+                            done
+
+                            if [ "\$AUTH_READY" != "true" ]; then
+                                echo "Auth service failed to become ready"
+                                docker-compose -p the_commit_crew --env-file "\${ENV_FILE_PATH}" logs auth
+                                exit 1
+                            fi
                         """
                     }
                 }
             }
             post {
                 failure {
-                    sh 'docker-compose -p the_commit_crew logs db 2>/dev/null || true'
+                    sh '''
+                        docker-compose -p the_commit_crew logs kafka execution-engine auth 2>/dev/null || true
+                    '''
                 }
             }
         }
