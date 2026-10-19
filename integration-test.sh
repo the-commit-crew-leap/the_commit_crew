@@ -18,6 +18,13 @@ POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | tr 
 NETWORK=the-commit-crew_default
 APP_CONTAINER=the-commit-crew-app
 APP_PORT=8081
+API_BASE="http://localhost:$APP_PORT/api/v1"
+AUTH_BASE="${AUTH_BASE:-http://localhost:8082}"
+TEST_PASSWORD="${TEST_PASSWORD:-IntegrationTest123!}"
+TEST_RUN_ID="${BUILD_NUMBER:-$(date +%s)}"
+TEST_USERNAME="integration-${TEST_RUN_ID}"
+TEST_EMAIL="${TEST_USERNAME}@example.com"
+ACCOUNT_ID=""
 
 # Accept postgres container name from parameter
 POSTGRES_CONTAINER="${4:-the_commit_crew-db-1}"
@@ -61,7 +68,6 @@ docker run -d --name "$APP_CONTAINER" --network "$POSTGRES_NETWORK" -p "$APP_POR
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD="${POSTGRES_PASSWORD}" \
   -e SPRING_PROFILES_ACTIVE=test \
-  -e AUTH_ENABLED=false \
   -e SPRING_KAFKA_BOOTSTRAP_SERVERS="kafka:9092" \
   "$APP_IMAGE"
 
@@ -69,8 +75,8 @@ sleep 2
 
 echo "== Stage: Wait for Service Ready =="
 for i in $(seq 1 60); do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001" || true)
-  if [ "$code" != "000" ]; then 
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/actuator/health" || true)
+  if [ "$code" = "200" ]; then
     echo "Service is ready (HTTP $code)"
     break
   fi
@@ -83,23 +89,50 @@ done
 echo "== Stage: Application Logs =="
 docker logs "$APP_CONTAINER" 2>&1 | tail -100
 
+echo "== Stage: Authenticate Test User =="
+if ! AUTH_RESPONSE=$(curl -sS -f -X POST "$AUTH_BASE/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_EMAIL\",\"fullName\":\"Integration Test\",\"password\":\"$TEST_PASSWORD\"}"); then
+  echo "FAIL: could not register test user '$TEST_USERNAME' via $AUTH_BASE"
+  exit 1
+fi
+ACCESS_TOKEN=$(printf '%s' "$AUTH_RESPONSE" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+ACCOUNT_ID=$(printf '%s' "$AUTH_RESPONSE" | sed -n 's/.*"accountId":"\([^"]*\)".*/\1/p')
+if [ -z "$ACCESS_TOKEN" ] || [ -z "$ACCOUNT_ID" ]; then
+  echo "FAIL: registration response did not contain an access token and account ID"
+  echo "Auth response: $AUTH_RESPONSE"
+  exit 1
+fi
+AUTH_HEADER="Authorization: Bearer $ACCESS_TOKEN"
+echo "PASS: registered and authenticated as $TEST_USERNAME ($ACCOUNT_ID)"
+
 echo "== Stage: Test Account Retrieval =="
-RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001")
+RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID")
 echo "Full response: $RESPONSE"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT/accounts/ACC-1001")
+HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID")
 echo "HTTP code: $HTTP_CODE"
 echo "$RESPONSE" | grep -q '"status":"ACTIVE"' || { echo "FAIL: account not found"; exit 1; }
 echo "PASS: account retrieved from database"
 
+echo "== Stage: Fund Test Account =="
+DEPOSIT_RESPONSE=$(curl -sS -f -X POST "$API_BASE/accounts/$ACCOUNT_ID/deposit" \
+  -H "$AUTH_HEADER" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":25000}')
+echo "Deposit response: $DEPOSIT_RESPONSE"
+echo "$DEPOSIT_RESPONSE" | grep -q "\"accountId\":\"$ACCOUNT_ID\"" || { echo "FAIL: account deposit failed"; exit 1; }
+echo "PASS: test account funded"
+
 echo "== Stage: Test Get Account Balance =="
-BALANCE_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/balance")
+BALANCE_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID/balance")
 echo "Balance response: $BALANCE_RESPONSE"
-echo "$BALANCE_RESPONSE" | grep -q '"accountId":"ACC-1001"' || { echo "FAIL: balance endpoint failed"; exit 1; }
+echo "$BALANCE_RESPONSE" | grep -q "\"accountId\":\"$ACCOUNT_ID\"" || { echo "FAIL: balance endpoint failed"; exit 1; }
 echo "$BALANCE_RESPONSE" | grep -q '"cashBalance"' || { echo "FAIL: cashBalance not in response"; exit 1; }
 echo "PASS: account balance retrieved"
 
 echo "== Stage: Test Place Order - Validation =="
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:$APP_PORT/api/v1/orders" \
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_BASE/orders" \
+  -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d '{"symbol":"","quantity":-10'})
 if [ "$CODE" != "400" ]; then
@@ -109,29 +142,30 @@ fi
 echo "PASS: bean validation caught invalid request (400)"
 
 echo "== Stage: Test Place Order - Success =="
-ORDER_RESPONSE=$(curl -s -X POST "http://localhost:$APP_PORT/api/v1/orders" \
+ORDER_RESPONSE=$(curl -sS -X POST "$API_BASE/orders" \
+  -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
-  -d "{\"accountId\":\"ACC-1001\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10}")
+  -d "{\"accountId\":\"$ACCOUNT_ID\",\"symbol\":\"AAPL\",\"side\":\"BUY\",\"quantity\":10}")
 echo "Order response: $ORDER_RESPONSE"
 
 echo "$ORDER_RESPONSE" | grep -q '"status":"FILLED"' || { echo "FAIL: order was not created"; exit 1; }
 echo "PASS: order placed and persisted"
 
 echo "== Stage: Test Get Account Orders =="
-ORDERS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/orders")
+ORDERS_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID/orders")
 echo "Orders response (with data): $ORDERS_RESPONSE"
 echo "$ORDERS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: order not in response"; exit 1; }
 echo "PASS: orders endpoint returns placed order"
 
 echo "== Stage: Test Get Account Positions =="
-POSITIONS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/accounts/ACC-1001/positions")
+POSITIONS_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/accounts/$ACCOUNT_ID/positions")
 echo "Positions response (with data): $POSITIONS_RESPONSE"
 echo "$POSITIONS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: position not in response"; exit 1; }
 echo "$POSITIONS_RESPONSE" | grep -q '"averageCost"' || { echo "FAIL: averageCost not in response"; exit 1; }
 echo "PASS: positions endpoint returns position"
 
 echo "== Stage: Test Get Instruments =="
-INSTRUMENTS_RESPONSE=$(curl -s "http://localhost:$APP_PORT/instruments")
+INSTRUMENTS_RESPONSE=$(curl -sS -H "$AUTH_HEADER" "$API_BASE/instruments")
 echo "Instruments response: $INSTRUMENTS_RESPONSE"
 echo "$INSTRUMENTS_RESPONSE" | grep -q '"symbol":"AAPL"' || { echo "FAIL: instrument not in response"; exit 1; }
 echo "PASS: instruments endpoint returns instrument"
@@ -167,7 +201,7 @@ fi
 
 echo "== Stage: Verify Data in Postgres =="
 docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \
-  "SELECT account_id, symbol, quantity, average_cost FROM positions WHERE account_id="ACC-1001" AND symbol='AAPL';"
+  "SELECT account_id, symbol, quantity, average_cost FROM positions WHERE account_id='$ACCOUNT_ID' AND symbol='AAPL';"
 
 echo "== Stage: Verify Price History Data in Postgres =="
 docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "$POSTGRES_CONTAINER" psql -U postgres -d "${POSTGRES_DB}" -c \
