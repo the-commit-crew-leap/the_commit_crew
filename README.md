@@ -273,6 +273,13 @@ price as current market data. The free Alpaca feed is real-time IEX data, so it
 may not represent every U.S. exchange. Simulated order processing remains
 unchanged.
 
+Authenticated pages also show a four-market crypto ticker for BTC/USD, ETH/USD,
+SOL/USD, and AVAX/USD. It uses `GET /api/v1/instruments/markets`, refreshes
+through the Angular app every five seconds, and gets crypto data from Alpaca
+through the Spring backend. Unavailable symbols show a dash rather than a
+database fallback. The ticker stays fixed on desktop and can be horizontally
+scrolled on smaller screens; it does not automatically move.
+
 ## Coding Conventions
 
 ### Naming 
