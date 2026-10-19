@@ -454,22 +454,38 @@ pipeline {
                                     curl -sS \
                                         --connect-timeout 2 \
                                         --max-time 5 \
+                                        -w '\nHTTP_STATUS:%{http_code}' \
                                         http://localhost:8081/actuator/health \
-                                        2>/dev/null || true
+                                        2>&1 || true
                                 )
 
-                                if echo "$HEALTH_RESPONSE" | grep -q '"status":"UP"'; then
+                                HTTP_STATUS=$(printf '%s\n' "$HEALTH_RESPONSE" |
+                                    sed -n 's/^HTTP_STATUS://p')
+
+                                HEALTH_BODY=$(printf '%s\n' "$HEALTH_RESPONSE" |
+                                    sed '/^HTTP_STATUS:/d')
+
+                                if [ "$HTTP_STATUS" = "200" ] &&
+                                   printf '%s\n' "$HEALTH_BODY" |
+                                   grep -q '"status":"UP"'; then
                                     echo "Smoke test passed"
                                     exit 0
                                 fi
 
                                 echo "Attempt $i/90: application is not ready"
+                                echo "HTTP status: ${HTTP_STATUS:-unavailable}"
+                                echo "Health response:"
+                                printf '%s\n' "$HEALTH_BODY"
+
                                 sleep 2
                             done
 
                             echo "Smoke test failed"
+                            echo "HTTP status: ${HTTP_STATUS:-unavailable}"
                             echo "Last health response:"
-                            echo "$HEALTH_RESPONSE"
+                            printf '%s\n' "$HEALTH_BODY"
+                            echo "Application logs:"
+                            docker logs "$CONTAINER_ID" 2>&1 || true
                             exit 1
                         '''
                     }
