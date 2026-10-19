@@ -112,6 +112,10 @@
         <header><div><p class="eyebrow">Risk profile</p><h2>Risk / return</h2></div></header>
         <div #performanceChart class="plot-container"></div>
       </article>
+      <article *ngIf="selectedSymbols.length === 1" class="chart-card chart-card-wide">
+        <header><div><p class="eyebrow">Price action</p><h2>{{ selectedSymbols[0] }} candlestick</h2></div></header>
+        <div #candlestickChart class="plot-container"></div>
+      </article>
     </section>
   </div>
 </section>

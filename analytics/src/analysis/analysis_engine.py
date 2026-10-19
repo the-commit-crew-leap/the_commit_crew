@@ -126,6 +126,273 @@ class AnalysisEngine:
 
         return returns_df
 
+    def get_portfolio_returns(
+        self,
+        symbols: list[str],
+        weights: list[float],
+        start_date: str,
+        end_date: str,
+    ) -> pd.Series:
+        """Calculate weighted daily returns for a portfolio of symbols."""
+        if len(symbols) != len(weights) or not symbols:
+            raise ValueError("Portfolio symbols and weights must have the same non-zero length")
+
+        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date)
+        if returns_df.empty:
+            return pd.Series(dtype="float64", name="Portfolio")
+
+        normalized_symbols = [self.helper.normalize_ticker(symbol) for symbol in symbols]
+        weight_series = pd.Series(weights, index=normalized_symbols, dtype="float64")
+        weight_series = weight_series / weight_series.sum()
+        available_weights = weight_series.reindex(returns_df.columns).fillna(0)
+
+        portfolio_returns = returns_df.mul(available_weights, axis=1).sum(axis=1, min_count=1)
+        portfolio_returns.name = "Portfolio"
+        return portfolio_returns.dropna()
+
+    def _portfolio_figure_period(
+        self,
+        symbols: list[str],
+        period: str,
+    ) -> AnalysisPeriod:
+        return self._resolve_period(period, symbols)
+
+    def create_portfolio_cumulative_figure(
+        self,
+        symbols: list[str],
+        weights: list[float],
+        period: str,
+    ) -> Optional[go.Figure]:
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(
+            symbols, weights, analysis_period.start_date, analysis_period.end_date
+        )
+        if returns.empty:
+            return None
+
+        cumulative = ((1 + returns).cumprod() - 1) * 100
+        figure = go.Figure(go.Scatter(
+            x=cumulative.index,
+            y=cumulative.values,
+            mode="lines",
+            name="Portfolio",
+            line={"color": "#a7b8fa", "width": 3},
+            hovertemplate="%{x|%Y-%m-%d}<br>Return: %{y:.2f}%<extra></extra>",
+        ))
+        figure.update_layout(
+            title=f"Portfolio cumulative return — {period.upper()}",
+            xaxis_title="Date",
+            yaxis_title="Cumulative return (%)",
+            template="plotly_white",
+        )
+        return figure
+
+    def create_portfolio_volatility_figure(
+        self,
+        symbols: list[str],
+        weights: list[float],
+        period: str,
+        window: int = 30,
+    ) -> Optional[go.Figure]:
+        if window < 2:
+            raise ValueError("Volatility window must be at least 2 trading days")
+
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(
+            symbols, weights, analysis_period.start_date, analysis_period.end_date
+        )
+        rolling = returns.rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
+        rolling = rolling.dropna()
+        if rolling.empty:
+            return None
+
+        figure = go.Figure(go.Scatter(
+            x=rolling.index,
+            y=rolling.values,
+            mode="lines",
+            name="Portfolio volatility",
+            line={"color": "#f2bf69", "width": 3},
+            hovertemplate="%{x|%Y-%m-%d}<br>Volatility: %{y:.2f}%<extra></extra>",
+        ))
+        figure.update_layout(
+            title=f"Portfolio rolling volatility — {period.upper()}",
+            xaxis_title="Date",
+            yaxis_title="Annualized volatility (%)",
+            template="plotly_white",
+        )
+        return figure
+
+    def create_portfolio_drawdown_figure(
+        self,
+        symbols: list[str],
+        weights: list[float],
+        period: str,
+    ) -> Optional[go.Figure]:
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(
+            symbols, weights, analysis_period.start_date, analysis_period.end_date
+        )
+        if returns.empty:
+            return None
+
+        cumulative = (1 + returns).cumprod()
+        drawdown = (cumulative / cumulative.cummax() - 1) * 100
+        figure = go.Figure(go.Scatter(
+            x=drawdown.index,
+            y=drawdown.values,
+            mode="lines",
+            name="Portfolio drawdown",
+            fill="tozeroy",
+            line={"color": "#ed7181", "width": 3},
+            hovertemplate="%{x|%Y-%m-%d}<br>Drawdown: %{y:.2f}%<extra></extra>",
+        ))
+        figure.update_layout(
+            title=f"Portfolio drawdown — {period.upper()}",
+            xaxis_title="Date",
+            yaxis_title="Drawdown (%)",
+            template="plotly_white",
+        )
+        return figure
+
+    def create_portfolio_allocation_figure(
+        self,
+        symbols: list[str],
+        weights: list[float],
+    ) -> go.Figure:
+        normalized_weights = np.array(weights, dtype=float)
+        normalized_weights = normalized_weights / normalized_weights.sum()
+        figure = go.Figure(go.Pie(
+            labels=[self.helper.normalize_ticker(symbol) for symbol in symbols],
+            values=normalized_weights * 100,
+            hole=0.55,
+            textinfo="label+percent",
+            hovertemplate="%{label}<br>Weight: %{percent}<extra></extra>",
+        ))
+        figure.update_layout(title="Current portfolio allocation", template="plotly_white")
+        return figure
+
+    def get_portfolio_statistics(
+        self,
+        symbols: list[str],
+        weights: list[float],
+        period: str,
+        volatility_window: int = 30,
+    ) -> pd.DataFrame:
+        analysis_period = self._portfolio_figure_period(symbols, period)
+        returns = self.get_portfolio_returns(
+            symbols, weights, analysis_period.start_date, analysis_period.end_date
+        )
+        if returns.empty:
+            return pd.DataFrame()
+        return self.statistics_calculator.calculate(pd.DataFrame({"Portfolio": returns}))
+
+    def create_candlestick_figure(
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str,
+        period_label: str,
+    ) -> Optional[go.Figure]:
+        """Generate an OHLC candlestick chart for one instrument."""
+        normalized_symbol = self.helper.normalize_ticker(symbol)
+        price_data = self.loader.load_price_data(normalized_symbol, start_date, end_date)
+        required_columns = {"date", "open", "high", "low", "close"}
+        if price_data.empty or not required_columns.issubset(price_data.columns):
+            logger.warning("No OHLC data available for %s", normalized_symbol)
+            return None
+
+        ohlc = price_data.copy()
+        for column in required_columns - {"date"}:
+            ohlc[column] = pd.to_numeric(ohlc[column], errors="coerce")
+        ohlc = ohlc.dropna(subset=list(required_columns - {"date"}))
+        if ohlc.empty:
+            return None
+
+        figure = go.Figure(go.Candlestick(
+            x=ohlc["date"],
+            open=ohlc["open"],
+            high=ohlc["high"],
+            low=ohlc["low"],
+            close=ohlc["close"],
+            name=normalized_symbol,
+            increasing_line_color="#53d5ad",
+            decreasing_line_color="#ed7181",
+            increasing_fillcolor="#53d5ad",
+            decreasing_fillcolor="#ed7181",
+            hovertemplate=(
+                "<b>%{x|%Y-%m-%d}</b><br>Open: %{open:.2f}<br>High: %{high:.2f}"
+                "<br>Low: %{low:.2f}<br>Close: %{close:.2f}<extra></extra>"
+            ),
+        ))
+        figure.update_layout(
+            title=f"{normalized_symbol} price action — {period_label}",
+            xaxis_title="Date",
+            yaxis_title="Price",
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis_rangeslider_visible=False,
+            hovermode="x",
+        )
+        return figure
+
+    def calculate_portfolio_scenario(
+        self,
+        symbols: list[str],
+        values: list[float],
+        scenario_symbol: str,
+        additional_quantity: float,
+        period: str,
+        volatility_window: int = 30,
+    ) -> dict:
+        """Compare current portfolio metrics with a proposed additional purchase."""
+        if len(symbols) != len(values) or not symbols:
+            raise ValueError("Portfolio symbols and values must have the same non-zero length")
+        if any(value < 0 for value in values):
+            raise ValueError("Portfolio values cannot be negative")
+        if additional_quantity <= 0:
+            raise ValueError("Additional quantity must be positive")
+
+        normalized_symbols = [self.helper.normalize_ticker(symbol) for symbol in symbols]
+        normalized_scenario_symbol = self.helper.normalize_ticker(scenario_symbol)
+        purchase_price = self.loader.get_latest_price(normalized_scenario_symbol)
+        if purchase_price is None or purchase_price <= 0:
+            raise ValueError(f"No saved price available for {normalized_scenario_symbol}")
+        current_values = dict(zip(normalized_symbols, values))
+        proposed_values = current_values.copy()
+        proposed_values[normalized_scenario_symbol] = (
+            proposed_values.get(normalized_scenario_symbol, 0.0)
+            + additional_quantity * purchase_price
+        )
+
+        def portfolio_snapshot(portfolio_values: dict[str, float]) -> dict:
+            snapshot_symbols = list(portfolio_values)
+            total_value = sum(portfolio_values.values())
+            if total_value <= 0:
+                raise ValueError("Portfolio value must be positive")
+            weights = [portfolio_values[symbol] / total_value for symbol in snapshot_symbols]
+            statistics = self.get_portfolio_statistics(
+                snapshot_symbols, weights, period, volatility_window
+            )
+            return {
+                "total_value": total_value,
+                "symbols": snapshot_symbols,
+                "weights": weights,
+                "statistics": statistics.to_dict(orient="records"),
+            }
+
+        return {
+            "period": period,
+            "scenario": {
+                "symbol": normalized_scenario_symbol,
+                "additional_quantity": additional_quantity,
+                "purchase_price": purchase_price,
+                "purchase_value": additional_quantity * purchase_price,
+            },
+            "current": portfolio_snapshot(current_values),
+            "proposed": portfolio_snapshot(proposed_values),
+        }
+
 
     # CORRELATION ANALYSIS
     def create_correlation_figure(

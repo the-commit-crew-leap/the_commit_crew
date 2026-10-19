@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, Subject, takeUntil } from 'rxjs';
+import { forkJoin, of, Subject, takeUntil } from 'rxjs';
 import { InstrumentResponse } from '../../api/trading.models';
 import {
   AnalyticsApiService,
@@ -22,6 +22,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('volatilityChart') private volatilityChart?: ElementRef<HTMLElement>;
   @ViewChild('performanceChart') private performanceChart?: ElementRef<HTMLElement>;
   @ViewChild('drawdownChart') private drawdownChart?: ElementRef<HTMLElement>;
+  @ViewChild('candlestickChart') private candlestickChart?: ElementRef<HTMLElement>;
 
   instruments: InstrumentResponse[] = [];
   selectedSymbols: string[] = [];
@@ -41,7 +42,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   loadingInstruments = true;
   loadingAnalytics = false;
   error = '';
-  private pendingFigures?: { volatility: PlotlyFigure; performance: PlotlyFigure; drawdown: PlotlyFigure };
+  private pendingFigures?: { volatility: PlotlyFigure; performance: PlotlyFigure; drawdown: PlotlyFigure; candlestick?: PlotlyFigure | null };
   private readonly destroy$ = new Subject<void>();
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly tradingApi = inject(TradingApiService);
@@ -74,12 +75,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
     void this.renderFigure(this.volatilityChart.nativeElement, figures.volatility);
     void this.renderFigure(this.performanceChart.nativeElement, figures.performance);
     void this.renderFigure(this.drawdownChart.nativeElement, figures.drawdown);
+    if (figures.candlestick && this.candlestickChart) {
+      void this.renderFigure(this.candlestickChart.nativeElement, figures.candlestick);
+    }
   }
 
   ngOnDestroy(): void {
     if (this.volatilityChart) Plotly.purge(this.volatilityChart.nativeElement);
     if (this.performanceChart) Plotly.purge(this.performanceChart.nativeElement);
     if (this.drawdownChart) Plotly.purge(this.drawdownChart.nativeElement);
+    if (this.candlestickChart) Plotly.purge(this.candlestickChart.nativeElement);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -122,16 +127,15 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
     forkJoin({
       insights: this.analyticsApi.getInsights(this.selectedSymbols, this.period, volatilityWindow),
       volatility: this.analyticsApi.getVolatility(this.selectedSymbols, this.period, volatilityWindow),
-      drawdown: this.analyticsApi.getDrawdown(this.selectedSymbols, this.period)
+      drawdown: this.analyticsApi.getDrawdown(this.selectedSymbols, this.period),
+      candlestick: this.selectedSymbols.length === 1
+        ? this.analyticsApi.getCandlestick(this.selectedSymbols[0], this.period)
+        : of(null)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ insights, volatility, drawdown }) => {
+      next: ({ insights, volatility, drawdown, candlestick }) => {
         this.insights = insights;
         this.statistics = insights.statistics;
-        this.pendingFigures = {
-          volatility,
-          performance: this.createPerformanceFigure(insights.statistics),
-          drawdown
-        };
+        this.pendingFigures = { volatility, performance: this.createPerformanceFigure(insights.statistics), drawdown, candlestick };
         this.loadingAnalytics = false;
         this.cdr.markForCheck();
       },

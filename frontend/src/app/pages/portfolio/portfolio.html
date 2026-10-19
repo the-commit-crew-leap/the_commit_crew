@@ -1,0 +1,40 @@
+<section class="portfolio-analytics-shell">
+  <div class="portfolio-analytics-workspace">
+    <header class="page-heading"><div><p class="eyebrow">Account research</p><h1>Portfolio analytics</h1><p>See how your current holdings behave as one portfolio.</p></div><span class="status">{{ loading ? 'Calculating' : 'Ready' }}</span></header>
+    <section class="portfolio-controls" aria-label="Portfolio period controls">
+      <span>Lookback</span>
+      <div class="period-buttons"><button *ngFor="let period of periods" type="button" [class.is-active]="selectedPeriod === period.value" [attr.aria-pressed]="selectedPeriod === period.value" (click)="setPeriod(period.value)">{{ period.label }}</button></div>
+    </section>
+    <p *ngIf="error" class="state-message" role="alert">{{ error }}</p>
+    <p *ngIf="loading && !error" class="state-message">Loading portfolio analytics...</p>
+    <ng-container *ngIf="!loading && !error">
+      <section class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue | number:'1.0-0' }} USD</span></article></section>
+      <section *ngIf="statistics[0] as statistic" class="metric-strip" aria-label="Portfolio statistics">
+        <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
+        <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
+        <article><span>Sharpe ratio</span><strong>{{ formatRatio(statistic['Sharpe Ratio']) }}</strong></article>
+        <article><span>Max drawdown</span><strong>{{ formatPercent(statistic['Maximum Drawdown (%)']) }}</strong></article>
+      </section>
+      <section class="scenario-panel" aria-labelledby="scenario-title">
+        <div class="section-heading"><div><p class="eyebrow">What if?</p><h2 id="scenario-title">Simulate an additional purchase</h2></div><span class="scenario-note">Historical risk comparison</span></div>
+        <div class="scenario-controls">
+          <label>Instrument<select [(ngModel)]="scenarioSymbol"><option *ngFor="let instrument of instruments" [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option></select></label>
+          <label>Shares<input type="number" min="0.01" step="0.01" [(ngModel)]="scenarioQuantity"></label>
+          <button type="button" class="scenario-button" [disabled]="scenarioLoading" (click)="runScenario()">{{ scenarioLoading ? 'Calculating...' : 'Compare scenario' }}</button>
+        </div>
+        <div *ngIf="scenario" class="scenario-result">
+          <div><span>Added value</span><strong>{{ scenario.scenario.purchase_value | number:'1.2-2' }} USD</strong></div>
+          <div><span>New portfolio value</span><strong>{{ scenario.proposed.total_value | number:'1.2-2' }} USD</strong></div>
+          <div><span>New {{ scenario.scenario.symbol }} weight</span><strong>{{ formatWeight(scenario.proposed.weights[scenario.proposed.symbols.indexOf(scenario.scenario.symbol)] || 0) }}</strong></div>
+          <div><span>Volatility change</span><strong>{{ formatPercent((scenarioMetric('proposed', 'Annualized Volatility (%)') ?? 0) - (scenarioMetric('current', 'Annualized Volatility (%)') ?? 0)) }}</strong></div>
+        </div>
+      </section>
+      <section class="portfolio-charts" aria-label="Portfolio charts">
+        <article class="chart-card"><header><p class="eyebrow">Allocation</p><h2>Current position weights</h2></header><div #allocationChart class="plot-container allocation"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Growth</p><h2>Cumulative return</h2></header><div #cumulativeChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></header><div #volatilityChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Downside</p><h2>Drawdown</h2></header><div #drawdownChart class="plot-container"></div></article>
+      </section>
+    </ng-container>
+  </div>
+</section>
