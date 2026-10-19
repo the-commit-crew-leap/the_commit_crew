@@ -3,7 +3,7 @@
 }
 
 .watchlist-card {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;

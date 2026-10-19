@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TimeoutError, catchError, forkJoin, map, of, timeout } from 'rxjs';
 
@@ -18,6 +26,7 @@ export class WatchlistComponent implements OnInit {
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
 
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
@@ -31,6 +40,13 @@ export class WatchlistComponent implements OnInit {
   success = '';
   pickerOpen = false;
   highlightedInstrumentIndex = 0;
+
+  @HostListener('document:click', ['$event'])
+  closePickerOnOutsideClick(event: MouseEvent): void {
+    if (!this.instrumentPicker?.nativeElement.contains(event.target as Node)) {
+      this.pickerOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     const accountId = this.authSession.getAccountId();

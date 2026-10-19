@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  Input,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { TradingApiService } from '../../../api/trading-api.service';
@@ -37,6 +45,7 @@ export class OrderTicketComponent implements OnInit {
   instrumentPickerOpen = false;
   highlightedInstrumentIndex = 0;
   @ViewChild('symbolInput') private symbolInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
   @ViewChild('quantityInput') private quantityInput?: ElementRef<HTMLInputElement>;
   @ViewChild('orderErrorElement') private orderErrorElement?: ElementRef<HTMLElement>;
   private pricedSymbol = '';
@@ -47,6 +56,13 @@ export class OrderTicketComponent implements OnInit {
     private readonly tradingApi: TradingApiService,
     private readonly cdr: ChangeDetectorRef
   ) {}
+
+  @HostListener('document:click', ['$event'])
+  closePickerOnOutsideClick(event: MouseEvent): void {
+    if (!this.instrumentPicker?.nativeElement.contains(event.target as Node)) {
+      this.instrumentPickerOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     this.tradingApi.getInstruments().subscribe({

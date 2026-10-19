@@ -8,7 +8,7 @@
 
   <form class="watchlist-form" (ngSubmit)="addInstrument()">
     <label for="instrument-select">Add an instrument</label>
-    <div class="instrument-picker">
+    <div #instrumentPicker class="instrument-picker">
       <div class="watchlist-input-wrap">
         <input
           id="instrument-select"
