@@ -89,18 +89,31 @@ done
 echo "== Stage: Application Logs =="
 docker logs "$APP_CONTAINER" 2>&1 | tail -100
 
-echo "== Stage: Authenticate Test User =="
-if ! AUTH_RESPONSE=$(curl -sS -f -X POST "$AUTH_BASE/api/auth/register" \
+echo "== Stage: Register Test User =="
+if ! REGISTER_RESPONSE=$(curl -sS -f -X POST "$AUTH_BASE/api/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_EMAIL\",\"fullName\":\"Integration Test\",\"password\":\"$TEST_PASSWORD\"}"); then
   echo "FAIL: could not register test user '$TEST_USERNAME' via $AUTH_BASE"
   exit 1
 fi
+ACCOUNT_ID=$(printf '%s' "$REGISTER_RESPONSE" | sed -n 's/.*"accountId":"\([^"]*\)".*/\1/p')
+if [ -z "$ACCOUNT_ID" ]; then
+  echo "FAIL: registration response did not contain an account ID"
+  echo "Registration response: $REGISTER_RESPONSE"
+  exit 1
+fi
+
+echo "== Stage: Authenticate Test User =="
+if ! AUTH_RESPONSE=$(curl -sS -f -X POST "$AUTH_BASE/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$TEST_USERNAME\",\"password\":\"$TEST_PASSWORD\"}"); then
+  echo "FAIL: could not authenticate test user '$TEST_USERNAME' via $AUTH_BASE"
+  exit 1
+fi
 ACCESS_TOKEN=$(printf '%s' "$AUTH_RESPONSE" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
-ACCOUNT_ID=$(printf '%s' "$AUTH_RESPONSE" | sed -n 's/.*"accountId":"\([^"]*\)".*/\1/p')
-if [ -z "$ACCESS_TOKEN" ] || [ -z "$ACCOUNT_ID" ]; then
-  echo "FAIL: registration response did not contain an access token and account ID"
-  echo "Auth response: $AUTH_RESPONSE"
+if [ -z "$ACCESS_TOKEN" ]; then
+  echo "FAIL: login response did not contain an access token"
+  echo "Login response: $AUTH_RESPONSE"
   exit 1
 fi
 AUTH_HEADER="Authorization: Bearer $ACCESS_TOKEN"
