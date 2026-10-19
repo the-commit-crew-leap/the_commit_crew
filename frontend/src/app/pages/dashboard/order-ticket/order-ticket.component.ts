@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { TradingApiService } from '../../../api/trading-api.service';
@@ -23,6 +23,12 @@ export class OrderTicketComponent {
   orderSubmitting = false;
   orderError = '';
   submittedOrder: OrderResponse | null = null;
+  validationSubmitted = false;
+  symbolInvalid = false;
+  quantityInvalid = false;
+  @ViewChild('symbolInput') private symbolInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('quantityInput') private quantityInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('orderErrorElement') private orderErrorElement?: ElementRef<HTMLElement>;
   private pricedSymbol = '';
   private priceRequestToken = 0;
 
@@ -36,22 +42,31 @@ export class OrderTicketComponent {
     const accountId = this.authSession.getAccountId();
     const normalizedSymbol = this.symbol.trim().toUpperCase();
 
+    this.validationSubmitted = true;
+    this.symbolInvalid = !normalizedSymbol;
+    this.quantityInvalid =
+      !this.quantity || this.quantity <= 0 || !Number.isInteger(this.quantity);
     this.orderError = '';
     this.priceError = '';
     this.submittedOrder = null;
 
     if (!accountId) {
       this.orderError = 'Your session has expired. Please log in again.';
+      this.focusOrderError();
       return;
     }
 
     if (!normalizedSymbol) {
       this.orderError = 'Enter a symbol.';
+      this.cdr.detectChanges();
+      this.focusFirstInvalidField();
       return;
     }
 
     if (!this.quantity || this.quantity <= 0 || !Number.isInteger(this.quantity)) {
       this.orderError = 'Quantity must be a positive whole number.';
+      this.cdr.detectChanges();
+      this.focusFirstInvalidField();
       return;
     }
 
@@ -78,6 +93,7 @@ export class OrderTicketComponent {
         this.orderError = 'Could not place the order. Please review the details and try again.';
         this.orderSubmitting = false;
         this.cdr.detectChanges();
+        this.focusOrderError();
       }
     });
   }
@@ -140,5 +156,33 @@ export class OrderTicketComponent {
 
   getOrderTotal(quantity: number, price: number): number {
     return quantity * price;
+  }
+
+  get symbolError(): string {
+    return this.symbolInvalid ? 'Enter an asset symbol.' : '';
+  }
+
+  get quantityError(): string {
+    if (this.quantityInvalid && (this.quantity === null || this.quantity === undefined)) {
+      return 'Enter a quantity.';
+    }
+
+    return this.quantityInvalid
+      ? 'Quantity must be a positive whole number.'
+      : '';
+  }
+
+  private focusFirstInvalidField(): void {
+    setTimeout(() => {
+      if (this.symbolError) {
+        this.symbolInput?.nativeElement.focus();
+      } else if (this.quantityError) {
+        this.quantityInput?.nativeElement.focus();
+      }
+    });
+  }
+
+  private focusOrderError(): void {
+    setTimeout(() => this.orderErrorElement?.nativeElement.focus());
   }
 }

@@ -1,6 +1,6 @@
 <app-auth-header />
 
-<section class="auth-shell">
+<main id="main-content" class="auth-shell">
   <div class="auth-intro" aria-hidden="true">
     <p class="eyebrow">Built for your next move</p>
     <h1>A clearer view.<br />A sharper trade.</h1>
@@ -23,34 +23,52 @@
   </div>
 
   <div class="auth-card">
-    <h1>Create account</h1>
+    <h1 id="register-heading">Create account</h1>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="username">Username</label>
-      <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Choose a username" />
-      <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
-        Username must be 3-30 chars and contain only letters, numbers, underscore, or hyphen.
-      </p>
+    <form #registerForm aria-labelledby="register-heading" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="form-fields">
+        <legend class="sr-only">Registration details</legend>
+        <label for="username">Username</label>
+        <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Choose a username"
+          [attr.aria-invalid]="form.controls.username.touched && form.controls.username.invalid"
+          [attr.aria-describedby]="form.controls.username.touched && form.controls.username.invalid ? 'username-error' : null" />
+        <p id="username-error" class="field-error" role="alert" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+          Username must be 3-30 chars and contain only letters, numbers, underscore, or hyphen.
+        </p>
 
-      <label for="email">Email</label>
-      <input id="email" type="email" formControlName="email" autocomplete="email" placeholder="Enter your email"/>
-      <p class="field-error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
-        Enter a valid email.
-      </p>
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" autocomplete="email" placeholder="Enter your email"
+          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null" />
+        <p id="email-error" class="field-error" role="alert" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+          Enter a valid email.
+        </p>
 
-      <label for="fullName">Full name</label>
-      <input id="fullName" type="text" formControlName="fullName" autocomplete="name" placeholder="Enter your full name"/>
-      <p class="field-error" *ngIf="form.controls.fullName.touched && form.controls.fullName.invalid">
-        Full name is required.
-      </p>
+        <label for="fullName">Full name</label>
+        <input id="fullName" type="text" formControlName="fullName" autocomplete="name" placeholder="Enter your full name"
+          [attr.aria-invalid]="form.controls.fullName.touched && form.controls.fullName.invalid"
+          [attr.aria-describedby]="form.controls.fullName.touched && form.controls.fullName.invalid ? 'full-name-error' : null" />
+        <p id="full-name-error" class="field-error" role="alert" *ngIf="form.controls.fullName.touched && form.controls.fullName.invalid">
+          Full name is required.
+        </p>
 
-      <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" autocomplete="new-password" placeholder="Create a password" />
-      <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
-        Password must be at least 8 chars and include uppercase, lowercase, number, and special character.
-      </p>
+        <label for="password">Password</label>
+        <input id="password" type="password" formControlName="password" autocomplete="new-password" placeholder="Create a password"
+          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null" />
+        <p id="password-error" class="field-error" role="alert" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+          Password must be at least 8 chars and include uppercase, lowercase, number, and special character.
+        </p>
+      </fieldset>
 
-      <p class="api-error" *ngIf="hasSubmitError">
+      <p
+        #apiError
+        id="register-api-error"
+        class="api-error"
+        role="alert"
+        aria-live="assertive"
+        tabindex="-1"
+        *ngIf="hasSubmitError">
         {{ errorMessage || 'Could not register. Please try again.' }}
       </p>
 
@@ -64,4 +82,4 @@
       <a routerLink="/login">Sign in</a>
     </p>
   </div>
-</section>
+</main>

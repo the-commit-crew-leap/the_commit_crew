@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ChangeDetectorRef } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
@@ -49,6 +49,38 @@ describe('OrderTicketComponent', () => {
     expect(component.orderError).toBe('Quantity must be a positive whole number.');
     expect(tradingApi.placeOrder).not.toHaveBeenCalled();
   });
+
+  it('marks invalid fields and focuses the first invalid field', fakeAsync(() => {
+    fixture.detectChanges();
+
+    component.symbol = '';
+    component.quantity = 0;
+    fixture.detectChanges();
+    component.placeOrder();
+    fixture.detectChanges();
+    tick();
+
+    const symbolInput = fixture.nativeElement.querySelector('#ticket-symbol');
+    expect(symbolInput.getAttribute('aria-invalid')).toBe('true');
+    expect(symbolInput.getAttribute('aria-describedby')).toBe('ticket-symbol-error');
+    expect(document.activeElement).toBe(symbolInput);
+  }));
+
+  it('focuses the quantity field when the symbol is valid', fakeAsync(() => {
+    fixture.detectChanges();
+
+    component.symbol = 'BTC';
+    component.quantity = 0;
+    fixture.detectChanges();
+    component.placeOrder();
+    fixture.detectChanges();
+    tick();
+
+    const quantityInput = fixture.nativeElement.querySelector('#ticket-quantity');
+    expect(quantityInput.getAttribute('aria-invalid')).toBe('true');
+    expect(quantityInput.getAttribute('aria-describedby')).toBe('ticket-quantity-error');
+    expect(document.activeElement).toBe(quantityInput);
+  }));
 
   it('normalizes the symbol and submits the order', () => {
     const response = {

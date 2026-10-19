@@ -1,6 +1,6 @@
 <app-auth-header />
 
-<section class="auth-shell">
+<main id="main-content" class="auth-shell">
   <div class="auth-intro" aria-hidden="true">
     <p class="eyebrow">Built for your next move</p>
     <h1>A clearer view.<br />A sharper trade.</h1>
@@ -23,27 +23,43 @@
   </div>
 
   <div class="auth-card">
-    <h1>Sign in</h1>
-    <p class="info-msg" *ngIf="infoMessage">{{ infoMessage }}</p>
+    <h1 id="login-heading">Sign in</h1>
+    <p class="info-msg" role="status" *ngIf="infoMessage">{{ infoMessage }}</p>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label for="username">Username</label>
-      <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Enter your username" />
-      <p class="field-error" *ngIf="form.controls.username.touched && form.controls.username.invalid">
-        Username is required.
+    <form #loginForm aria-labelledby="login-heading" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="form-fields">
+        <legend class="sr-only">Sign-in details</legend>
+        <label for="username">Username</label>
+        <input id="username" type="text" formControlName="username" autocomplete="username" placeholder="Enter your username"
+          [attr.aria-invalid]="form.controls.username.touched && form.controls.username.invalid"
+          [attr.aria-describedby]="form.controls.username.touched && form.controls.username.invalid ? 'username-error' : null" />
+        <p id="username-error" class="field-error" role="alert" *ngIf="form.controls.username.touched && form.controls.username.invalid">
+          Username is required.
+        </p>
+
+        <label for="password">Password</label>
+        <input id="password" type="password" formControlName="password" autocomplete="current-password" placeholder="Enter your password"
+          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null" />
+        <p id="password-error" class="field-error" role="alert" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+          Password is required.
+        </p>
+
+        <label class="remember-me">
+          <input type="checkbox" formControlName="rememberMe" />
+          <span>Remember me</span>
+        </label>
+      </fieldset>
+      <p
+        #apiError
+        id="login-api-error"
+        class="api-error"
+        role="alert"
+        aria-live="assertive"
+        tabindex="-1"
+        *ngIf="errorMessage">
+        {{ errorMessage }}
       </p>
-
-      <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" autocomplete="current-password" placeholder="Enter your password" />
-      <p class="field-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
-        Password is required.
-      </p>
-
-      <label class="remember-me">
-        <input type="checkbox" formControlName="rememberMe" />
-        <span>Remember me</span>
-      </label>
-      <p class="api-error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
       <button type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
@@ -61,4 +77,4 @@
       <a routerLink="/register">Create an account</a>
     </p>
   </div>
-</section>
+</main>

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
@@ -7,6 +7,7 @@ import { DepositService } from '../services/deposit.service';
 
 describe('DepositModalComponent', () => {
   let component: DepositModalComponent;
+  let fixture: ComponentFixture<DepositModalComponent>;
   let depositService: jest.Mocked<DepositService>;
 
   const balance = {
@@ -36,9 +37,8 @@ describe('DepositModalComponent', () => {
       ],
     });
 
-    component = TestBed.runInInjectionContext(
-      () => TestBed.createComponent(DepositModalComponent).componentInstance,
-    );
+    fixture = TestBed.createComponent(DepositModalComponent);
+    component = fixture.componentInstance;
 
     component.accountId = 'ACC-123';
   });
@@ -151,5 +151,54 @@ describe('DepositModalComponent', () => {
     component.close();
 
     expect(closedSpy).not.toHaveBeenCalled();
+  });
+
+  it('focuses the close button when the modal opens', fakeAsync(() => {
+    depositService.getBalance.mockReturnValue(of(balance));
+    fixture.componentRef.setInput('visible', true);
+
+    fixture.detectChanges();
+    tick();
+
+    expect(document.activeElement).toBe(
+      fixture.nativeElement.querySelector('.tcc-modal-close'),
+    );
+  }));
+
+  it('closes when Escape is pressed in the dialog', () => {
+    component.visible = true;
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector(
+      '[role="dialog"]',
+    ) as HTMLElement;
+    const closedSpy = jest.spyOn(component.closed, 'emit');
+
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(closedSpy).toHaveBeenCalled();
+  });
+
+  it('wraps focus from the first element to the last on Shift+Tab', () => {
+    component.visible = true;
+    fixture.detectChanges();
+    const dialog = fixture.nativeElement.querySelector(
+      '[role="dialog"]',
+    ) as HTMLElement;
+    const focusableElements = dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled])',
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    firstElement.focus();
+
+    dialog.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+      }),
+    );
+
+    expect(document.activeElement).toBe(lastElement);
   });
 });
