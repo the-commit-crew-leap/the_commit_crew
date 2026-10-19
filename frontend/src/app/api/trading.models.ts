@@ -47,6 +47,7 @@ export interface OrderResponse {
     price: number;
     status: 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED';
     createdOn: string;
+    assetClass?: 'EQUITY' | 'BOND' | 'FUND' | 'CASH';
 }
 
 export interface DepositRequest {
