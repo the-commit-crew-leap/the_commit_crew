@@ -10,15 +10,19 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.io.IOException;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.AbstractHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -41,11 +45,12 @@ class AlpacaMarketDataClientTest {
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
         stringConverter.setSupportedMediaTypes(List.of(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN));
+        HttpMessageConverter<Object> jacksonConverter = new Jackson2TestMessageConverter(objectMapper);
         RestClient.Builder restClientBuilder = RestClient.builder()
-            .messageConverters(converters -> {
-                converters.clear();
-                converters.add(stringConverter);
-                converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
+            .configureMessageConverters(converters -> {
+                converters.disableDefaults()
+                    .withStringConverter(stringConverter)
+                    .withJsonConverter(jacksonConverter);
             });
         server = MockRestServiceServer.bindTo(restClientBuilder).build();
         client = new AlpacaMarketDataClient(
@@ -58,6 +63,34 @@ class AlpacaMarketDataClientTest {
     @AfterEach
     void tearDown() {
         server.verify();
+    }
+
+    private static final class Jackson2TestMessageConverter
+        extends AbstractHttpMessageConverter<Object> {
+
+        private final ObjectMapper objectMapper;
+
+        private Jackson2TestMessageConverter(ObjectMapper objectMapper) {
+            super(MediaType.APPLICATION_JSON);
+            this.objectMapper = objectMapper;
+        }
+
+        @Override
+        protected boolean supports(Class<?> clazz) {
+            return true;
+        }
+
+        @Override
+        protected Object readInternal(Class<? extends Object> clazz, HttpInputMessage inputMessage)
+            throws IOException {
+            return objectMapper.readValue(inputMessage.getBody(), objectMapper.constructType(clazz));
+        }
+
+        @Override
+        protected void writeInternal(Object object, HttpOutputMessage outputMessage)
+            throws IOException {
+            objectMapper.writeValue(outputMessage.getBody(), object);
+        }
     }
 
     @Test
@@ -101,7 +134,7 @@ class AlpacaMarketDataClientTest {
     void getIntradayPricesKeepsLatestRegularSession() {
         server.expect(request -> {
             assertEquals(HttpMethod.GET, request.getMethod());
-            assertTrue(request.getURI().getPath().equals("/v2/stocks/AAPL/bars"));
+            assertEquals("/v2/stocks/AAPL/bars", request.getURI().getPath());
             assertEquals("1Min", request.getURI().getQuery().split("&")[0].split("=")[1]);
         }).andRespond(withSuccess("""
             {"bars": [
@@ -127,10 +160,7 @@ class AlpacaMarketDataClientTest {
         server.expect(request -> assertEquals("/v2/stocks/AAPL/bars", request.getURI().getPath()))
             .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThrows(
-            IllegalStateException.class,
-            () -> client.getIntradayPrices("AAPL")
-        );
+        assertThrows(IllegalStateException.class, () -> client.getIntradayPrices("AAPL"));
     }
 
     @Test
