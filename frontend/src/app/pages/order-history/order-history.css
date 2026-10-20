@@ -22,6 +22,15 @@
   font-size: 28px;
 }
 
+.eyebrow {
+  margin: 0 0 7px;
+  color: #93a4e8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
 .history-header h1 span,
 .table-header h2 span {
   margin-left: 8px;
@@ -34,6 +43,11 @@
 .history-header p {
   margin: 6px 0 0;
   color: #8993a3;
+}
+
+.history-header .eyebrow {
+  margin: 0 0 7px;
+  color: #93a4e8;
 }
 
 .history-header a {

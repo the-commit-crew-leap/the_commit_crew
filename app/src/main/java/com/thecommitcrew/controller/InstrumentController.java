@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.dto.MarketTickerResponse;
 import com.thecommitcrew.service.InstrumentService;
@@ -54,5 +55,11 @@ public class InstrumentController {
 	public ResponseEntity<LivePriceResponse> getCurrentPrice(@PathVariable String symbol) {
 		String normalizedSymbol = symbol.trim().toUpperCase();
 		return ResponseEntity.ok(priceService.getCurrentLivePrice(normalizedSymbol));
+	}
+
+	@GetMapping("/{symbol}/intraday")
+	public ResponseEntity<IntradayPriceResponse> getIntradayPrices(@PathVariable String symbol) {
+		String normalizedSymbol = symbol.trim().toUpperCase();
+		return ResponseEntity.ok(priceService.getIntradayPrices(normalizedSymbol));
 	}
 }

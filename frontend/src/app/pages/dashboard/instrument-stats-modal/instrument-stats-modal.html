@@ -1,0 +1,51 @@
+<div *ngIf="visible" class="modal-backdrop" (click)="close()">
+  <section class="stats-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'stats-title-' + symbol" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <div>
+        <p class="eyebrow">Instrument snapshot</p>
+        <h2 [id]="'stats-title-' + symbol">{{ symbol }}</h2>
+      </div>
+      <button class="close-button" type="button" aria-label="Close statistics" (click)="close()">×</button>
+    </header>
+
+    <div class="modal-body">
+      <section class="quote-panel" aria-labelledby="quote-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Live market data</p>
+            <h3 id="quote-title">Current session</h3>
+          </div>
+          <span *ngIf="quote?.updatedAt">Updated {{ quote.updatedAt | date:'shortTime' }}</span>
+        </div>
+        <p *ngIf="loading" class="modal-state">Loading today's market data...</p>
+        <p *ngIf="error" class="modal-state error" role="alert">{{ error }}</p>
+        <div *ngIf="quote && intraday && !loading" class="stat-grid">
+          <article><span>Live price</span><strong>${{ formatPrice(quote.price) }}</strong></article>
+          <article><span>Source</span><strong>{{ quote.source }}</strong></article>
+          <article><span>Session open</span><strong>${{ formatPrice(intraday.bars[0]?.open) }}</strong></article>
+          <article><span>Session high</span><strong>${{ formatPrice(sessionHigh()) }}</strong></article>
+          <article><span>Session low</span><strong>${{ formatPrice(sessionLow()) }}</strong></article>
+          <article><span>Bars</span><strong>{{ intraday.bars.length || '—' }}</strong></article>
+        </div>
+      </section>
+
+      <section *ngIf="!loading && !error" class="volatility-panel" aria-labelledby="volatility-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Today’s price action</p>
+            <h3 id="volatility-title">Intraday session</h3>
+          </div>
+        </div>
+        <div *ngIf="intraday?.bars?.length; else noBars" #volatilityChart class="volatility-chart"></div>
+        <ng-template #noBars><p class="modal-state">No regular-session bars are available yet.</p></ng-template>
+      </section>
+    </div>
+    <footer>
+      <span>Regular session · {{ intraday?.sessionDate || '—' }}</span>
+      <div class="footer-actions">
+        <a [routerLink]="['/analytics']" [queryParams]="{ symbol: symbol }" (click)="close()">Full analytics</a>
+        <button type="button" (click)="close()">Done</button>
+      </div>
+    </footer>
+  </section>
+</div>

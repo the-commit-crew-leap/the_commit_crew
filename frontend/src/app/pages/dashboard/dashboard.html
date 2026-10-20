@@ -1,6 +1,7 @@
 <main id="main-content" class="dash-shell">
   <div class="workspace">
     <div class="dash-card">
+      <p class="eyebrow">Account overview</p>
       <h1>Trading overview</h1>
       <p class="welcome-message">
         Welcome back<span *ngIf="authSession.username()">, {{ authSession.username() }}</span>.
@@ -44,11 +45,16 @@
       </article>
     </section>
 
-    <section class="portfolio-column" aria-label="Portfolio details">
-      <app-assets></app-assets>
+    <main class="portfolio-column">
+      <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>
-    </section>
+    </main>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
 </main>
+
+<app-instrument-stats-modal
+  [symbol]="selectedInstrument"
+  [visible]="!!selectedInstrument"
+  (closed)="closeInstrumentStats()" />

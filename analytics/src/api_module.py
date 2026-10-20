@@ -25,9 +25,14 @@ cors_origins = [
     ).split(",")
     if origin.strip()
 ]
+cors_origin_regex = os.getenv(
+    "ANALYTICS_CORS_ORIGIN_REGEX",
+    r"https?://10\.9\.\d{1,3}\.\d{1,3}:8086",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,7 +43,7 @@ loader = DataLoader()
 analysis_engine = AnalysisEngine(data_loader=loader, helper=helper)
 web_report = WebReport(helper=helper, analysis_engine=analysis_engine)
 
-SUPPORTED_PERIODS = {"1y", "5y", "10y", "all"}
+SUPPORTED_PERIODS = {"1w", "1m", "6m", "1y", "5y", "10y", "all"}
 
 
 def _validate_period(period: str) -> str:
@@ -46,7 +51,7 @@ def _validate_period(period: str) -> str:
     if period not in SUPPORTED_PERIODS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown period '{period}'. Use one of: 1y, 5y, 10y, all.",
+            detail=f"Unknown period '{period}'. Use one of: 1w, 1m, 6m, 1y, 5y, 10y.",
         )
     return period
 
@@ -70,6 +75,24 @@ def _figure_response(figure) -> JSONResponse:
     if figure is None:
         raise HTTPException(status_code=404, detail="No chart data available")
     return JSONResponse(content=json.loads(figure.to_json()))
+
+
+def _portfolio_inputs(
+    symbols: Optional[List[str]],
+    weights: Optional[List[float]],
+) -> tuple[list[str], list[float]]:
+    """Validate the holdings snapshot supplied by the authenticated UI."""
+    if not symbols or not weights or len(symbols) != len(weights):
+        raise HTTPException(status_code=400, detail="Portfolio symbols and weights are required")
+    if any(weight <= 0 for weight in weights) or sum(weights) <= 0:
+        raise HTTPException(status_code=400, detail="Portfolio weights must be positive")
+    return symbols, weights
+
+
+def _portfolio_period(period: str, symbols: list[str]) -> None:
+    _validate_period(period)
+    if not symbols:
+        raise HTTPException(status_code=400, detail="Portfolio has no holdings")
 
 
 # HEALTH
@@ -152,7 +175,8 @@ def get_correlation_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_correlation_figure(
         selected_tickers,
         start_date,
@@ -175,7 +199,8 @@ def get_volatility_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_volatility_figure(
         selected_tickers,
         start_date,
@@ -198,7 +223,8 @@ def get_asset_class_volatility_chart(
     selected_tickers = _select_tickers(tickers, asset_classes)
     period = _validate_period(period)
 
-    start_date, end_date = helper.get_date_range(period)
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
     figure = analysis_engine.create_asset_class_volatility_figure(
         selected_tickers,
         start_date,
@@ -206,6 +232,141 @@ def get_asset_class_volatility_chart(
         period.upper(),
     )
     return _figure_response(figure)
+
+
+@app.get("/charts/drawdown")
+def get_drawdown_chart(
+    tickers: Optional[List[str]] = Query(default=None),
+    asset_classes: Optional[List[str]] = Query(default=None),
+    period: str = "1y"
+):
+    """Generate and return the drawdown chart."""
+    selected_tickers = _select_tickers(tickers, asset_classes)
+    period = _validate_period(period)
+
+    analysis_period = analysis_engine._resolve_period(period, selected_tickers)
+    start_date, end_date = analysis_period.start_date, analysis_period.end_date
+    figure = analysis_engine.create_drawdown_figure(
+        selected_tickers,
+        start_date,
+        end_date,
+        period.upper(),
+    )
+    return _figure_response(figure)
+
+
+@app.get("/charts/candlestick")
+def get_candlestick_chart(
+    ticker: str,
+    period: str = "1y",
+):
+    """Generate a candlestick chart for exactly one instrument."""
+    period = _validate_period(period)
+    selected_ticker = _select_tickers([ticker], None)
+    analysis_period = analysis_engine._resolve_period(period, selected_ticker)
+    figure = analysis_engine.create_candlestick_figure(
+        selected_ticker[0],
+        analysis_period.start_date,
+        analysis_period.end_date,
+        period.upper(),
+    )
+    return _figure_response(figure)
+
+
+@app.get("/portfolio/insights")
+def get_portfolio_insights(
+    symbols: Optional[List[str]] = Query(default=None),
+    weights: Optional[List[float]] = Query(default=None),
+    period: str = "1y",
+    volatility_window: int = Query(default=30, ge=2),
+):
+    """Return weighted statistics for the user's current holdings snapshot."""
+    symbols, weights = _portfolio_inputs(symbols, weights)
+    _portfolio_period(period, symbols)
+    statistics = analysis_engine.get_portfolio_statistics(symbols, weights, period, volatility_window)
+    if statistics.empty:
+        raise HTTPException(status_code=404, detail="No portfolio data available")
+    return {
+        "period": period,
+        "symbols": symbols,
+        "weights": weights,
+        "statistics": statistics.to_dict(orient="records"),
+    }
+
+
+@app.get("/portfolio/charts/cumulative")
+def get_portfolio_cumulative_chart(
+    symbols: Optional[List[str]] = Query(default=None),
+    weights: Optional[List[float]] = Query(default=None),
+    period: str = "1y",
+):
+    symbols, weights = _portfolio_inputs(symbols, weights)
+    _portfolio_period(period, symbols)
+    return _figure_response(analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period))
+
+
+@app.get("/portfolio/charts/volatility")
+def get_portfolio_volatility_chart(
+    symbols: Optional[List[str]] = Query(default=None),
+    weights: Optional[List[float]] = Query(default=None),
+    period: str = "1y",
+    volatility_window: int = Query(default=30, ge=2),
+):
+    symbols, weights = _portfolio_inputs(symbols, weights)
+    _portfolio_period(period, symbols)
+    return _figure_response(
+        analysis_engine.create_portfolio_volatility_figure(
+            symbols, weights, period, volatility_window
+        )
+    )
+
+
+@app.get("/portfolio/charts/drawdown")
+def get_portfolio_drawdown_chart(
+    symbols: Optional[List[str]] = Query(default=None),
+    weights: Optional[List[float]] = Query(default=None),
+    period: str = "1y",
+):
+    symbols, weights = _portfolio_inputs(symbols, weights)
+    _portfolio_period(period, symbols)
+    return _figure_response(analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period))
+
+
+@app.get("/portfolio/charts/allocation")
+def get_portfolio_allocation_chart(
+    symbols: Optional[List[str]] = Query(default=None),
+    weights: Optional[List[float]] = Query(default=None),
+):
+    symbols, weights = _portfolio_inputs(symbols, weights)
+    return _figure_response(analysis_engine.create_portfolio_allocation_figure(symbols, weights))
+
+
+@app.get("/portfolio/scenario")
+def get_portfolio_scenario(
+    symbols: Optional[List[str]] = Query(default=None),
+    values: Optional[List[float]] = Query(default=None),
+    scenario_symbol: str = Query(...),
+    additional_quantity: int = Query(..., gt=0),
+    cash_value: float = Query(default=0.0, ge=0),
+    period: str = "1y",
+    volatility_window: int = Query(default=30, ge=2),
+):
+    """Compare the current portfolio with a proposed additional purchase."""
+    if not symbols or not values or len(symbols) != len(values):
+        raise HTTPException(status_code=400, detail="Portfolio symbols and values are required")
+    _portfolio_period(period, symbols)
+    try:
+        return analysis_engine.calculate_portfolio_scenario(
+            symbols,
+            values,
+            scenario_symbol,
+            additional_quantity,
+            period,
+            cash_value,
+            volatility_window,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 if __name__ == "__main__":
     uvicorn.run("src.api_module:app", host="0.0.0.0", port=8090)

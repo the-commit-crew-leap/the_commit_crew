@@ -29,6 +29,16 @@ class StatisticsCalculator:
                 if annualized_volatility > 0
                 else np.nan
             )
+            cumulative_value = (1 + returns).cumprod()
+            running_peak = cumulative_value.cummax()
+            drawdown = cumulative_value / running_peak - 1
+            below_peak = drawdown < 0
+            drawdown_groups = (~below_peak).cumsum()
+            drawdown_duration = int(
+                below_peak.groupby(drawdown_groups).sum().max()
+            ) if below_peak.any() else 0
+            var_threshold = returns.quantile(0.05)
+            tail_returns = returns[returns <= var_threshold]
 
             rows.append(
                 {
@@ -40,6 +50,11 @@ class StatisticsCalculator:
                     "Sharpe Ratio": sharpe_ratio,
                     "Best Daily Return (%)": returns.max() * 100,
                     "Worst Daily Return (%)": returns.min() * 100,
+                    "Maximum Drawdown (%)": drawdown.min() * 100,
+                    "Current Drawdown (%)": drawdown.iloc[-1] * 100,
+                    "Max Drawdown Duration (days)": drawdown_duration,
+                    "Historical VaR 95% (%)": max(0.0, -var_threshold * 100),
+                    "Expected Shortfall 95% (%)": max(0.0, -tail_returns.mean() * 100),
                 }
             )
 

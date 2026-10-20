@@ -19,6 +19,15 @@
   font-size: 16px;
 }
 
+.watchlist-header .eyebrow {
+  margin: 0 0 6px;
+  color: #93a4e8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
 .watchlist-header p {
   margin: 6px 0 0;
   color: #8993a3;

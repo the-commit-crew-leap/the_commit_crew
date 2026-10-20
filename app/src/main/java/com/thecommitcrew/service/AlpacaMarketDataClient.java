@@ -2,6 +2,12 @@ package com.thecommitcrew.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -11,6 +17,7 @@ import org.springframework.web.client.RestClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.thecommitcrew.config.AlpacaProperties;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 
 @Component
 public class AlpacaMarketDataClient {
@@ -51,6 +58,66 @@ public class AlpacaMarketDataClient {
         }
 
         return response.trade();
+    }
+
+    public IntradayPriceResponse getIntradayPrices(String symbol) {
+        ZoneId eastern = ZoneId.of("America/New_York");
+        ZonedDateTime now = ZonedDateTime.now(eastern);
+        ZonedDateTime requestStart = now.minusDays(7).toLocalDate().atTime(9, 30).atZone(eastern);
+
+        JsonNode response = restClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/v2/stocks/{symbol}/bars")
+                .queryParam("timeframe", "1Min")
+                .queryParam("start", requestStart.toInstant().toString())
+                .queryParam("end", now.toInstant().toString())
+                .queryParam("feed", properties.feed())
+                .queryParam("sort", "asc")
+                .queryParam("limit", 10000)
+                .build(symbol))
+            .retrieve()
+            .body(JsonNode.class);
+
+        JsonNode barsNode = response == null ? null : response.path("bars");
+        if (barsNode != null && barsNode.isObject()) {
+            barsNode = barsNode.path(symbol);
+        }
+        if (barsNode == null || !barsNode.isArray()) {
+            throw new IllegalStateException("Alpaca returned no intraday bars for symbol: " + symbol);
+        }
+
+        List<IntradayPriceResponse.IntradayBar> allBars = new ArrayList<>();
+        for (JsonNode bar : barsNode) {
+            allBars.add(new IntradayPriceResponse.IntradayBar(
+                Instant.parse(bar.path("t").asText()),
+                decimalField(bar, "o"),
+                decimalField(bar, "h"),
+                decimalField(bar, "l"),
+                decimalField(bar, "c"),
+                bar.path("v").asLong()
+            ));
+        }
+
+        LocalDate sessionDate = allBars.stream()
+            .map(bar -> bar.timestamp().atZone(eastern))
+            .filter(timestamp -> isRegularSessionTime(timestamp.toLocalTime()))
+            .map(ZonedDateTime::toLocalDate)
+            .max(LocalDate::compareTo)
+            .orElse(now.toLocalDate());
+        List<IntradayPriceResponse.IntradayBar> bars = allBars.stream()
+            .filter(bar -> {
+                ZonedDateTime timestamp = bar.timestamp().atZone(eastern);
+                return timestamp.toLocalDate().equals(sessionDate)
+                    && isRegularSessionTime(timestamp.toLocalTime());
+            })
+            .toList();
+
+        Instant updatedAt = bars.isEmpty() ? null : bars.get(bars.size() - 1).timestamp();
+        return new IntradayPriceResponse(symbol, sessionDate, "ALPACA_" + properties.feed().toUpperCase(), true, updatedAt, bars);
+    }
+
+    private boolean isRegularSessionTime(java.time.LocalTime time) {
+        return !time.isBefore(LocalTime.of(9, 30)) && time.isBefore(LocalTime.of(16, 0));
     }
 
     public CryptoSnapshot getLatestCryptoSnapshot(String symbol) {
@@ -112,6 +179,14 @@ public class AlpacaMarketDataClient {
             }
         }
         return null;
+    }
+
+    private BigDecimal decimalField(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isNumber() || value.decimalValue().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Alpaca returned an invalid intraday bar");
+        }
+        return value.decimalValue();
     }
 
     private record LatestTradeResponse(@JsonProperty("trade") LatestTrade trade) {

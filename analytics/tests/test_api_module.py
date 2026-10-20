@@ -38,3 +38,6 @@ def test_cors_allows_angular_development_server():
     )
 
     assert "http://localhost:8086" in cors_middleware.kwargs["allow_origins"]
+    assert cors_middleware.kwargs["allow_origin_regex"] == r"https?://10\.9\.\d{1,3}\.\d{1,3}:8086"
+
+

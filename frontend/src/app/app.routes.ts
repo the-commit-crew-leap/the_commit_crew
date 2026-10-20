@@ -5,12 +5,16 @@ import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { NotFoundComponent } from './pages/not-found/not-found.component';
 import { OrderHistoryComponent } from './pages/order-history/order-history.component';
+import { AnalyticsComponent } from './pages/analytics/analytics.component';
+import { PortfolioComponent } from './pages/portfolio/portfolio.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'orders', component: OrderHistoryComponent, canActivate: [authGuard] },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'analytics', component: AnalyticsComponent, canActivate: [authGuard] },
+  { path: 'portfolio', component: PortfolioComponent, canActivate: [authGuard] },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '**', component: NotFoundComponent }
 ];
