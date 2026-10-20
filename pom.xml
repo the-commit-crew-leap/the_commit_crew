@@ -12,6 +12,11 @@
     <name>The Commit Crew</name>
     <description>Trading platform application</description>
 
+    <properties>
+        <tomcat.version>11.0.27</tomcat.version>
+        <kafka.version>4.4.0</kafka.version>
+    </properties>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
