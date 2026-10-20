@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.thecommitcrew.domain.model.PriceHistory;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.exception.PriceNotFoundException;
 import com.thecommitcrew.domain.exception.LivePriceUnavailableException;
@@ -69,6 +70,23 @@ public class PriceService {
         } catch (RuntimeException exception) {
             throw new LivePriceUnavailableException(
                 "Live price is unavailable for symbol: " + symbol,
+                exception
+            );
+        }
+    }
+
+    public IntradayPriceResponse getIntradayPrices(String symbol) {
+        if (alpacaMarketDataClient == null || !alpacaMarketDataClient.isConfigured()) {
+            throw new LivePriceUnavailableException(
+                "Live Alpaca market data is not configured for symbol: " + symbol
+            );
+        }
+
+        try {
+            return alpacaMarketDataClient.getIntradayPrices(symbol);
+        } catch (RuntimeException exception) {
+            throw new LivePriceUnavailableException(
+                "Intraday price data is unavailable for symbol: " + symbol,
                 exception
             );
         }

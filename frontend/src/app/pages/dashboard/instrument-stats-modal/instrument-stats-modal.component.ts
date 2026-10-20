@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
-import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure } from '../../../services/analytics-api.service';
+import { RouterLink } from '@angular/router';
+import { IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
+import { TradingApiService } from '../../../api/trading-api.service';
 import { forkJoin, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-instrument-stats-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './instrument-stats-modal.html',
   styleUrl: './instrument-stats-modal.css'
 })
@@ -16,26 +18,18 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   @Input() visible = false;
   @Output() closed = new EventEmitter<void>();
 
-  statistic?: AnalyticsStatistic;
+  quote?: PriceResponse;
+  intraday?: IntradayPriceResponse;
   loading = false;
   error = '';
-  selectedPeriod = '1y';
-  readonly periods = [
-    { value: '1w', label: '1W' },
-    { value: '1m', label: '1M' },
-    { value: '6m', label: '6M' },
-    { value: '1y', label: '1Y' },
-    { value: '5y', label: '5Y' },
-    { value: '10y', label: '10Y' }
-  ];
-  private pendingFigure?: PlotlyFigure;
-  private readonly analyticsApi = inject(AnalyticsApiService);
+  private pendingFigure?: { data: unknown[]; layout: Record<string, unknown> };
+  private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['symbol'] || changes['visible']) && this.visible && this.symbol) {
-      this.loadStatistics();
+      this.loadMarketData();
     }
   }
 
@@ -73,36 +67,38 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
     this.closed.emit();
   }
 
-  changePeriod(period: string): void {
-    if (this.selectedPeriod === period) {
-      return;
-    }
-
-    this.selectedPeriod = period;
-    this.loadStatistics();
+  formatPrice(value: number | null | undefined): string {
+    return value === null || value === undefined
+      ? '—'
+      : value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  formatPercent(value: number | undefined): string {
-    return value === undefined ? '—' : `${value.toFixed(2)}%`;
+  sessionHigh(): number | null {
+    return this.intraday?.bars.length
+      ? Math.max(...this.intraday.bars.map((bar) => bar.high))
+      : null;
   }
 
-  formatRatio(value: number | null | undefined): string {
-    return value === null || value === undefined ? '—' : value.toFixed(2);
+  sessionLow(): number | null {
+    return this.intraday?.bars.length
+      ? Math.min(...this.intraday.bars.map((bar) => bar.low))
+      : null;
   }
 
-  private loadStatistics(): void {
+  private loadMarketData(): void {
     this.loading = true;
     this.error = '';
-    this.statistic = undefined;
+    this.quote = undefined;
+    this.intraday = undefined;
     this.pendingFigure = undefined;
-    const volatilityWindow = this.getVolatilityWindow();
     forkJoin({
-      insights: this.analyticsApi.getInsights([this.symbol], this.selectedPeriod, volatilityWindow),
-      volatility: this.analyticsApi.getVolatility([this.symbol], this.selectedPeriod, volatilityWindow)
+      quote: this.tradingApi.getInstrumentPrice(this.symbol),
+      intraday: this.tradingApi.getInstrumentIntraday(this.symbol)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ insights, volatility }) => {
-        this.statistic = insights.statistics[0];
-        this.pendingFigure = volatility;
+      next: ({ quote, intraday }) => {
+        this.quote = quote;
+        this.intraday = intraday;
+        this.pendingFigure = this.createIntradayFigure(intraday);
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -114,12 +110,19 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
     });
   }
 
-  private getVolatilityWindow(): number {
-    switch (this.selectedPeriod) {
-      case '1w': return 2;
-      case '1m': return 5;
-      case '6m': return 10;
-      default: return 30;
-    }
+  private createIntradayFigure(intraday: IntradayPriceResponse): { data: unknown[]; layout: Record<string, unknown> } {
+    return {
+      data: [{
+        type: 'candlestick',
+        x: intraday.bars.map((bar) => bar.timestamp),
+        open: intraday.bars.map((bar) => bar.open),
+        high: intraday.bars.map((bar) => bar.high),
+        low: intraday.bars.map((bar) => bar.low),
+        close: intraday.bars.map((bar) => bar.close),
+        increasing: { line: { color: '#64d6a0' } },
+        decreasing: { line: { color: '#ff929b' } }
+      }],
+      layout: { xaxis: { type: 'date', rangeslider: { visible: false } }, yaxis: { fixedrange: true } }
+    };
   }
 }

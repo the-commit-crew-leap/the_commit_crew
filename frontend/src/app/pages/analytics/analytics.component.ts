@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of, Subject, takeUntil } from 'rxjs';
 import { InstrumentResponse } from '../../api/trading.models';
 import {
@@ -46,13 +47,18 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   private readonly destroy$ = new Subject<void>();
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly tradingApi = inject(TradingApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.tradingApi.getInstruments(true).pipe(takeUntil(this.destroy$)).subscribe({
       next: (instruments) => {
         this.instruments = instruments;
-        this.selectedSymbols = instruments.slice(0, 3).map((instrument) => instrument.symbol);
+        const requestedSymbol = this.route.snapshot.queryParamMap.get('symbol')?.trim().toUpperCase();
+        const requestedInstrument = instruments.find((instrument) => instrument.symbol === requestedSymbol);
+        this.selectedSymbols = requestedInstrument
+          ? [requestedInstrument.symbol]
+          : instruments.slice(0, 3).map((instrument) => instrument.symbol);
         this.loadingInstruments = false;
         this.cdr.markForCheck();
         this.runAnalytics();

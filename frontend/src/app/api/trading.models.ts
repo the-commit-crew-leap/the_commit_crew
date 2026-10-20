@@ -78,6 +78,24 @@ export interface PriceResponse {
     updatedAt: string;
 }
 
+export interface IntradayPriceResponse {
+    symbol: string;
+    sessionDate: string;
+    source: string;
+    live: boolean;
+    updatedAt: string | null;
+    bars: IntradayBar[];
+}
+
+export interface IntradayBar {
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+}
+
 export interface MarketTickerResponse {
     symbol: string;
     price: number | null;
