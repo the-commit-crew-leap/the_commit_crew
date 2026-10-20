@@ -54,6 +54,16 @@
     </button>
   </form>
 
+  <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-tools">
+    <input type="search" [(ngModel)]="watchlistFilter" placeholder="Filter watchlist" aria-label="Filter watchlist">
+    <select [(ngModel)]="sortMode" aria-label="Sort watchlist">
+      <option value="symbol">Sort: Symbol</option>
+      <option value="change">Sort: Change</option>
+      <option value="price">Sort: Price</option>
+    </select>
+    <span class="freshness-status">{{ freshnessLabel }}</span>
+  </div>
+
   <p *ngIf="loading" class="watchlist-state">Loading your watchlist...</p>
   <p *ngIf="!loading && error" class="watchlist-state watchlist-error" role="alert">{{ error }}</p>
   <p *ngIf="!loading && !error && success" class="watchlist-state watchlist-success" role="status">
@@ -66,7 +76,7 @@
     Your watchlist is empty. Search for an instrument above to get started.
   </p>
 
-  <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-columns" aria-hidden="true">
+  <div *ngIf="!loading && !error && displayedWatchlist.length > 0" class="watchlist-columns" aria-hidden="true">
     <span>Asset</span>
     <span>Latest price</span>
     <span>Change</span>
@@ -74,8 +84,8 @@
     <span>Trend</span>
     <span></span>
   </div>
-  <ul *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-items">
-    <li *ngFor="let instrument of watchlist" class="watchlist-item">
+  <ul *ngIf="!loading && !error && displayedWatchlist.length > 0" class="watchlist-items">
+    <li *ngFor="let instrument of displayedWatchlist" class="watchlist-item">
       <div class="watchlist-asset">
         <strong>{{ instrument.symbol }}</strong>
         <span>{{ instrument.name }}</span>
@@ -110,7 +120,7 @@
       </button>
     </li>
   </ul>
-  <p *ngIf="lastUpdated" class="watchlist-state">
-    Live prices updated {{ lastUpdated | date:'shortTime' }}
+  <p *ngIf="!loading && !error && watchlist.length > 0 && displayedWatchlist.length === 0" class="watchlist-state">
+    No instruments match this filter.
   </p>
 </section>

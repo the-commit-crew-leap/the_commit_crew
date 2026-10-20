@@ -104,6 +104,35 @@
   opacity: 0.6;
 }
 
+.watchlist-tools {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 128px minmax(180px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 0 20px 14px;
+}
+
+.watchlist-tools input,
+.watchlist-tools select {
+  min-width: 0;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid #29313c;
+  border-radius: 6px;
+  background: #0b0e12;
+  color: #e8ebf0;
+  font: inherit;
+  font-size: 11px;
+}
+
+.freshness-status {
+  color: #8993a3;
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .watchlist-state {
   margin: 0;
   padding: 24px 20px;
@@ -221,6 +250,9 @@
     gap: 8px;
     grid-template-columns: minmax(0, 1fr) minmax(92px, auto) var(--watchlist-action-width);
   }
+
+  .watchlist-tools { grid-template-columns: 1fr 128px; }
+  .freshness-status { grid-column: 1 / -1; text-align: left; }
 
   .watchlist-columns span:nth-child(3),
   .watchlist-columns span:nth-child(4),

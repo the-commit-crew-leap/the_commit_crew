@@ -57,6 +57,8 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   success = '';
   pickerOpen = false;
   highlightedInstrumentIndex = 0;
+  watchlistFilter = '';
+  sortMode: 'symbol' | 'change' | 'price' = 'symbol';
 
   @HostListener('document:click', ['$event'])
   closePickerOnOutsideClick(event: MouseEvent): void {
@@ -113,6 +115,32 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       instrument.symbol.toLowerCase().includes(query) ||
       instrument.name.toLowerCase().includes(query)
     );
+  }
+
+  get displayedWatchlist(): InstrumentResponse[] {
+    const query = this.watchlistFilter.trim().toLowerCase();
+    const filtered = this.watchlist.filter((instrument) =>
+      !query || instrument.symbol.toLowerCase().includes(query) || instrument.name.toLowerCase().includes(query)
+    );
+    return [...filtered].sort((left, right) => {
+      if (this.sortMode === 'change') {
+        return (this.getDailyChange(right.symbol) ?? -Infinity) - (this.getDailyChange(left.symbol) ?? -Infinity);
+      }
+      if (this.sortMode === 'price') {
+        return (this.getLatestPrice(right.symbol) ?? -Infinity) - (this.getLatestPrice(left.symbol) ?? -Infinity);
+      }
+      return left.symbol.localeCompare(right.symbol);
+    });
+  }
+
+  get freshnessLabel(): string {
+    if (!this.lastUpdated) {
+      return 'Waiting for market data';
+    }
+    if (Object.values(this.watchlistDetails).some((detail) => detail && !detail.live)) {
+      return `Last available session · updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    }
+    return `Updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   }
 
   openPicker(): void {
