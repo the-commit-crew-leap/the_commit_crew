@@ -123,6 +123,7 @@ public class AccountController {
                         null,
                         null,
                         null,
+                        null,
                         null
                     );
                 }
@@ -139,7 +140,8 @@ public class AccountController {
                     currentPrice,
                     marketValue,
                     unrealizedPnL,
-                    unrealizedPnLPercent
+                    unrealizedPnLPercent,
+                    livePrice.updatedAt()
                 );
             })
             .toList();

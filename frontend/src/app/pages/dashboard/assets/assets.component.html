@@ -38,6 +38,12 @@
 
   <p class="assets-note">
     Spot holdings · Values shown in USD
-    <span *ngIf="lastUpdated"> · Live prices updated {{ lastUpdated | date:'shortTime' }}</span>
+    <span *ngIf="lastUpdated">
+      · <ng-container *ngIf="!marketOpen && lastTradeAt; else assetsRefreshed">
+        Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
+      </ng-container>
+      <ng-template #assetsRefreshed>Market data</ng-template>
+      Refreshed {{ lastUpdated | date:'shortTime' }}
+    </span>
   </p>
 </section>

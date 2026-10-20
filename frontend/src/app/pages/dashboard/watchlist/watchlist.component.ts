@@ -10,11 +10,12 @@ import {
   inject
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, timeout } from 'rxjs';
+import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, tap, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { InstrumentResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+import { isUsMarketOpen } from '../../../shared/market-status';
 
 @Component({
   selector: 'app-watchlist',
@@ -39,6 +40,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   priceLoading = false;
   priceError = '';
   lastUpdated: Date | null = null;
+  lastTradeAt: Date | null = null;
   saving = false;
   removingSymbol = '';
   error = '';
@@ -302,6 +304,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
 
     return forkJoin(watchlist.map((instrument) =>
       this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
+        tap((response) => this.recordLastTradeAt(response.updatedAt)),
         map((response) => response.live ? response.price : null),
         catchError((error) => {
           console.error(`Failed to load live price for ${instrument.symbol}`, error);
@@ -324,5 +327,18 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       this.priceError = 'Some live prices are currently unavailable.';
     }
     this.cdr.detectChanges();
+  }
+
+  get marketOpen(): boolean {
+    return isUsMarketOpen();
+  }
+
+  private recordLastTradeAt(timestamp: string): void {
+    const tradeTime = new Date(timestamp).getTime();
+    if (!Number.isFinite(tradeTime)
+      || (this.lastTradeAt !== null && this.lastTradeAt.getTime() >= tradeTime)) {
+      return;
+    }
+    this.lastTradeAt = new Date(tradeTime);
   }
 }

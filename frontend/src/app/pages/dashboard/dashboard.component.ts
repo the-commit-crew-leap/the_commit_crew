@@ -10,6 +10,7 @@ import { OrderTicketComponent } from './order-ticket/order-ticket.component';
 import { AssetsComponent } from './assets/assets.component';
 import { WatchlistComponent } from './watchlist/watchlist.component';
 import { InstrumentStatsModalComponent } from './instrument-stats-modal/instrument-stats-modal.component';
+import { isUsMarketOpen } from '../../shared/market-status';
 
 @Component({
   imports: [CommonModule, OrderTicketComponent, AssetsComponent, WatchlistComponent, InstrumentStatsModalComponent],
@@ -117,6 +118,20 @@ export class DashboardComponent implements OnDestroy, OnInit {
 
     get openOrders(): number {
       return this.orders.filter((order) => order.status === 'NEW').length;
+    }
+
+    get lastTradeAt(): Date | null {
+      const timestamps = this.positions
+        .map((position) => position.lastTradeAt)
+        .filter((timestamp): timestamp is string => timestamp !== null)
+        .map((timestamp) => new Date(timestamp).getTime())
+        .filter((timestamp) => Number.isFinite(timestamp));
+      const latest = Math.max(...timestamps);
+      return Number.isFinite(latest) ? new Date(latest) : null;
+    }
+
+    get marketOpen(): boolean {
+      return isUsMarketOpen();
     }
 
     openInstrumentStats(symbol: string): void {

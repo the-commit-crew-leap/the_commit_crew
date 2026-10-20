@@ -94,6 +94,10 @@
     </li>
   </ul>
   <p *ngIf="lastUpdated" class="watchlist-state">
-    Live prices updated {{ lastUpdated | date:'shortTime' }}
+    <ng-container *ngIf="!marketOpen && lastTradeAt; else watchlistRefreshed">
+      Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
+    </ng-container>
+    <ng-template #watchlistRefreshed>Market data</ng-template>
+    Refreshed {{ lastUpdated | date:'shortTime' }}
   </p>
 </section>
