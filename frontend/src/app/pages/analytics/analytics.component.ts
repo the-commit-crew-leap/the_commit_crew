@@ -170,12 +170,12 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
       title: null,
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
-      font: { color: '#dbe2ed' },
-      margin: { l: 52, r: 20, t: 12, b: 48 },
-      hovermode: 'closest',
-      hoverdistance: 24,
+      font: { color: '#b9c2d0', family: 'Inter, system-ui, sans-serif', size: 11 },
+      margin: { l: 46, r: 18, t: 10, b: 42 },
+      hovermode: 'x unified',
+      hoverdistance: 20,
       spikedistance: -1,
-      hoverlabel: { bgcolor: '#151920', bordercolor: '#a7b8fa', font: { color: '#f0f2f6' } }
+      hoverlabel: { bgcolor: '#12161d', bordercolor: '#53658a', font: { color: '#f0f2f6', size: 11 } },
     }, {
       ...figure.config,
       responsive: true,

@@ -58,7 +58,9 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
       margin: { l: 42, r: 12, t: 8, b: 38 },
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
-      font: { color: '#b9c2d0', size: 10 },
+      font: { color: '#b9c2d0', family: 'Inter, system-ui, sans-serif', size: 10 },
+      hovermode: 'x unified',
+      hoverlabel: { bgcolor: '#12161d', bordercolor: '#53658a', font: { color: '#f0f2f6', size: 10 } },
       showlegend: false
     }, { responsive: true, displayModeBar: false, staticPlot: true, displaylogo: false });
   }

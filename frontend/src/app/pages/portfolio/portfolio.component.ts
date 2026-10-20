@@ -340,16 +340,65 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const symbols = valuedPositions.map((position) => position.symbol);
     const values = valuedPositions.map((position) => position.marketValue ?? 0);
     const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
+    const axis = {
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      ticks: '',
+      fixedrange: true,
+      tickfont: { color: '#8993a3', size: 10 },
+      tickformat: ',.0f'
+    };
+    const timeline = this.liveHistory.map((point) => point.time);
     return [
-      { data: [{ type: 'pie', labels: [...symbols, 'CASH'], values: [...values, this.cashBalance], hole: 0.55 }], layout: { showlegend: true, legend: { orientation: 'h', y: -0.08 } } },
-      { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.value), line: { color: '#a7b8fa', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
-      { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.pnl), line: { color: '#64d6a0', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
-      { data: [{ type: 'bar', x: symbols, y: pnl, marker: { color: pnl.map((value) => value >= 0 ? '#64d6a0' : '#ff929b') } }], layout: { yaxis: { title: 'USD' } } }
+      {
+        data: [{
+          type: 'pie',
+          labels: [...symbols, 'CASH'],
+          values: [...values, this.cashBalance],
+          hole: 0.66,
+          textinfo: 'label+percent',
+          textposition: 'outside',
+          textfont: { color: '#b9c2d0', size: 10 },
+          marker: { line: { color: '#151920', width: 2 } },
+          hovertemplate: '%{label}<br>$%{value:,.2f}<br>%{percent}<extra></extra>'
+        }],
+        layout: { showlegend: true, legend: { orientation: 'h', y: -0.08, font: { color: '#8993a3', size: 10 } } }
+      },
+      {
+        data: [{
+          type: 'scatter', mode: 'lines', x: timeline, y: this.liveHistory.map((point) => point.value),
+          line: { color: '#a7b8fa', width: 2.5, shape: 'spline' },
+          fill: 'tozeroy', fillcolor: 'rgba(167,184,250,0.10)',
+          hovertemplate: '%{x|%H:%M}<br>$%{y:,.2f}<extra></extra>'
+        }],
+        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: axis }
+      },
+      {
+        data: [{
+          type: 'scatter', mode: 'lines', x: timeline, y: this.liveHistory.map((point) => point.pnl),
+          line: { color: '#64d6a0', width: 2.5, shape: 'spline' },
+          fill: 'tozeroy', fillcolor: 'rgba(100,214,160,0.09)',
+          hovertemplate: '%{x|%H:%M}<br>%{y:+,.2f} USD<extra></extra>'
+        }],
+        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: { ...axis, zeroline: true, zerolinecolor: '#36404e' } }
+      },
+      {
+        data: [{
+          type: 'bar', x: symbols, y: pnl,
+          marker: { color: pnl.map((value) => value >= 0 ? '#64d6a0' : '#ff929b'), line: { width: 0 } },
+          hovertemplate: '%{x}<br>%{y:+,.2f} USD<extra></extra>'
+        }],
+        layout: { xaxis: { showgrid: false, fixedrange: true, tickfont: { color: '#b9c2d0', size: 10 } }, yaxis: { ...axis, zeroline: true, zerolinecolor: '#36404e' } }
+      }
     ].map((figure, index) => ({
       ...figure,
       layout: {
         ...figure.layout,
-        margin: { l: 48, r: 12, t: 12, b: index === 0 ? 64 : 42 },
+        margin: { l: 42, r: 12, t: 8, b: index === 0 ? 68 : 34 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        hovermode: 'x unified',
         showlegend: index === 0
       }
     }));
@@ -373,8 +422,9 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       margin: { l: 52, r: 18, t: 12, b: 48 },
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
-      font: { color: '#dbe2ed' },
-      hovermode: 'closest'
+      font: { color: '#b9c2d0', family: 'Inter, system-ui, sans-serif', size: 11 },
+      hovermode: 'x unified',
+      hoverlabel: { bgcolor: '#12161d', bordercolor: '#53658a', font: { color: '#f0f2f6', size: 11 } },
     }, { responsive: true, staticPlot: true, displayModeBar: false, displaylogo: false });
   }
 
