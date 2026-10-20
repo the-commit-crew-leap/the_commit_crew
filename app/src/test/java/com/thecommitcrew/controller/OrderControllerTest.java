@@ -246,7 +246,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().is(422));
     }
     
     /**
@@ -262,7 +262,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().is(422));
     }
     
     /**
@@ -285,7 +285,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(sellRequest)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().is(422));
     }
     
     /**
@@ -301,7 +301,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().is(422));
     }
     
     /**

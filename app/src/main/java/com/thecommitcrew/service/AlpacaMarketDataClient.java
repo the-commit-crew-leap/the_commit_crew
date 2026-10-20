@@ -171,9 +171,7 @@ public class AlpacaMarketDataClient {
 
         String normalizedSymbol = symbol.replace("/", "").toUpperCase();
         JsonNode candidates = snapshots == null ? response : snapshots;
-        var fields = candidates.fields();
-        while (fields.hasNext()) {
-            var entry = fields.next();
+        for (var entry : candidates.properties()) {
             if (entry.getKey().replace("/", "").toUpperCase().equals(normalizedSymbol)) {
                 return entry.getValue();
             }
