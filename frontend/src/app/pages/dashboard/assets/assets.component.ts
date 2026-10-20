@@ -35,7 +35,7 @@ export class AssetsComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(1000).pipe(
+    interval(5000).pipe(
       startWith(0),
       exhaustMap(() => this.tradingApi.getPositions(accountId).pipe(
         catchError((error) => {
@@ -49,12 +49,30 @@ export class AssetsComponent implements OnDestroy, OnInit {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (positions) => {
-        this.positions = positions;
+        this.positions = this.mergePositions(positions);
         this.loading = false;
         this.error = '';
         this.lastUpdated = new Date();
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  private mergePositions(nextPositions: PositionResponse[]): PositionResponse[] {
+    const previousBySymbol = new Map(this.positions.map((position) => [position.symbol, position]));
+    return nextPositions.map((position) => {
+      const previous = previousBySymbol.get(position.symbol);
+      if (!previous) {
+        return position;
+      }
+
+      return {
+        ...position,
+        currentPrice: position.currentPrice ?? previous.currentPrice,
+        marketValue: position.marketValue ?? previous.marketValue,
+        unrealizedPnL: position.unrealizedPnL ?? previous.unrealizedPnL,
+        unrealizedPnLPercent: position.unrealizedPnLPercent ?? previous.unrealizedPnLPercent
+      };
     });
   }
 
