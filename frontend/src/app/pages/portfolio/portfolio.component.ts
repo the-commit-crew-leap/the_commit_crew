@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, Subject, takeUntil } from 'rxjs';
+import { catchError, exhaustMap, forkJoin, interval, of, startWith, Subject, Subscription, takeUntil } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { InstrumentResponse, PositionResponse } from '../../api/trading.models';
 import { TradingApiService } from '../../api/trading-api.service';
@@ -19,6 +19,10 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('cumulativeChart') private cumulativeChart?: ElementRef<HTMLElement>;
   @ViewChild('volatilityChart') private volatilityChart?: ElementRef<HTMLElement>;
   @ViewChild('drawdownChart') private drawdownChart?: ElementRef<HTMLElement>;
+  @ViewChild('liveAllocationChart') private liveAllocationChart?: ElementRef<HTMLElement>;
+  @ViewChild('liveValueChart') private liveValueChart?: ElementRef<HTMLElement>;
+  @ViewChild('livePnlChart') private livePnlChart?: ElementRef<HTMLElement>;
+  @ViewChild('livePriceChangeChart') private livePriceChangeChart?: ElementRef<HTMLElement>;
 
   readonly periods = [
     { value: '1w', label: '1W' }, { value: '1m', label: '1M' }, { value: '6m', label: '6M' },
@@ -36,6 +40,14 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   statistics: AnalyticsStatistic[] = [];
   loading = true;
   error = '';
+  liveError = '';
+  liveLoading = false;
+  viewMode: 'historical' | 'live' = 'live';
+  liveUpdatedAt: Date | null = null;
+  private accountId = '';
+  private liveRefreshSubscription?: Subscription;
+  private liveHistory: Array<{ time: string; value: number; pnl: number }> = [];
+  private pendingLiveFigures?: PlotlyFigure[];
   private pendingFigures?: { allocation: PlotlyFigure; cumulative: PlotlyFigure; volatility: PlotlyFigure; drawdown: PlotlyFigure };
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
@@ -50,6 +62,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.loading = false;
       return;
     }
+    this.accountId = accountId;
     forkJoin({
       positions: this.tradingApi.getPositions(accountId),
       instruments: this.tradingApi.getInstruments(true),
@@ -61,6 +74,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.cashBalance = Number(balance.cashBalance.amount) || 0;
         this.scenarioSymbol = instruments[0]?.symbol ?? this.positions[0]?.symbol ?? '';
         this.runPortfolioAnalytics();
+        this.startLiveRefresh();
       },
       error: () => {
         this.error = 'Unable to load your holdings.';
@@ -79,6 +93,12 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.renderFigure(this.volatilityChart!.nativeElement, figures.volatility);
       this.renderFigure(this.drawdownChart!.nativeElement, figures.drawdown);
     }
+    if (this.pendingLiveFigures && this.allLiveChartsReady()) {
+      const figures = this.pendingLiveFigures;
+      this.pendingLiveFigures = undefined;
+      [this.liveAllocationChart, this.liveValueChart, this.livePnlChart, this.livePriceChangeChart]
+        .forEach((chart, index) => this.renderFigure(chart!.nativeElement, figures[index]));
+    }
   }
 
   ngOnDestroy(): void {
@@ -86,6 +106,38 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       .forEach((chart) => { if (chart) Plotly.purge(chart.nativeElement); });
     this.destroy$.next();
     this.destroy$.complete();
+    this.liveRefreshSubscription?.unsubscribe();
+  }
+
+  setViewMode(mode: 'historical' | 'live'): void {
+    if (this.viewMode === mode) {
+      return;
+    }
+
+    this.viewMode = mode;
+    if (mode === 'live') {
+      this.startLiveRefresh();
+    } else {
+      this.liveRefreshSubscription?.unsubscribe();
+      this.liveRefreshSubscription = undefined;
+      this.liveError = '';
+    }
+  }
+
+  livePortfolioValue(): number {
+    return this.getValuedPositions().reduce((total, position) => total + (position.marketValue ?? 0), 0);
+  }
+
+  liveTotalValue(): number {
+    return this.livePortfolioValue() + this.cashBalance;
+  }
+
+  liveUnrealizedPnL(): number {
+    return this.getValuedPositions().reduce((total, position) => total + (position.unrealizedPnL ?? 0), 0);
+  }
+
+  liveHasUnavailablePrices(): boolean {
+    return this.positions.some((position) => position.currentPrice === null || !position.live);
   }
 
   setPeriod(period: string): void {
@@ -180,6 +232,84 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private getValuedPositions(): PositionResponse[] {
     return this.positions.filter((position) => position.marketValue !== null && position.marketValue > 0);
+  }
+
+  private startLiveRefresh(): void {
+    this.liveRefreshSubscription?.unsubscribe();
+    this.liveRefreshSubscription = interval(this.livePollingInterval()).pipe(
+      startWith(0),
+      exhaustMap(() => {
+        this.liveLoading = true;
+        return forkJoin({
+          positions: this.tradingApi.getPositions(this.accountId),
+          balance: this.tradingApi.getBalance(this.accountId)
+        }).pipe(
+          catchError((error) => {
+            console.error('Failed to refresh live portfolio snapshot', error);
+            this.liveError = 'Live portfolio data is temporarily unavailable.';
+            return of(null);
+          })
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe((snapshot) => {
+      this.liveLoading = false;
+      if (!snapshot) {
+        this.cdr.markForCheck();
+        return;
+      }
+
+      this.positions = snapshot.positions;
+      this.cashBalance = Number(snapshot.balance.cashBalance.amount) || 0;
+      this.liveError = '';
+      this.liveUpdatedAt = new Date();
+        this.recordLiveSnapshot();
+      this.cdr.markForCheck();
+    });
+  }
+
+  private livePollingInterval(): number {
+    const easternParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const weekday = easternParts.find((part) => part.type === 'weekday')?.value;
+    const hour = Number(easternParts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(easternParts.find((part) => part.type === 'minute')?.value);
+    const marketOpen = hour > 9 || (hour === 9 && minute >= 30);
+    const marketClosed = hour >= 16;
+    const weekdaySession = weekday !== 'Sat' && weekday !== 'Sun';
+    return weekdaySession && marketOpen && !marketClosed ? 5000 : 60000;
+  }
+
+  private recordLiveSnapshot(): void {
+    const now = this.liveUpdatedAt ?? new Date();
+    this.liveHistory = [
+      ...this.liveHistory,
+      { time: now.toISOString(), value: this.liveTotalValue(), pnl: this.liveUnrealizedPnL() }
+    ].slice(-60);
+    this.pendingLiveFigures = this.createLiveFigures();
+  }
+
+  private createLiveFigures(): PlotlyFigure[] {
+    const valuedPositions = this.getValuedPositions();
+    const symbols = valuedPositions.map((position) => position.symbol);
+    const values = valuedPositions.map((position) => position.marketValue ?? 0);
+    const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
+    const prices = valuedPositions.map((position) => position.currentPrice ?? 0);
+    return [
+      { data: [{ type: 'pie', labels: [...symbols, 'CASH'], values: [...values, this.cashBalance], hole: 0.55 }], layout: {} },
+      { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.value), line: { color: '#a7b8fa', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
+      { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.pnl), line: { color: '#64d6a0', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
+      { data: [{ type: 'bar', x: symbols, y: pnl, marker: { color: pnl.map((value) => value >= 0 ? '#64d6a0' : '#ff929b') } }], layout: { yaxis: { title: 'USD' } } }
+    ].map((figure) => ({ ...figure, layout: { ...figure.layout, margin: { l: 48, r: 12, t: 12, b: 42 }, showlegend: false } }));
+  }
+
+  private allLiveChartsReady(): boolean {
+    return !!this.liveAllocationChart && !!this.liveValueChart && !!this.livePnlChart && !!this.livePriceChangeChart;
   }
 
   private allChartsReady(): boolean {

@@ -166,7 +166,7 @@ public class AccountController {
         try {
             IntradayPriceResponse intraday = priceService.getIntradayPrices(position.getSymbol());
             if (intraday.bars().isEmpty()) {
-                return unavailablePosition(position);
+                return databaseLastAvailablePosition(position);
             }
             IntradayPriceResponse.IntradayBar lastBar = intraday.bars().get(intraday.bars().size() - 1);
             BigDecimal currentPrice = lastBar.close();
@@ -183,6 +183,27 @@ public class AccountController {
                 false
             );
         } catch (RuntimeException fallbackException) {
+            return databaseLastAvailablePosition(position);
+        }
+    }
+
+    private PositionResponseDTO databaseLastAvailablePosition(Position position) {
+        try {
+            LivePriceResponse lastClose = priceService.getLastAvailableClose(position.getSymbol());
+            BigDecimal currentPrice = lastClose.price();
+            return new PositionResponseDTO(
+                position.getSymbol(),
+                position.getQuantity(),
+                position.getAverageCost(),
+                currentPrice,
+                positionService.marketValue(position, currentPrice),
+                positionService.unrealizedProfitLoss(position, currentPrice),
+                positionService.unrealizedPnLPercent(position, currentPrice),
+                lastClose.source(),
+                lastClose.updatedAt(),
+                false
+            );
+        } catch (RuntimeException unavailableException) {
             return unavailablePosition(position);
         }
     }
@@ -287,5 +308,26 @@ public class AccountController {
             LocalDateTime.now(ZoneId.of("UTC"))
         );
         return ResponseEntity.ok(response);
+    }
+
+    private PositionResponseDTO databaseLastAvailablePosition(Position position) {
+        try {
+            LivePriceResponse lastClose = priceService.getLastAvailableClose(position.getSymbol());
+            BigDecimal currentPrice = lastClose.price();
+            return new PositionResponseDTO(
+                position.getSymbol(),
+                position.getQuantity(),
+                position.getAverageCost(),
+                currentPrice,
+                positionService.marketValue(position, currentPrice),
+                positionService.unrealizedProfitLoss(position, currentPrice),
+                positionService.unrealizedPnLPercent(position, currentPrice),
+                lastClose.source(),
+                lastClose.updatedAt(),
+                false
+            );
+        } catch (RuntimeException unavailableException) {
+            return unavailablePosition(position);
+        }
     }
 }
