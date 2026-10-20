@@ -75,6 +75,9 @@
                     <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     <failBuildOnCVSS>5.0</failBuildOnCVSS>
                     <nvdApiDelay>6000</nvdApiDelay>
+                    <suppressionFiles>
+                        <suppressionFile>${maven.multiModuleProjectDirectory}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
                 </configuration>
             </plugin>
         </plugins>

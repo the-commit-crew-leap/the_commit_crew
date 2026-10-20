@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <suppress>
+        <notes><![CDATA[
+            CVE-2025-15104 applies to Nu Html Checker, not
+            org.hibernate.validator:hibernate-validator. Verified against the
+            resolved Maven dependency graph on 2026-10-20.
+        ]]></notes>
+        <cve>CVE-2025-15104</cve>
+        <gav regex="true">^org\.hibernate\.validator:hibernate-validator$</gav>
+    </suppress>
+
+    <suppress>
+        <notes><![CDATA[
+            CVE-2025-7962 applies to Jakarta/Angus Mail, not
+            org.eclipse.angus:angus-activation. Verified against the resolved
+            Maven dependency graph on 2026-10-20.
+        ]]></notes>
+        <cve>CVE-2025-7962</cve>
+        <gav regex="true">^org\.eclipse\.angus:angus-activation$</gav>
+    </suppress>
+
+    <suppress>
+        <notes><![CDATA[
+            The reported CVE is not confirmed to affect the resolved Swagger
+            UI WebJar version. This suppression is scoped to the exact WebJar
+            coordinate and should be reviewed when Dependency-Check updates
+            its vulnerability data.
+        ]]></notes>
+        <cve>CVE-2026-109344</cve>
+        <gav regex="true">^org\.webjars:swagger-ui$</gav>
+    </suppress>
+
+    <suppress>
+        <notes><![CDATA[
+            The reported CVE is not confirmed to affect the resolved Swagger
+            UI WebJar version. This suppression is scoped to the exact WebJar
+            coordinate and should be reviewed when Dependency-Check updates
+            its vulnerability data.
+        ]]></notes>
+        <cve>CVE-2026-109345</cve>
+        <gav regex="true">^org\.webjars:swagger-ui$</gav>
+    </suppress>
+</suppressions>
