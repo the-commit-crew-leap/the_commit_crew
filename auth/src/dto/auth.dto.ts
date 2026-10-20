@@ -127,6 +127,15 @@ export class AuthResponseDto {
   expiresIn: number;
 
   @ApiProperty({
+    description: 'Signed-in username',
+    example: 'alice',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiProperty({
     description: 'Linked trading account ID (included in login responses)',
     example: 'ACC-1A2B3C4D',
     required: false

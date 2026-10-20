@@ -30,7 +30,7 @@ export class DashboardComponent implements OnDestroy, OnInit {
   private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private readonly authSession: AuthSessionService,
+    readonly authSession: AuthSessionService,
     private readonly tradingApi: TradingApiService,
     private readonly cdr: ChangeDetectorRef
   ) {

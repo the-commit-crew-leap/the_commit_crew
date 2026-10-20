@@ -20,7 +20,8 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     authSession = {
-      getAccountId: jest.fn().mockReturnValue('ACC-1001')
+      getAccountId: jest.fn().mockReturnValue('ACC-1001'),
+      username: signal('alice')
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
       getPositions: jest.fn().mockReturnValue(of([{
@@ -95,6 +96,21 @@ describe('DashboardComponent', () => {
     expect(component.todayReturn).toBe(5000);
     expect(component.openOrders).toBe(1);
     expect(component.balance()?.cashBalance.amount).toBe('10000.00');
+  });
+
+  it('personalizes the greeting with the signed-in username', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.welcome-message').textContent)
+      .toContain("Welcome back, alice. Here's what's in your account.");
+  });
+
+  it('falls back to a generic greeting when no username is available', () => {
+    authSession.username.set(null);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.welcome-message').textContent)
+      .toContain("Welcome back. Here's what's in your account.");
   });
 
   it('updates portfolio value when the live position price changes', () => {

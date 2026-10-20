@@ -72,6 +72,7 @@ export class AuthController {
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
         expiresIn: String(session.expiresIn),
+        username: session.username,
         accountId: session.accountId,
         role: session.role,
       }).toString();
