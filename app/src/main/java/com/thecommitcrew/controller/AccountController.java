@@ -309,25 +309,4 @@ public class AccountController {
         );
         return ResponseEntity.ok(response);
     }
-
-    private PositionResponseDTO databaseLastAvailablePosition(Position position) {
-        try {
-            LivePriceResponse lastClose = priceService.getLastAvailableClose(position.getSymbol());
-            BigDecimal currentPrice = lastClose.price();
-            return new PositionResponseDTO(
-                position.getSymbol(),
-                position.getQuantity(),
-                position.getAverageCost(),
-                currentPrice,
-                positionService.marketValue(position, currentPrice),
-                positionService.unrealizedProfitLoss(position, currentPrice),
-                positionService.unrealizedPnLPercent(position, currentPrice),
-                lastClose.source(),
-                lastClose.updatedAt(),
-                false
-            );
-        } catch (RuntimeException unavailableException) {
-            return unavailablePosition(position);
-        }
-    }
 }
