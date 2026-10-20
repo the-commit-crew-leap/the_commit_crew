@@ -48,7 +48,13 @@ class AnalysisEngine:
 
 
     # RETURN CALCULATIONS
-    def get_returns_for_tickers(self, tickers: list, start_date: str, end_date: str) -> pd.DataFrame:
+    def get_returns_for_tickers(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
+    ) -> pd.DataFrame:
         """
         Calculate daily close-to-close returns for multiple instruments.
         Adjusted closing price is used when available. Otherwise, regular
@@ -113,6 +119,9 @@ class AnalysisEngine:
             
             # Do not fill missing observations when calculating returns.
             returns = price_df["price"].pct_change(fill_method=None)
+            acquisition_date = (acquisition_dates or {}).get(symbol)
+            if acquisition_date:
+                returns = returns.loc[returns.index >= pd.Timestamp(acquisition_date)]
             returns.name = symbol
             returns_data[symbol] = returns
 
@@ -132,12 +141,13 @@ class AnalysisEngine:
         weights: list[float],
         start_date: str,
         end_date: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> pd.Series:
         """Calculate weighted daily returns for a portfolio of symbols."""
         if len(symbols) != len(weights) or not symbols:
             raise ValueError("Portfolio symbols and weights must have the same non-zero length")
 
-        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date)
+        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date, acquisition_dates)
         if returns_df.empty:
             return pd.Series(dtype="float64", name="Portfolio")
 
@@ -162,9 +172,10 @@ class AnalysisEngine:
         symbols: list[str],
         weights: list[float],
         period: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return None
 
@@ -191,12 +202,13 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         if window < 2:
             raise ValueError("Volatility window must be at least 2 trading days")
 
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date, acquisition_dates)
         rolling = returns.rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
         rolling = rolling.dropna()
         if rolling.empty:
@@ -223,9 +235,10 @@ class AnalysisEngine:
         symbols: list[str],
         weights: list[float],
         period: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return None
 
@@ -271,9 +284,10 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         volatility_window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> pd.DataFrame:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return pd.DataFrame()
         return self.statistics_calculator.calculate(pd.DataFrame({"Portfolio": returns}))
@@ -337,6 +351,7 @@ class AnalysisEngine:
         period: str,
         cash_value: float = 0.0,
         volatility_window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> dict:
         """Compare current portfolio metrics with a proposed additional purchase."""
         if len(symbols) != len(values) or not symbols:
@@ -372,7 +387,7 @@ class AnalysisEngine:
                 raise ValueError("Portfolio value must be positive")
             weights = [portfolio_values[symbol] / total_value for symbol in snapshot_symbols]
             statistics = self.get_portfolio_statistics(
-                snapshot_symbols, weights, period, volatility_window
+                snapshot_symbols, weights, period, volatility_window, acquisition_dates
             )
             return {
                 "total_value": total_value,

@@ -36,6 +36,24 @@ def test_get_returns_for_tickers(monkeypatch, csv_file):
     assert result.loc[pd.Timestamp("2026-01-03"), "AAPL"] == pytest.approx(101 / 102 - 1)
 
 
+def test_get_returns_filters_data_before_acquisition_date(monkeypatch, csv_file):
+    monkeypatch.setattr(
+        config,
+        "get_symbol_csv_path",
+        lambda _: csv_file
+    )
+
+    result = engine.get_returns_for_tickers(
+        ["AAPL"],
+        "2026-01-01",
+        "2026-01-03",
+        {"AAPL": "2026-01-03"},
+    )
+
+    assert list(result.index) == [pd.Timestamp("2026-01-03")]
+    assert pd.isna(result.loc[pd.Timestamp("2026-01-03"), "AAPL"])
+
+
 def test_get_returns_invalid_date_range():
     with pytest.raises(ValueError):
         engine.get_returns_for_tickers(

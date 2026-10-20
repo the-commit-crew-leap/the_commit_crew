@@ -3,7 +3,7 @@ import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, 
 import { FormsModule } from '@angular/forms';
 import { catchError, exhaustMap, forkJoin, interval, of, startWith, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
-import { InstrumentResponse, IntradayPriceResponse, PositionResponse } from '../../api/trading.models';
+import { InstrumentResponse, IntradayPriceResponse, OrderResponse, PositionResponse } from '../../api/trading.models';
 import { TradingApiService } from '../../api/trading-api.service';
 import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario } from '../../services/analytics-api.service';
 
@@ -29,6 +29,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     { value: '1y', label: '1Y' }, { value: '5y', label: '5Y' }, { value: '10y', label: '10Y' }
   ];
   positions: PositionResponse[] = [];
+  orders: OrderResponse[] = [];
   instruments: InstrumentResponse[] = [];
   scenarioSymbol = '';
   scenarioQuantity = 1;
@@ -66,11 +67,13 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.accountId = accountId;
     forkJoin({
       positions: this.tradingApi.getPositions(accountId),
+      orders: this.tradingApi.getAccountOrders(accountId),
       instruments: this.tradingApi.getInstruments(true),
       balance: this.tradingApi.getBalance(accountId)
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ positions, instruments, balance }) => {
+      next: ({ positions, orders, instruments, balance }) => {
         this.positions = positions;
+        this.orders = orders;
         this.instruments = instruments;
         this.cashBalance = Number(balance.cashBalance.amount) || 0;
         this.scenarioSymbol = instruments[0]?.symbol ?? this.positions[0]?.symbol ?? '';
@@ -152,6 +155,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const valuedPositions = this.getValuedPositions();
     const symbols = valuedPositions.map((position) => position.symbol);
     const values = valuedPositions.map((position) => position.marketValue!);
+    const acquisitionDates = symbols.map((symbol) => this.firstFilledBuyDate(symbol));
     if (!symbols.length || !this.scenarioSymbol || this.scenarioQuantity <= 0 || !Number.isInteger(this.scenarioQuantity)) {
       this.error = 'Choose an instrument and enter a positive quantity.';
       return;
@@ -160,7 +164,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.error = '';
     this.analyticsApi.getPortfolioScenario(
       symbols, values, this.scenarioSymbol, this.scenarioQuantity,
-      this.selectedPeriod, this.cashBalance, this.getVolatilityWindow()
+      this.selectedPeriod, this.cashBalance, this.getVolatilityWindow(), acquisitionDates
     ).pipe(takeUntil(this.destroy$)).subscribe({
       next: (scenario) => {
         this.scenario = scenario;
@@ -196,6 +200,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     const weights = values.map((value) => value / total);
+    const acquisitionDates = symbols.map((symbol) => this.firstFilledBuyDate(symbol));
     const allocationTotal = total + this.cashBalance;
     const allocationSymbols = [...symbols, 'CASH'];
     const allocationWeights = [...values, this.cashBalance].map((value) => value / allocationTotal);
@@ -203,11 +208,11 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.loading = true;
     this.error = '';
     forkJoin({
-      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window),
+      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window, acquisitionDates),
       allocation: this.analyticsApi.getPortfolioAllocation(allocationSymbols, allocationWeights),
-      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod),
-      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window),
-      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod)
+      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod, acquisitionDates),
+      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window, acquisitionDates),
+      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod, acquisitionDates)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ insights, allocation, cumulative, volatility, drawdown }) => {
         this.statistics = insights.statistics;
@@ -233,6 +238,14 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private getValuedPositions(): PositionResponse[] {
     return this.positions.filter((position) => position.marketValue !== null && position.marketValue > 0);
+  }
+
+  private firstFilledBuyDate(symbol: string): string {
+    const dates = this.orders
+      .filter((order) => order.symbol === symbol && order.side === 'BUY' && order.status === 'FILLED')
+      .map((order) => order.createdOn.slice(0, 10))
+      .sort();
+    return dates[0] ?? '1900-01-01';
   }
 
   private startLiveRefresh(): void {
