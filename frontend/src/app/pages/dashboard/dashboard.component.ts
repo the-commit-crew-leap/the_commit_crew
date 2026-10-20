@@ -93,6 +93,10 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return this.positions.length > 0 && this.positions.every((position) => position.marketValue !== null);
     }
 
+    get hasLastSessionPrices(): boolean {
+      return this.positions.some((position) => !position.live && position.currentPrice !== null);
+    }
+
     get todayReturn(): number {
       return this.positions.reduce((total, position) => total + (position.unrealizedPnL ?? 0), 0);
     }

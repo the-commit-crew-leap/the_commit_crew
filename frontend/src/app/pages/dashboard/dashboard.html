@@ -8,7 +8,7 @@
         Here's what's in your account.
       </p>
       <p class="market-update" *ngIf="lastUpdated">
-        Live prices updated {{ lastUpdated | date:'shortTime' }}
+        {{ hasLastSessionPrices ? 'Last available session prices' : 'Live prices' }} updated {{ lastUpdated | date:'shortTime' }}
       </p>
       <p class="market-update" *ngIf="overviewError" role="alert">
         Live prices are temporarily unavailable. Retrying automatically.

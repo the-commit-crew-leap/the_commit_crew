@@ -22,6 +22,9 @@ export interface PositionResponse {
     marketValue: number | null;
     unrealizedPnL: number | null;
     unrealizedPnLPercent: number | null;
+    priceSource: string | null;
+    priceUpdatedAt: string | null;
+    live: boolean;
 }
 
 export interface TradingApiError {

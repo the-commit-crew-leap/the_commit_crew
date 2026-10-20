@@ -7,6 +7,7 @@ import com.thecommitcrew.domain.dto.BalanceResponseDTO;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.dto.PositionResponseDTO;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 import com.thecommitcrew.domain.dto.TransactionRequestDTO;
 import com.thecommitcrew.domain.dto.TransactionResponseDTO;
 import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
@@ -25,7 +26,9 @@ import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -115,16 +118,11 @@ public class AccountController {
                 LivePriceResponse livePrice;
                 try {
                     livePrice = priceService.getCurrentLivePrice(pos.getSymbol());
+                    if (!isCurrentRegularSession(livePrice.updatedAt())) {
+                        return lastAvailablePosition(pos);
+                    }
                 } catch (LivePriceUnavailableException exception) {
-                    return new PositionResponseDTO(
-                        pos.getSymbol(),
-                        pos.getQuantity(),
-                        pos.getAverageCost(),
-                        null,
-                        null,
-                        null,
-                        null
-                    );
+                    return lastAvailablePosition(pos);
                 }
 
                 BigDecimal currentPrice = livePrice.price();
@@ -139,11 +137,72 @@ public class AccountController {
                     currentPrice,
                     marketValue,
                     unrealizedPnL,
-                    unrealizedPnLPercent
+                    unrealizedPnLPercent,
+                    livePrice.source(),
+                    livePrice.updatedAt(),
+                    livePrice.live()
                 );
             })
             .toList();
         return ResponseEntity.ok(response);
+    }
+
+    private PositionResponseDTO unavailablePosition(Position position) {
+        return new PositionResponseDTO(
+            position.getSymbol(),
+            position.getQuantity(),
+            position.getAverageCost(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        );
+    }
+
+    private PositionResponseDTO lastAvailablePosition(Position position) {
+        try {
+            IntradayPriceResponse intraday = priceService.getIntradayPrices(position.getSymbol());
+            if (intraday.bars().isEmpty()) {
+                return unavailablePosition(position);
+            }
+            IntradayPriceResponse.IntradayBar lastBar = intraday.bars().get(intraday.bars().size() - 1);
+            BigDecimal currentPrice = lastBar.close();
+            return new PositionResponseDTO(
+                position.getSymbol(),
+                position.getQuantity(),
+                position.getAverageCost(),
+                currentPrice,
+                positionService.marketValue(position, currentPrice),
+                positionService.unrealizedProfitLoss(position, currentPrice),
+                positionService.unrealizedPnLPercent(position, currentPrice),
+                intraday.source(),
+                intraday.updatedAt(),
+                false
+            );
+        } catch (RuntimeException fallbackException) {
+            return unavailablePosition(position);
+        }
+    }
+
+    private boolean isCurrentRegularSession(java.time.Instant tradeTimestamp) {
+        if (tradeTimestamp == null) {
+            return false;
+        }
+        ZoneId eastern = ZoneId.of("America/New_York");
+        ZonedDateTime now = ZonedDateTime.now(eastern);
+        ZonedDateTime tradeTime = tradeTimestamp.atZone(eastern);
+        LocalTime currentTime = now.toLocalTime();
+        LocalTime marketOpen = LocalTime.of(9, 30);
+        LocalTime marketClose = LocalTime.of(16, 0);
+        return now.getDayOfWeek().getValue() <= 5
+            && tradeTime.toLocalDate().equals(now.toLocalDate())
+            && !currentTime.isBefore(marketOpen)
+            && currentTime.isBefore(marketClose)
+            && !tradeTime.toLocalTime().isBefore(marketOpen)
+            && tradeTime.toLocalTime().isBefore(marketClose);
     }
 
     @GetMapping("/orders")

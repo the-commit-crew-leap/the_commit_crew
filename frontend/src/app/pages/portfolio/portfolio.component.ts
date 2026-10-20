@@ -56,7 +56,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       balance: this.tradingApi.getBalance(accountId)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ positions, instruments, balance }) => {
-        this.positions = positions.filter((position) => (position.marketValue ?? 0) > 0);
+        this.positions = positions;
         this.instruments = instruments;
         this.cashBalance = Number(balance.cashBalance.amount) || 0;
         this.scenarioSymbol = instruments[0]?.symbol ?? this.positions[0]?.symbol ?? '';
@@ -96,8 +96,9 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   runScenario(): void {
-    const symbols = this.positions.map((position) => position.symbol);
-    const values = this.positions.map((position) => position.marketValue ?? 0);
+    const valuedPositions = this.getValuedPositions();
+    const symbols = valuedPositions.map((position) => position.symbol);
+    const values = valuedPositions.map((position) => position.marketValue!);
     if (!symbols.length || !this.scenarioSymbol || this.scenarioQuantity <= 0 || !Number.isInteger(this.scenarioQuantity)) {
       this.error = 'Choose an instrument and enter a positive quantity.';
       return;
@@ -130,12 +131,13 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   runPortfolioAnalytics(): void {
-    const symbols = this.positions.map((position) => position.symbol);
-    const values = this.positions.map((position) => position.marketValue ?? 0);
+    const valuedPositions = this.getValuedPositions();
+    const symbols = valuedPositions.map((position) => position.symbol);
+    const values = valuedPositions.map((position) => position.marketValue!);
     const total = values.reduce((sum, value) => sum + value, 0);
     if (!symbols.length || total <= 0) {
       this.loading = false;
-      this.error = 'No holdings available for portfolio analytics.';
+      this.error = 'Portfolio analytics are unavailable until market values load.';
       this.cdr.markForCheck();
       return;
     }
@@ -174,6 +176,10 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   formatRatio(value: number | null): string {
     return value === null ? '—' : value.toFixed(2);
+  }
+
+  private getValuedPositions(): PositionResponse[] {
+    return this.positions.filter((position) => position.marketValue !== null && position.marketValue > 0);
   }
 
   private allChartsReady(): boolean {

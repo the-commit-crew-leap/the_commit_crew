@@ -7,8 +7,8 @@
     </section>
     <p *ngIf="error" class="state-message" role="alert">{{ error }}</p>
     <p *ngIf="loading && !error" class="state-message">Loading portfolio analytics...</p>
+    <section *ngIf="!loading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
     <ng-container *ngIf="!loading && !error">
-      <section class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue | number:'1.0-0' }} USD</span></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
       <section *ngIf="statistics[0] as statistic" class="metric-strip" aria-label="Portfolio statistics">
         <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
         <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>

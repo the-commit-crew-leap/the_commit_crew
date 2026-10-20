@@ -85,6 +85,75 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
       : null;
   }
 
+  sessionOpen(): number | null {
+    return this.intraday?.bars[0]?.open ?? null;
+  }
+
+  sessionClose(): number | null {
+    return this.intraday?.bars.length
+      ? this.intraday.bars[this.intraday.bars.length - 1].close
+      : null;
+  }
+
+  openToCloseDifference(): number | null {
+    const open = this.sessionOpen();
+    const close = this.sessionClose();
+    return open === null || close === null ? null : close - open;
+  }
+
+  formatDifference(value: number | null): string {
+    if (value === null) {
+      return '—';
+    }
+
+    const sign = value >= 0 ? '+' : '-';
+    return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  isLastAvailableSession(): boolean {
+    return !this.isCurrentSession();
+  }
+
+  sessionLabel(): string {
+    return this.isCurrentSession() ? 'Live market session' : 'Last available session';
+  }
+
+  sessionChartLabel(): string {
+    return this.isCurrentSession() ? "Today's price action" : 'Last available price action';
+  }
+
+  private isCurrentSession(): boolean {
+    if (!this.intraday) {
+      return false;
+    }
+
+    const now = new Date();
+    const easternDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    const timeParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(now);
+    const hour = Number(timeParts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(timeParts.find((part) => part.type === 'minute')?.value);
+    const weekday = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short'
+    }).format(now);
+
+    return easternDate === this.intraday.sessionDate
+      && weekday !== 'Sat'
+      && weekday !== 'Sun'
+      && (hour > 9 || (hour === 9 && minute >= 30))
+      && hour < 16;
+  }
+
   private loadMarketData(): void {
     this.loading = true;
     this.error = '';

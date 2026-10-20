@@ -22,6 +22,8 @@ h2 { margin: 0; font-size: 28px; font-weight: 500; }
 .stat-grid article { display: flex; min-height: 62px; box-sizing: border-box; flex-direction: column; justify-content: space-between; padding: 10px; border: 1px solid #29313c; border-radius: 8px; background: #101419; }
 .stat-grid span, footer span { color: #8993a3; font-size: 11px; }
 .stat-grid strong { color: #f0f2f6; font-size: 17px; font-weight: 500; }
+.stat-grid strong.positive { color: #64d6a0; }
+.stat-grid strong.negative { color: #ff929b; }
 .modal-state { margin: 28px 0; color: #8993a3; text-align: center; }
 .modal-state.error { color: #ff929b; }
 footer { min-height: 42px; box-sizing: border-box; padding-top: 16px; border-top: 1px solid #29313c; }

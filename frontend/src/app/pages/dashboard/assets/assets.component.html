@@ -24,7 +24,12 @@
         <strong>{{ position.symbol }}</strong>
         <small>{{ formatQuantity(position.quantity) }}</small>
       </button>
-      <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
+      <span role="cell">
+        ${{ formatCurrency(position.currentPrice) }}
+        <small class="price-status">
+          {{ position.live ? 'Live' : position.currentPrice !== null ? 'Last available session' : 'Unavailable' }}
+        </small>
+      </span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span
         role="cell"
