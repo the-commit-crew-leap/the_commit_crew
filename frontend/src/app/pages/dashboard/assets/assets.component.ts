@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, EventEmitter, OnDestroy, OnInit, Output }
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { PositionResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { Subject, exhaustMap, interval, startWith, takeUntil } from 'rxjs';
+import { EMPTY, Subject, catchError, exhaustMap, interval, startWith, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-assets',
@@ -17,6 +17,7 @@ export class AssetsComponent implements OnDestroy, OnInit {
   positions: PositionResponse[] = [];
   loading = true;
   error = '';
+  lastUpdated: Date | null = null;
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -34,20 +35,24 @@ export class AssetsComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(1000).pipe(
+    interval(5000).pipe(
       startWith(0),
-      exhaustMap(() => this.tradingApi.getPositions(accountId)),
+      exhaustMap(() => this.tradingApi.getPositions(accountId).pipe(
+        catchError((error) => {
+          console.error('Failed to refresh account positions', error);
+          this.error = 'Live prices are temporarily unavailable.';
+          this.loading = false;
+          this.cdr.detectChanges();
+          return EMPTY;
+        })
+      )),
       takeUntil(this.destroy$)
     ).subscribe({
       next: (positions) => {
         this.positions = positions;
         this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Failed to load account positions', error);
-        this.error = 'Unable to load your assets.';
-        this.loading = false;
+        this.error = '';
+        this.lastUpdated = new Date();
         this.cdr.detectChanges();
       }
     });

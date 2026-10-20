@@ -57,6 +57,9 @@
   <p *ngIf="!loading && !error && success" class="watchlist-state watchlist-success" role="status">
     {{ success }}
   </p>
+  <p *ngIf="!loading && !error && priceError" class="watchlist-state watchlist-error" role="status">
+    {{ priceError }}
+  </p>
   <p *ngIf="!loading && !error && watchlist.length === 0" class="watchlist-state">
     Your watchlist is empty. Search for an instrument above to get started.
   </p>
@@ -88,4 +91,7 @@
       </button>
     </li>
   </ul>
+  <p *ngIf="lastUpdated" class="watchlist-state">
+    Live prices updated {{ lastUpdated | date:'shortTime' }}
+  </p>
 </section>

@@ -9,7 +9,8 @@ import {
     PositionResponse,
     PlaceOrderRequest,
     InstrumentResponse,
-    PriceResponse
+    PriceResponse,
+    MarketTickerResponse
 } from './trading.models';
 
 @Injectable({ providedIn: 'root' })
@@ -48,6 +49,10 @@ export class TradingApiService {
         return this.http.get<PriceResponse>(
             `${this.baseUrl}/instruments/${encodeURIComponent(symbol)}/price`
         );
+    }
+
+    getMarketTicker(): Observable<MarketTickerResponse[]> {
+        return this.http.get<MarketTickerResponse[]>(`${this.baseUrl}/instruments/markets`);
     }
 
     getWatchlist(accountId: string): Observable<InstrumentResponse[]> {

@@ -29,6 +29,7 @@ import org.springframework.web.client.RestTemplate;
 import com.thecommitcrew.auth.AuthServiceClient;
 import com.thecommitcrew.auth.JwtAuthenticationFilter;
 import com.thecommitcrew.domain.enums.AccountStatus;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
 import com.thecommitcrew.domain.exception.AccountNotFoundException;
@@ -176,7 +177,13 @@ class AccountControllerTest {
             BigDecimal unrealizedPnLPercent = new BigDecimal("30.3333");
 
             when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(positions);
-            when(priceService.getCurrentPrice("AAPL")).thenReturn(currentPrice);
+            when(priceService.getCurrentLivePrice("AAPL")).thenReturn(new LivePriceResponse(
+                "AAPL",
+                currentPrice,
+                "ALPACA_IEX",
+                true,
+                java.time.Instant.parse("2026-10-19T10:00:00Z")
+            ));
             when(positionService.marketValue(position, currentPrice)).thenReturn(marketValue);
             when(positionService.unrealizedProfitLoss(position, currentPrice)).thenReturn(unrealizedPnL);
             when(positionService.unrealizedPnLPercent(position, currentPrice)).thenReturn(unrealizedPnLPercent);
@@ -193,17 +200,22 @@ class AccountControllerTest {
         }
 
         @Test
-        @DisplayName("Returns 404 when price not found for symbol")
-        void returns404WhenPriceNotFound() throws Exception {
+        @DisplayName("Returns a position without market values when live price is unavailable")
+        void returnsPositionWithoutMarketValuesWhenPriceUnavailable() throws Exception {
             Position position = new Position(TEST_ACCOUNT_ID, "UNKNOWN", 100L, new BigDecimal("150.00"));
             List<Position> positions = List.of(position);
 
             when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(positions);
-            when(priceService.getCurrentPrice("UNKNOWN"))
-                .thenThrow(new com.thecommitcrew.domain.exception.PriceNotFoundException("No price found for symbol: UNKNOWN"));
+            when(priceService.getCurrentLivePrice("UNKNOWN"))
+                .thenThrow(new com.thecommitcrew.domain.exception.LivePriceUnavailableException(
+                    "Live price is unavailable for symbol: UNKNOWN"
+                ));
 
             mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].symbol").value("UNKNOWN"))
+                .andExpect(jsonPath("$[0].currentPrice").doesNotExist())
+                .andExpect(jsonPath("$[0].marketValue").doesNotExist());
         }
 
         @Test
