@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.thecommitcrew.config.AlpacaProperties;
@@ -23,9 +25,15 @@ import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 public class AlpacaMarketDataClient {
     private final AlpacaProperties properties;
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
-    public AlpacaMarketDataClient(AlpacaProperties properties, RestClient.Builder restClientBuilder) {
+    public AlpacaMarketDataClient(
+        AlpacaProperties properties,
+        RestClient.Builder restClientBuilder,
+        ObjectMapper objectMapper
+    ) {
         this.properties = properties;
+        this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
             .baseUrl(properties.dataUrl())
             .defaultHeaders(headers -> {
@@ -121,13 +129,20 @@ public class AlpacaMarketDataClient {
     }
 
     public CryptoSnapshot getLatestCryptoSnapshot(String symbol) {
-        JsonNode response = restClient.get()
+        String responseBody = restClient.get()
             .uri(uriBuilder -> uriBuilder
                 .path("/v1beta3/crypto/{feed}/snapshots")
                 .queryParam("symbols", symbol)
                 .build("us"))
             .retrieve()
-            .body(JsonNode.class);
+            .body(String.class);
+
+        JsonNode response;
+        try {
+            response = objectMapper.readTree(responseBody);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Alpaca returned invalid JSON for symbol: " + symbol, exception);
+        }
 
         JsonNode snapshot = findCryptoSnapshot(response, symbol);
         if (snapshot == null || snapshot.get("latestTrade") == null) {
