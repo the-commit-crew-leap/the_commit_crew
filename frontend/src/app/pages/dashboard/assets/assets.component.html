@@ -10,6 +10,7 @@
   <div class="assets-table" role="table" aria-label="Your assets">
     <div class="assets-row assets-row-header" role="row">
       <span role="columnheader">Asset</span>
+      <span role="columnheader">Amount</span>
       <span role="columnheader">Current price</span>
       <span role="columnheader">Value</span>
       <span role="columnheader">Today's P&amp;L</span>
@@ -22,8 +23,8 @@
     <div *ngFor="let position of positions" class="assets-row" role="row">
       <button class="asset-name asset-name-button" type="button" role="cell" (click)="selectInstrument(position.symbol)" [attr.aria-label]="'View statistics for ' + position.symbol">
         <strong>{{ position.symbol }}</strong>
-        <small>{{ formatQuantity(position.quantity) }}</small>
       </button>
+      <span role="cell">{{ formatQuantity(position.quantity) }}</span>
       <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span
