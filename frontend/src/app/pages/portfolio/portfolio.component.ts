@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, exhaustMap, forkJoin, interval, of, startWith, Subject, Subscription, takeUntil } from 'rxjs';
+import { catchError, exhaustMap, forkJoin, interval, of, startWith, Subject, Subscription, switchMap, takeUntil } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
-import { InstrumentResponse, PositionResponse } from '../../api/trading.models';
+import { InstrumentResponse, IntradayPriceResponse, PositionResponse } from '../../api/trading.models';
 import { TradingApiService } from '../../api/trading-api.service';
 import { AnalyticsApiService, AnalyticsStatistic, PlotlyFigure, PortfolioScenario } from '../../services/analytics-api.service';
 
@@ -47,6 +47,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   private accountId = '';
   private liveRefreshSubscription?: Subscription;
   private liveHistory: Array<{ time: string; value: number; pnl: number }> = [];
+  private liveIntraday: IntradayPriceResponse[] = [];
   private pendingLiveFigures?: PlotlyFigure[];
   private pendingFigures?: { allocation: PlotlyFigure; cumulative: PlotlyFigure; volatility: PlotlyFigure; drawdown: PlotlyFigure };
   private readonly authSession = inject(AuthSessionService);
@@ -240,10 +241,17 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       startWith(0),
       exhaustMap(() => {
         this.liveLoading = true;
-        return forkJoin({
-          positions: this.tradingApi.getPositions(this.accountId),
-          balance: this.tradingApi.getBalance(this.accountId)
-        }).pipe(
+        return this.tradingApi.getPositions(this.accountId).pipe(
+          switchMap((positions) => forkJoin({
+            positions: of(positions),
+            balance: this.tradingApi.getBalance(this.accountId),
+            intraday: forkJoin(
+              positions.map((position) => this.tradingApi.getInstrumentIntraday(position.symbol).pipe(
+                catchError(() => of(null))
+              ))
+            )
+          }))
+        ).pipe(
           catchError((error) => {
             console.error('Failed to refresh live portfolio snapshot', error);
             this.liveError = 'Live portfolio data is temporarily unavailable.';
@@ -261,9 +269,12 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
 
       this.positions = snapshot.positions;
       this.cashBalance = Number(snapshot.balance.cashBalance.amount) || 0;
+      this.liveIntraday = snapshot.intraday.filter(
+        (intraday): intraday is IntradayPriceResponse => intraday !== null
+      );
       this.liveError = '';
       this.liveUpdatedAt = new Date();
-        this.recordLiveSnapshot();
+      this.recordLiveSnapshot();
       this.cdr.markForCheck();
     });
   }
@@ -286,12 +297,42 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private recordLiveSnapshot(): void {
-    const now = this.liveUpdatedAt ?? new Date();
-    this.liveHistory = [
-      ...this.liveHistory,
-      { time: now.toISOString(), value: this.liveTotalValue(), pnl: this.liveUnrealizedPnL() }
-    ].slice(-60);
+    this.liveHistory = this.calculateIntradayPortfolioHistory();
     this.pendingLiveFigures = this.createLiveFigures();
+  }
+
+  private calculateIntradayPortfolioHistory(): Array<{ time: string; value: number; pnl: number }> {
+    const positionsBySymbol = new Map(this.positions.map((position) => [position.symbol, position]));
+    const timestamps = [...new Set(this.liveIntraday.flatMap((intraday) =>
+      intraday.bars.map((bar) => bar.timestamp)
+    ))].sort();
+    const latestPrices = new Map<string, number>();
+
+    return timestamps.map((timestamp) => {
+      for (const intraday of this.liveIntraday) {
+        const bar = intraday.bars.filter((candidate) => candidate.timestamp <= timestamp).at(-1);
+        if (bar) {
+          latestPrices.set(intraday.symbol, bar.close);
+        }
+      }
+
+      let holdingsValue = 0;
+      let unrealizedPnl = 0;
+      for (const [symbol, price] of latestPrices) {
+        const position = positionsBySymbol.get(symbol);
+        if (!position) {
+          continue;
+        }
+        holdingsValue += position.quantity * price;
+        unrealizedPnl += position.quantity * (price - position.averageCost);
+      }
+
+      return {
+        time: timestamp,
+        value: holdingsValue + this.cashBalance,
+        pnl: unrealizedPnl
+      };
+    });
   }
 
   private createLiveFigures(): PlotlyFigure[] {
@@ -299,7 +340,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const symbols = valuedPositions.map((position) => position.symbol);
     const values = valuedPositions.map((position) => position.marketValue ?? 0);
     const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
-    const prices = valuedPositions.map((position) => position.currentPrice ?? 0);
     return [
       { data: [{ type: 'pie', labels: [...symbols, 'CASH'], values: [...values, this.cashBalance], hole: 0.55 }], layout: {} },
       { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.value), line: { color: '#a7b8fa', width: 2 } }], layout: { yaxis: { title: 'USD' } } },

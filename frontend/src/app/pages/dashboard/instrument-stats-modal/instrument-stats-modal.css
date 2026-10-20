@@ -10,7 +10,7 @@ h2 { margin: 0; font-size: 28px; font-weight: 500; }
 .period-buttons { display: flex; gap: 5px; }
 .period-buttons button { min-width: 42px; padding: 7px 9px; border: 1px solid #36404e; border-radius: 5px; background: #101419; color: #aeb7c5; font: inherit; font-size: 11px; cursor: pointer; }
 .period-buttons button:hover, .period-buttons button.is-active { border-color: #a7b8fa; background: #27304a; color: #f0f2f6; }
-.modal-body { display: grid; grid-template-columns: minmax(235px, .68fr) minmax(0, 1.32fr); gap: 18px; min-height: 0; min-width: 0; margin-top: 20px; }
+.modal-body { display: grid; grid-template-columns: minmax(220px, .3fr) minmax(0, .7fr); gap: 18px; min-height: 0; min-width: 0; margin-top: 20px; }
 .quote-panel, .volatility-panel { min-width: 0; box-sizing: border-box; padding: 16px 14px; border: 1px solid #29313c; border-radius: 8px; background: #101419; }
 .volatility-panel { display: flex; flex-direction: column; }
 .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }

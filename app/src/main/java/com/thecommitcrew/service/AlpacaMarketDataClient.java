@@ -86,7 +86,7 @@ public class AlpacaMarketDataClient {
         ZonedDateTime now = ZonedDateTime.now(eastern);
         ZonedDateTime requestStart = now.minusDays(7).toLocalDate().atTime(9, 30).atZone(eastern);
 
-        JsonNode response = restClient.get()
+        String responseBody = restClient.get()
             .uri(uriBuilder -> uriBuilder
                 .path("/v2/stocks/{symbol}/bars")
                 .queryParam("timeframe", "1Min")
@@ -97,11 +97,28 @@ public class AlpacaMarketDataClient {
                 .queryParam("limit", 10000)
                 .build(symbol))
             .retrieve()
-            .body(JsonNode.class);
+            .body(String.class);
+
+        JsonNode response;
+        try {
+            response = objectMapper.readTree(responseBody);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Alpaca returned invalid intraday JSON for symbol: " + symbol, exception);
+        }
 
         JsonNode barsNode = response == null ? null : response.path("bars");
         if (barsNode != null && barsNode.isObject()) {
-            barsNode = barsNode.path(symbol);
+            JsonNode symbolBars = barsNode.path(symbol);
+            if (!symbolBars.isArray()) {
+                String normalizedSymbol = symbol.replace("/", "").toUpperCase();
+                for (var entry : barsNode.properties()) {
+                    if (entry.getKey().replace("/", "").toUpperCase().equals(normalizedSymbol)) {
+                        symbolBars = entry.getValue();
+                        break;
+                    }
+                }
+            }
+            barsNode = symbolBars;
         }
         if (barsNode == null || !barsNode.isArray()) {
             throw new IllegalStateException("Alpaca returned no intraday bars for symbol: " + symbol);
@@ -109,21 +126,28 @@ public class AlpacaMarketDataClient {
 
         List<IntradayPriceResponse.IntradayBar> allBars = new ArrayList<>();
         for (JsonNode bar : barsNode) {
-            allBars.add(new IntradayPriceResponse.IntradayBar(
-                Instant.parse(bar.path("t").asText()),
-                decimalField(bar, "o"),
-                decimalField(bar, "h"),
-                decimalField(bar, "l"),
-                decimalField(bar, "c"),
-                bar.path("v").asLong()
-            ));
+            try {
+                allBars.add(new IntradayPriceResponse.IntradayBar(
+                    Instant.parse(bar.path("t").asText()),
+                    decimalField(bar, "o"),
+                    decimalField(bar, "h"),
+                    decimalField(bar, "l"),
+                    decimalField(bar, "c"),
+                    bar.path("v").asLong()
+                ));
+            } catch (RuntimeException ignored) {
+            }
+        }
+
+        if (allBars.isEmpty()) {
+            throw new IllegalStateException("Alpaca returned no valid intraday bars for symbol: " + symbol);
         }
 
         LocalDate sessionDate = allBars.stream()
             .map(bar -> bar.timestamp().atZone(eastern))
             .filter(timestamp -> isRegularSessionTime(timestamp.toLocalTime()))
-            .map(ZonedDateTime::toLocalDate)
-            .max(LocalDate::compareTo)
+            .map(timestamp -> timestamp.toLocalDate())
+            .max((left, right) -> left.compareTo(right))
             .orElse(now.toLocalDate());
         List<IntradayPriceResponse.IntradayBar> bars = allBars.stream()
             .filter(bar -> {

@@ -24,7 +24,6 @@
             <span>Live price</span>
             <strong>{{ isLastAvailableSession() ? '—' : '$' + formatPrice(quote.price) }}</strong>
           </article>
-          <article><span>Source</span><strong>{{ isLastAvailableSession() ? 'Market closed' : quote.source }}</strong></article>
           <article><span>Session open</span><strong>${{ formatPrice(sessionOpen()) }}</strong></article>
           <article><span>Session high</span><strong>${{ formatPrice(sessionHigh()) }}</strong></article>
           <article><span>Session low</span><strong>${{ formatPrice(sessionLow()) }}</strong></article>
