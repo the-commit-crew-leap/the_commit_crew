@@ -35,7 +35,7 @@ export class AssetsComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(5000).pipe(
+    interval(1000).pipe(
       startWith(0),
       exhaustMap(() => this.tradingApi.getPositions(accountId).pipe(
         catchError((error) => {

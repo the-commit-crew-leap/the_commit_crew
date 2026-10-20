@@ -52,7 +52,7 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return;
     }
 
-    interval(5000).pipe(
+    interval(1000).pipe(
       startWith(0),
       exhaustMap(() => forkJoin({
         balance: this.depositService.getBalance(accountId, false),
