@@ -2,7 +2,10 @@
   <div class="workspace">
     <div class="dash-card">
       <h1>Trading overview</h1>
-      <p class="welcome-message">Welcome back. Here's what's in your account.</p>
+      <p class="welcome-message">
+        Welcome back<span *ngIf="authSession.username()">, {{ authSession.username() }}</span>.
+        Here's what's in your account.
+      </p>
       <p class="market-update" *ngIf="lastUpdated">
         Live prices updated {{ lastUpdated | date:'shortTime' }}
       </p>

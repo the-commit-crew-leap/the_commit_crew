@@ -269,6 +269,9 @@ components:
           type: integer
           minimum: 1
           description: Access token expiration time in seconds
+        username:
+          type: string
+          description: Signed-in username, when available
         accountId:
           type: string
           description: Linked trading account ID, when available

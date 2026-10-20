@@ -9,6 +9,7 @@ import { TokenStorageService } from './token-storage.service';
 })
 export class AuthSessionService {
   readonly accountId = signal<string | null>(null);
+  readonly username = signal<string | null>(null);
 
   constructor(
     private readonly authApi: AuthApiService,
@@ -22,6 +23,7 @@ export class AuthSessionService {
       tap((response) => {
         localStorage.setItem('auth.accountId', response.accountId);
         this.accountId.set(response.accountId);
+        this.username.set(response.username || payload.username);
 
         const expiresAt = Date.now() + response.expiresIn * 1000;
 
@@ -44,6 +46,7 @@ export class AuthSessionService {
     const expiresIn = Number(params.get('expiresIn'));
     const accountId = params.get('accountId');
     const role = params.get('role');
+    const username = params.get('username');
 
     if (!accessToken || !refreshToken || !Number.isFinite(expiresIn) || !accountId || !role) {
       return false;
@@ -51,6 +54,7 @@ export class AuthSessionService {
 
     localStorage.setItem('auth.accountId', accountId);
     this.accountId.set(accountId);
+    this.username.set(username);
     this.tokenStorage.saveSession({
       accessToken,
       refreshToken,
@@ -73,6 +77,8 @@ export class AuthSessionService {
       tap((response) => {
         if (!response.valid) {
           this.logout();
+        } else {
+          this.username.set(response.username);
         }
       }),
       map(() => void 0),
@@ -91,6 +97,7 @@ export class AuthSessionService {
     this.tokenStorage.clearSession();
     localStorage.removeItem('auth.accountId');
     this.accountId.set(null);
+    this.username.set(null);
   }
 
   getAccessToken(): string | null {
