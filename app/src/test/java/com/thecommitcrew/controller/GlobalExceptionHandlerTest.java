@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -42,8 +42,7 @@ class GlobalExceptionHandlerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Nested
     @DisplayName("404 Not Found exceptions")
@@ -79,7 +78,7 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Handles AccountNotActiveException with 422 status")
         void handlesAccountNotActive() throws Exception {
             mockMvc.perform(get("/test-account-not-active"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.errorCode", is("ACCOUNT_NOT_ACTIVE")))
                 .andExpect(jsonPath("$.message", is("Account is not active")));
         }
@@ -88,7 +87,7 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Handles InsufficientFundsException with 422 status")
         void handlesInsufficientFunds() throws Exception {
             mockMvc.perform(get("/test-insufficient-funds"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.errorCode", is("INSUFFICIENT_FUNDS")))
                 .andExpect(jsonPath("$.message", is("Insufficient funds to complete transaction")));
         }
@@ -97,7 +96,7 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Handles InsufficientHoldingsException with 422 status")
         void handlesInsufficientHoldings() throws Exception {
             mockMvc.perform(get("/test-insufficient-holdings"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.errorCode", is("INSUFFICIENT_HOLDINGS")))
                 .andExpect(jsonPath("$.message", is("Insufficient holdings to sell")));
         }
@@ -106,7 +105,7 @@ class GlobalExceptionHandlerTest {
         @DisplayName("Handles DuplicateOrderException with 422 status")
         void handlesDuplicateOrder() throws Exception {
             mockMvc.perform(get("/test-duplicate-order"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.errorCode", is("DUPLICATE_ORDER")))
                 .andExpect(jsonPath("$.message", is("Order with ID 456 already exists")));
         }

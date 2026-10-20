@@ -41,9 +41,20 @@ export class MarketTickerComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.marketData = this.markets.map((symbol) =>
-        markets.find((market) => market.symbol === symbol) ?? this.unavailable(symbol)
-      );
+      this.marketData = this.markets.map((symbol) => {
+        const latest = markets.find((market) => market.symbol === symbol);
+        const previous = this.marketData.find((market) => market.symbol === symbol);
+        if (!latest || latest.price === null) {
+          return previous ?? this.unavailable(symbol);
+        }
+        return {
+          ...latest,
+          changePercent: latest.changePercent ?? previous?.changePercent ?? null,
+          source: latest.source ?? previous?.source ?? null,
+          updatedAt: latest.updatedAt ?? previous?.updatedAt ?? null,
+          live: latest.live || previous?.live || false
+        };
+      });
       this.loading = false;
       this.error = this.marketData.some((market) => !market.live)
         ? 'Some market prices are currently unavailable.'
