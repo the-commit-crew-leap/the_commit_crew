@@ -182,5 +182,5 @@ test('shows an error when assets cannot be loaded', async ({ page }) => {
 
   await page.goto('/dashboard');
 
-  await expect(page.getByText('Unable to load your assets.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Live prices are temporarily unavailable.', { exact: true })).toBeVisible();
 });

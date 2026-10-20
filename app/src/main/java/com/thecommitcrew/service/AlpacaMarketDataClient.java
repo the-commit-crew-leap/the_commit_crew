@@ -8,12 +8,16 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.thecommitcrew.config.AlpacaProperties;
@@ -21,11 +25,21 @@ import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 
 @Component
 public class AlpacaMarketDataClient {
+    private static final long LATEST_QUOTE_CACHE_MILLIS = 4_000;
+
     private final AlpacaProperties properties;
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
+    private final Map<String, CachedQuote> latestQuoteCache = new ConcurrentHashMap<>();
+    private final Map<String, CachedCryptoSnapshot> cryptoSnapshotCache = new ConcurrentHashMap<>();
 
-    public AlpacaMarketDataClient(AlpacaProperties properties, RestClient.Builder restClientBuilder) {
+    public AlpacaMarketDataClient(
+        AlpacaProperties properties,
+        RestClient.Builder restClientBuilder,
+        ObjectMapper objectMapper
+    ) {
         this.properties = properties;
+        this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
             .baseUrl(properties.dataUrl())
             .defaultHeaders(headers -> {
@@ -44,7 +58,12 @@ public class AlpacaMarketDataClient {
         return properties.feed();
     }
 
-    public LatestTrade getLatestTrade(String symbol) {
+    public synchronized LatestTrade getLatestTrade(String symbol) {
+        CachedQuote cached = latestQuoteCache.get(symbol);
+        if (cached != null && cached.isFresh()) {
+            return cached.trade();
+        }
+
         LatestTradeResponse response = restClient.get()
             .uri(uriBuilder -> uriBuilder
                 .path("/v2/stocks/{symbol}/trades/latest")
@@ -57,7 +76,9 @@ public class AlpacaMarketDataClient {
             throw new IllegalStateException("Alpaca returned no latest trade for symbol: " + symbol);
         }
 
-        return response.trade();
+        LatestTrade trade = response.trade();
+        latestQuoteCache.put(symbol, new CachedQuote(trade, System.currentTimeMillis()));
+        return trade;
     }
 
     public IntradayPriceResponse getIntradayPrices(String symbol) {
@@ -120,14 +141,26 @@ public class AlpacaMarketDataClient {
         return !time.isBefore(LocalTime.of(9, 30)) && time.isBefore(LocalTime.of(16, 0));
     }
 
-    public CryptoSnapshot getLatestCryptoSnapshot(String symbol) {
-        JsonNode response = restClient.get()
+    public synchronized CryptoSnapshot getLatestCryptoSnapshot(String symbol) {
+        CachedCryptoSnapshot cached = cryptoSnapshotCache.get(symbol);
+        if (cached != null && cached.isFresh()) {
+            return cached.snapshot();
+        }
+
+        String responseBody = restClient.get()
             .uri(uriBuilder -> uriBuilder
                 .path("/v1beta3/crypto/{feed}/snapshots")
                 .queryParam("symbols", symbol)
                 .build("us"))
             .retrieve()
-            .body(JsonNode.class);
+            .body(String.class);
+
+        JsonNode response;
+        try {
+            response = objectMapper.readTree(responseBody);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Alpaca returned invalid JSON for symbol: " + symbol, exception);
+        }
 
         JsonNode snapshot = findCryptoSnapshot(response, symbol);
         if (snapshot == null || snapshot.get("latestTrade") == null) {
@@ -148,7 +181,21 @@ public class AlpacaMarketDataClient {
             ? null
             : Instant.parse(latestTrade.get("t").asText());
 
-        return new CryptoSnapshot(price.decimalValue(), previousClose, timestamp);
+        CryptoSnapshot snapshotResult = new CryptoSnapshot(price.decimalValue(), previousClose, timestamp);
+        cryptoSnapshotCache.put(symbol, new CachedCryptoSnapshot(snapshotResult, System.currentTimeMillis()));
+        return snapshotResult;
+    }
+
+    private record CachedQuote(LatestTrade trade, long cachedAt) {
+        private boolean isFresh() {
+            return System.currentTimeMillis() - cachedAt < LATEST_QUOTE_CACHE_MILLIS;
+        }
+    }
+
+    private record CachedCryptoSnapshot(CryptoSnapshot snapshot, long cachedAt) {
+        private boolean isFresh() {
+            return System.currentTimeMillis() - cachedAt < LATEST_QUOTE_CACHE_MILLIS;
+        }
     }
 
     private JsonNode findCryptoSnapshot(JsonNode response, String symbol) {
@@ -171,9 +218,7 @@ public class AlpacaMarketDataClient {
 
         String normalizedSymbol = symbol.replace("/", "").toUpperCase();
         JsonNode candidates = snapshots == null ? response : snapshots;
-        var fields = candidates.fields();
-        while (fields.hasNext()) {
-            var entry = fields.next();
+        for (var entry : candidates.properties()) {
             if (entry.getKey().replace("/", "").toUpperCase().equals(normalizedSymbol)) {
                 return entry.getValue();
             }
