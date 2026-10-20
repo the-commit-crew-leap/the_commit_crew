@@ -56,6 +56,7 @@ class CheckAuthTest {
             // Intentionally empty: used to test @CheckAuth authorization behavior.
         }
 
+        @SuppressWarnings("unused")
         void publicMethod() {
             // Intentionally empty: used as a control method without @CheckAuth.
         }
