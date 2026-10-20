@@ -28,7 +28,7 @@
 .watchlist-form {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 50%) auto;
+  grid-template-columns: minmax(0, 1fr) 64px;
   gap: 8px;
   padding: 0 20px 16px;
 }
@@ -85,7 +85,7 @@
 .watchlist-form button,
 .remove-button {
   margin: 0;
-  padding: 0 14px;
+  padding: 0 10px;
   height: 38px;
 }
 

@@ -38,8 +38,10 @@
           (click)="selectInstrument(instrument)"
           role="option"
           [attr.aria-selected]="index === highlightedInstrumentIndex">
-          <strong>{{ instrument.symbol }}</strong>
-          <span>{{ instrument.name }}</span>
+          <span class="instrument-option-details">
+            <strong>{{ instrument.symbol }}</strong>
+            <span>{{ instrument.name }}</span>
+          </span>
         </button>
         <p *ngIf="filteredAvailableInstruments.length === 0" class="instrument-empty">
           No matching instruments
