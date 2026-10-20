@@ -29,6 +29,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
+  private successTimeout?: ReturnType<typeof setTimeout>;
 
   @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
 
@@ -84,6 +85,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   }
 
   ngOnDestroy(): void {
+    this.clearSuccessTimeout();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -173,6 +175,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
         this.selectedSymbol = '';
         this.saving = false;
         this.success = `${instrument.symbol} was added to your watchlist.`;
+        this.dismissSuccessAfterDelay();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -210,6 +213,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
           this.refreshPricesNow();
           this.selectedSymbol = '';
           this.success = `${instrument.symbol} was added to your watchlist.`;
+          this.dismissSuccessAfterDelay();
         } else {
           this.error = 'The instrument could not be confirmed in your watchlist.';
         }
@@ -327,6 +331,22 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       this.priceError = 'Some live prices are currently unavailable.';
     }
     this.cdr.detectChanges();
+  }
+
+  private dismissSuccessAfterDelay(): void {
+    this.clearSuccessTimeout();
+    this.successTimeout = setTimeout(() => {
+      this.success = '';
+      this.cdr.detectChanges();
+      this.successTimeout = undefined;
+    }, 10000);
+  }
+
+  private clearSuccessTimeout(): void {
+    if (this.successTimeout) {
+      clearTimeout(this.successTimeout);
+      this.successTimeout = undefined;
+    }
   }
 
   get marketOpen(): boolean {
