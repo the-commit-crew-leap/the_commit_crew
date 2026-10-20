@@ -341,11 +341,18 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const values = valuedPositions.map((position) => position.marketValue ?? 0);
     const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
     return [
-      { data: [{ type: 'pie', labels: [...symbols, 'CASH'], values: [...values, this.cashBalance], hole: 0.55 }], layout: {} },
+      { data: [{ type: 'pie', labels: [...symbols, 'CASH'], values: [...values, this.cashBalance], hole: 0.55 }], layout: { showlegend: true, legend: { orientation: 'h', y: -0.08 } } },
       { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.value), line: { color: '#a7b8fa', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
       { data: [{ type: 'scatter', mode: 'lines+markers', x: this.liveHistory.map((point) => point.time), y: this.liveHistory.map((point) => point.pnl), line: { color: '#64d6a0', width: 2 } }], layout: { yaxis: { title: 'USD' } } },
       { data: [{ type: 'bar', x: symbols, y: pnl, marker: { color: pnl.map((value) => value >= 0 ? '#64d6a0' : '#ff929b') } }], layout: { yaxis: { title: 'USD' } } }
-    ].map((figure) => ({ ...figure, layout: { ...figure.layout, margin: { l: 48, r: 12, t: 12, b: 42 }, showlegend: false } }));
+    ].map((figure, index) => ({
+      ...figure,
+      layout: {
+        ...figure.layout,
+        margin: { l: 48, r: 12, t: 12, b: index === 0 ? 64 : 42 },
+        showlegend: index === 0
+      }
+    }));
   }
 
   private allLiveChartsReady(): boolean {

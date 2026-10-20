@@ -131,7 +131,7 @@
 .watchlist-item {
   --watchlist-action-width: 88px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) var(--watchlist-action-width);
+  grid-template-columns: minmax(150px, 1.35fr) minmax(92px, .8fr) minmax(92px, .8fr) minmax(100px, .9fr) var(--watchlist-action-width);
   gap: 16px;
   align-items: center;
   min-height: 62px;
@@ -147,9 +147,7 @@
   text-transform: uppercase;
 }
 
-.watchlist-columns span:nth-child(2) {
-  text-align: right;
-}
+.watchlist-columns span:nth-child(n+2) { text-align: right; }
 
 .watchlist-asset {
   display: flex;
@@ -163,9 +161,39 @@
   font-size: 12px;
 }
 
-.watchlist-price {
+.watchlist-change,
+.watchlist-range {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #e8ebf0;
+  font-size: 12px;
   text-align: right;
   white-space: nowrap;
+}
+
+.watchlist-change small,
+.watchlist-range span { color: #8993a3; font-size: 10px; }
+.watchlist-change.positive { color: #53d5ad; }
+.watchlist-change.negative { color: #ff929b; }
+
+.watchlist-price {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.watchlist-price strong {
+  color: #e8ebf0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.watchlist-price small {
+  color: #8993a3;
+  font-size: 10px;
 }
 
 .remove-button {
@@ -186,5 +214,11 @@
   .watchlist-columns,
   .watchlist-item {
     gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(92px, auto) var(--watchlist-action-width);
   }
+
+  .watchlist-columns span:nth-child(3),
+  .watchlist-columns span:nth-child(4),
+  .watchlist-item > .watchlist-change,
+  .watchlist-item > .watchlist-range { display: none; }
 }

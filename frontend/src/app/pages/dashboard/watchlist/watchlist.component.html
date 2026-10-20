@@ -68,7 +68,9 @@
 
   <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-columns" aria-hidden="true">
     <span>Asset</span>
-    <span>Latest price</span>
+    <span>Price</span>
+    <span>Change</span>
+    <span>Range</span>
     <span></span>
   </div>
   <ul *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-items">
@@ -79,10 +81,21 @@
       </div>
       <span class="watchlist-price">
         <span *ngIf="isPricePending(instrument.symbol)">Loading...</span>
-        <span *ngIf="isPriceUnavailable(instrument.symbol)">Unavailable</span>
-        <span *ngIf="!isPricePending(instrument.symbol) && !isPriceUnavailable(instrument.symbol)">
+        <span *ngIf="isPriceUnavailable(instrument.symbol) && !watchlistDetails[instrument.symbol]">Unavailable</span>
+        <span *ngIf="!isPricePending(instrument.symbol) && !isPriceUnavailable(instrument.symbol) && !watchlistDetails[instrument.symbol]">
           ${{ getLatestPrice(instrument.symbol) | number:'1.2-2' }}
         </span>
+        <ng-container *ngIf="watchlistDetails[instrument.symbol] as details">
+          <strong>${{ getLatestPrice(instrument.symbol) | number:'1.2-2' }}</strong>
+        </ng-container>
+      </span>
+      <span class="watchlist-change" [class.positive]="(getDailyChange(instrument.symbol) ?? 0) >= 0" [class.negative]="(getDailyChange(instrument.symbol) ?? 0) < 0">
+        {{ formatDailyChange(instrument.symbol) }}
+        <small>{{ getPriceStatus(instrument.symbol) }}</small>
+      </span>
+      <span class="watchlist-range">
+        <span>H {{ getSessionHigh(instrument.symbol) === null ? '—' : (getSessionHigh(instrument.symbol) | number:'1.2-2') }}</span>
+        <span>L {{ getSessionLow(instrument.symbol) === null ? '—' : (getSessionLow(instrument.symbol) | number:'1.2-2') }}</span>
       </span>
       <button
         type="button"

@@ -13,8 +13,16 @@ import { FormsModule } from '@angular/forms';
 import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
-import { InstrumentResponse } from '../../../api/trading.models';
+import { InstrumentResponse, IntradayPriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+
+interface WatchlistDetails {
+  price: number;
+  changePercent: number | null;
+  high: number;
+  low: number;
+  live: boolean;
+}
 
 @Component({
   selector: 'app-watchlist',
@@ -34,6 +42,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
   watchlistPrices: Record<string, number | null> = {};
+  watchlistDetails: Record<string, WatchlistDetails | null> = {};
   selectedSymbol = '';
   loading = true;
   priceLoading = false;
@@ -251,7 +260,29 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   }
 
   getLatestPrice(symbol: string): number | null {
-    return this.watchlistPrices[symbol] ?? null;
+    return this.watchlistDetails[symbol]?.price ?? this.watchlistPrices[symbol] ?? null;
+  }
+
+  getDailyChange(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.changePercent ?? null;
+  }
+
+  getSessionHigh(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.high ?? null;
+  }
+
+  getSessionLow(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.low ?? null;
+  }
+
+  getPriceStatus(symbol: string): string {
+    const details = this.watchlistDetails[symbol];
+    return details ? (details.live ? 'Live' : 'Last available session') : 'Unavailable';
+  }
+
+  formatDailyChange(symbol: string): string {
+    const change = this.getDailyChange(symbol);
+    return change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
   }
 
   isPricePending(symbol: string): boolean {
@@ -318,11 +349,60 @@ export class WatchlistComponent implements OnDestroy, OnInit {
 
   private applyPrices(prices: Record<string, number | null>): void {
     this.watchlistPrices = prices;
+    this.fetchWatchlistDetails().subscribe((details) => {
+      this.watchlistDetails = details;
+      this.cdr.detectChanges();
+    });
     this.priceLoading = false;
     this.lastUpdated = new Date();
     if (Object.values(prices).some((price) => price === null)) {
       this.priceError = 'Some live prices are currently unavailable.';
     }
     this.cdr.detectChanges();
+  }
+
+  private fetchWatchlistDetails(): Observable<Record<string, WatchlistDetails | null>> {
+    if (this.watchlist.length === 0 || typeof this.tradingApi.getInstrumentIntraday !== 'function') {
+      return of({});
+    }
+
+    return forkJoin(this.watchlist.map((instrument) =>
+      this.tradingApi.getInstrumentIntraday(instrument.symbol).pipe(
+        map((response) => this.toWatchlistDetails(response)),
+        catchError(() => of(null))
+      )
+    )).pipe(
+      map((details) => details.reduce<Record<string, WatchlistDetails | null>>((result, detail, index) => {
+        result[this.watchlist[index].symbol] = detail;
+        return result;
+      }, {}))
+    );
+  }
+
+  private toWatchlistDetails(response: IntradayPriceResponse): WatchlistDetails | null {
+    if (response.bars.length === 0) {
+      return null;
+    }
+
+    const first = response.bars[0];
+    const last = response.bars[response.bars.length - 1];
+    const now = new Date();
+    const easternDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(now);
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value);
+    const live = response.sessionDate === easternDate && weekday !== 'Sat' && weekday !== 'Sun'
+      && (hour > 9 || (hour === 9 && minute >= 30)) && hour < 16;
+
+    return {
+      price: last.close,
+      changePercent: first.open === 0 ? null : ((last.close - first.open) / first.open) * 100,
+      high: Math.max(...response.bars.map((bar) => bar.high)),
+      low: Math.min(...response.bars.map((bar) => bar.low)),
+      live
+    };
   }
 }
