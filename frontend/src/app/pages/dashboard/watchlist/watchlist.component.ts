@@ -15,6 +15,7 @@ import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, in
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { InstrumentResponse, IntradayPriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+import { MarketDataService } from '../../../services/market-data.service';
 
 interface WatchlistDetails {
   price: number;
@@ -22,6 +23,7 @@ interface WatchlistDetails {
   high: number;
   low: number;
   live: boolean;
+  bars: number[];
 }
 
 @Component({
@@ -34,6 +36,7 @@ interface WatchlistDetails {
 export class WatchlistComponent implements OnDestroy, OnInit {
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
+  private readonly marketData = inject(MarketDataService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
@@ -280,6 +283,20 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     return details ? (details.live ? 'Live' : 'Last available session') : 'Unavailable';
   }
 
+  sparklinePoints(symbol: string): string {
+    const values = this.watchlistDetails[symbol]?.bars ?? [];
+    if (values.length < 2) {
+      return '';
+    }
+    const minimum = Math.min(...values);
+    const spread = Math.max(...values) - minimum || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 28 - ((value - minimum) / spread) * 24;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+
   formatDailyChange(symbol: string): string {
     const change = this.getDailyChange(symbol);
     return change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
@@ -332,8 +349,8 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     }
 
     return forkJoin(watchlist.map((instrument) =>
-      this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
-        map((response) => response.live ? response.price : null),
+      this.marketData.getQuote(instrument.symbol).pipe(
+        map((response) => response.price),
         catchError((error) => {
           console.error(`Failed to load live price for ${instrument.symbol}`, error);
           return of(null);
@@ -367,7 +384,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     }
 
     return forkJoin(this.watchlist.map((instrument) =>
-      this.tradingApi.getInstrumentIntraday(instrument.symbol).pipe(
+      this.marketData.getIntraday(instrument.symbol).pipe(
         map((response) => this.toWatchlistDetails(response)),
         catchError(() => of(null))
       )
@@ -402,7 +419,8 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       changePercent: first.open === 0 ? null : ((last.close - first.open) / first.open) * 100,
       high: Math.max(...response.bars.map((bar) => bar.high)),
       low: Math.min(...response.bars.map((bar) => bar.low)),
-      live
+      live,
+      bars: response.bars.map((bar) => bar.close)
     };
   }
 }

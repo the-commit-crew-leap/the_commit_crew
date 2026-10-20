@@ -68,9 +68,10 @@
 
   <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-columns" aria-hidden="true">
     <span>Asset</span>
-    <span>Price</span>
+    <span>Latest price</span>
     <span>Change</span>
     <span>Range</span>
+    <span>Trend</span>
     <span></span>
   </div>
   <ul *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-items">
@@ -96,6 +97,9 @@
       <span class="watchlist-range">
         <span>H {{ getSessionHigh(instrument.symbol) === null ? '—' : (getSessionHigh(instrument.symbol) | number:'1.2-2') }}</span>
         <span>L {{ getSessionLow(instrument.symbol) === null ? '—' : (getSessionLow(instrument.symbol) | number:'1.2-2') }}</span>
+      </span>
+      <span class="watchlist-sparkline" [class.positive]="(getDailyChange(instrument.symbol) ?? 0) >= 0" [class.negative]="(getDailyChange(instrument.symbol) ?? 0) < 0">
+        <svg *ngIf="sparklinePoints(instrument.symbol) as points" viewBox="0 0 100 32" role="img" [attr.aria-label]="instrument.symbol + ' session trend'"><polyline [attr.points]="points" /></svg>
       </span>
       <button
         type="button"
