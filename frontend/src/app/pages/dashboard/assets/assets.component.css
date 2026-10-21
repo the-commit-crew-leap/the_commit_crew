@@ -96,13 +96,6 @@
   font-size: 12px;
 }
 
-.price-status {
-  display: block;
-  margin-top: 4px;
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-
 .positive {
   color: #53d5ad;
 }
