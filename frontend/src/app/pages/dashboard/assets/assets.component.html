@@ -13,7 +13,7 @@
       <span role="columnheader">Amount</span>
       <span role="columnheader">Current price</span>
       <span role="columnheader">Value</span>
-      <span role="columnheader">Today's P&amp;L</span>
+      <span role="columnheader">Unrealized P&amp;L</span>
     </div>
 
     <p *ngIf="loading" class="assets-state">Loading your assets...</p>
@@ -27,12 +27,16 @@
       <span role="cell">{{ formatQuantity(position.quantity) }}</span>
       <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
-      <span
-        role="cell"
-        [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
-        [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
-        {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
-          formatCurrency(position.unrealizedPnL) }}
+      <span role="cell">
+        <ng-container *ngIf="marketOpen; else marketClosedPnl">
+          <span
+            [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
+            [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
+            {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
+              formatCurrency(position.unrealizedPnL) }}
+          </span>
+        </ng-container>
+        <ng-template #marketClosedPnl>—</ng-template>
       </span>
     </div>
   </div>

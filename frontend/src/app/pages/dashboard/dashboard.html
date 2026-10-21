@@ -24,8 +24,8 @@
       <article class="overview-card">
         <span>Total portfolio value</span>
         <strong>{{ portfolioValueAvailable ? '$' + formatCurrency(portfolioValue) : '—' }}</strong>
-        <small [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
-          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }} today
+        <small [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }} unrealized P&amp;L
         </small>
       </article>
       <article class="overview-card">
@@ -36,9 +36,9 @@
         <small>USD balance · Ready to invest</small>
       </article>
       <article class="overview-card">
-        <span>Today's return</span>
-        <strong [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
-          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}
+        <span>Unrealized P&amp;L</span>
+        <strong [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }}
         </strong>
         <small>Across your portfolio</small>
       </article>

@@ -116,6 +116,10 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return this.positions.reduce((total, position) => total + (position.unrealizedPnL ?? 0), 0);
     }
 
+    get displayedUnrealizedPnL(): number {
+      return this.marketOpen ? this.todayReturn : 0;
+    }
+
     get openOrders(): number {
       return this.orders.filter((order) => order.status === 'NEW').length;
     }
