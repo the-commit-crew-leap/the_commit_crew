@@ -5,13 +5,13 @@
 <mapper namespace="com.thecommitcrew.persistence.mapper.OrderMapper">
 
     <select id="findById" resultType="com.thecommitcrew.domain.model.Order" useCache="false">
-        SELECT id, account_id as accountId, symbol, side, quantity, price, execution_price as executionPrice, status, created_on as createdOn, idempotencyKey
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey, execution_price as executionPrice
         FROM orders
         WHERE id = #{orderId}
     </select>
 
     <select id="findByAccountId" resultType="com.thecommitcrew.domain.model.Order">
-        SELECT id, account_id as accountId, symbol, side, quantity, price, execution_price as executionPrice, status, created_on as createdOn, idempotencyKey
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey, execution_price as executionPrice
         FROM orders
         WHERE account_id = #{accountId}
     </select>

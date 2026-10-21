@@ -37,7 +37,7 @@
         <p *ngIf="!loading && !error">{{ orders.length ? 'Your recent trading activity' : 'No order activity yet' }}</p>
       </div>
       <p class="total-value" *ngIf="!loading && !error">
-        Total value <strong>${{ formatCurrency(filteredOrderValue) }}</strong>
+        Total price <strong>${{ formatCurrency(filteredOrderValue) }}</strong>
       </p>
     </header>
 
@@ -99,7 +99,7 @@
             <th>Quantity</th>
             <th>Price</th>
             <th>Execution price</th>
-            <th>Total value</th>
+            <th>Total price</th>
             <th>Status</th>
           </tr>
         </thead>

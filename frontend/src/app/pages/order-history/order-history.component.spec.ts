@@ -28,6 +28,23 @@ describe('OrderHistoryComponent', () => {
     })).toBe(376.5);
   });
 
+  it('calculates the total price from the execution price when available', () => {
+    const component = createComponent();
+
+    expect(component.orderTotal({
+      orderId: 'order-1',
+      accountId: 'ACC-1001',
+      symbol: 'AAPL',
+      side: 'BUY',
+      quantity: 3,
+      price: 125.5,
+      executionPrice: 124.25,
+      status: 'FILLED',
+      createdOn: '2026-10-15T08:00:00',
+      assetClass: 'EQUITY'
+    })).toBe(372.75);
+  });
+
   it('filters orders by asset class, side, and status', () => {
     const component = createComponent();
     component.orders = [
