@@ -19,7 +19,9 @@
 
 .history-header h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--page-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: 1.15;
 }
 
 .eyebrow {
