@@ -26,7 +26,10 @@
       <span>Lookback</span>
       <div class="period-buttons"><button *ngFor="let period of periods" type="button" [class.is-active]="selectedPeriod === period.value" [attr.aria-pressed]="selectedPeriod === period.value" (click)="setPeriod(period.value)">{{ period.label }}</button></div>
     </section>
-    <p *ngIf="viewMode === 'historical' && error" class="state-message" role="alert">{{ error }}</p>
+    <div *ngIf="viewMode === 'historical' && error" class="historical-error" role="alert">
+      <p class="state-message">{{ error }}</p>
+      <button type="button" class="scenario-button" (click)="retryHistoricalAnalytics()">Retry analytics</button>
+    </div>
     <p *ngIf="viewMode === 'historical' && loading && !error" class="state-message">Loading portfolio analytics...</p>
     <section *ngIf="viewMode === 'historical' && !loading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
     <ng-container *ngIf="viewMode === 'historical' && !loading && !error">

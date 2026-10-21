@@ -11,6 +11,7 @@ import {
     InstrumentResponse,
     PriceResponse,
     IntradayPriceResponse,
+    FundamentalsResponse,
     MarketTickerResponse
 } from './trading.models';
 
@@ -55,6 +56,12 @@ export class TradingApiService {
     getInstrumentIntraday(symbol: string): Observable<IntradayPriceResponse> {
         return this.http.get<IntradayPriceResponse>(
             `${this.baseUrl}/instruments/${encodeURIComponent(symbol)}/intraday`
+        );
+    }
+
+    getInstrumentFundamentals(symbol: string): Observable<FundamentalsResponse> {
+        return this.http.get<FundamentalsResponse>(
+            `${this.baseUrl}/instruments/${encodeURIComponent(symbol)}/fundamentals`
         );
     }
 

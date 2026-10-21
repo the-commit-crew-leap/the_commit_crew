@@ -99,6 +99,21 @@ export interface IntradayBar {
     volume: number;
 }
 
+export interface FundamentalsResponse {
+    symbol: string;
+    companyName: string;
+    revenue: number | null;
+    netIncome: number | null;
+    earningsPerShare: number | null;
+    totalAssets: number | null;
+    totalLiabilities: number | null;
+    cashAndEquivalents: number | null;
+    operatingCashFlow: number | null;
+    sharesOutstanding: number | null;
+    filedAt: string | null;
+    fiscalPeriod: string | null;
+}
+
 export interface MarketTickerResponse {
     symbol: string;
     price: number | null;

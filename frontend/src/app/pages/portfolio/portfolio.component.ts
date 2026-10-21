@@ -67,7 +67,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.accountId = accountId;
     forkJoin({
       positions: this.tradingApi.getPositions(accountId),
-      orders: this.tradingApi.getAccountOrders(accountId),
+      orders: this.tradingApi.getAccountOrders(accountId).pipe(catchError(() => of([] as OrderResponse[]))),
       instruments: this.tradingApi.getInstruments(true),
       balance: this.tradingApi.getBalance(accountId)
     }).pipe(takeUntil(this.destroy$)).subscribe({
@@ -149,6 +149,10 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.selectedPeriod = period;
       this.runPortfolioAnalytics();
     }
+  }
+
+  retryHistoricalAnalytics(): void {
+    this.runPortfolioAnalytics();
   }
 
   runScenario(): void {
@@ -363,6 +367,8 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       tickformat: ',.0f'
     };
     const timeline = this.liveHistory.map((point) => point.time);
+    const baselineValue = this.liveHistory[0]?.value ?? 0;
+    const valueChanges = this.liveHistory.map((point) => point.value - baselineValue);
     return [
       {
         data: [{
@@ -380,10 +386,10 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       },
       {
         data: [{
-          type: 'scatter', mode: 'lines', x: timeline, y: this.liveHistory.map((point) => point.value),
+          type: 'scatter', mode: 'lines', x: timeline, y: valueChanges,
           line: { color: '#a7b8fa', width: 2.5, shape: 'spline' },
           fill: 'tozeroy', fillcolor: 'rgba(167,184,250,0.10)',
-          hovertemplate: '%{x|%H:%M}<br>$%{y:,.2f}<extra></extra>'
+          hovertemplate: '%{x|%H:%M}<br>%{y:+,.2f} USD<extra></extra>'
         }],
         layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: axis }
       },

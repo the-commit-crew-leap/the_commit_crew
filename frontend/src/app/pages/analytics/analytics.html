@@ -83,6 +83,32 @@
       </article>
     </section>
 
+    <section *ngIf="selectedSymbols.length" class="fundamentals-card" aria-labelledby="fundamentals-title">
+      <header class="section-heading">
+        <div>
+          <p class="eyebrow">Company research</p>
+          <h2 id="fundamentals-title">Fundamentals comparison</h2>
+        </div>
+        <span class="selection-count">SEC EDGAR · {{ loadingFundamentals ? 'Loading' : 'Latest filed facts' }}</span>
+      </header>
+      <p *ngIf="loadingFundamentals" class="state-message">Loading company fundamentals...</p>
+      <p *ngIf="!loadingFundamentals && fundamentalsError" class="state-message error-message">{{ fundamentalsError }}</p>
+      <div *ngIf="!loadingFundamentals && fundamentals.length" class="fundamentals-table" role="table">
+        <div class="fundamentals-row fundamentals-header" role="row"><span>Metric</span><span *ngFor="let fundamental of fundamentals">{{ fundamental.symbol }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Revenue</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.revenue === null ? '—' : (fundamental.revenue | number:'1.0-0') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Net income</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.netIncome === null ? '—' : (fundamental.netIncome | number:'1.0-0') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>EPS</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.earningsPerShare === null ? '—' : (fundamental.earningsPerShare | number:'1.2-2') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Total assets</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.totalAssets === null ? '—' : (fundamental.totalAssets | number:'1.0-0') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Total liabilities</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.totalLiabilities === null ? '—' : (fundamental.totalLiabilities | number:'1.0-0') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Operating cash flow</strong><span *ngFor="let fundamental of fundamentals">{{ fundamental.operatingCashFlow === null ? '—' : (fundamental.operatingCashFlow | number:'1.0-0') }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>P/E ratio</strong><span *ngFor="let fundamental of fundamentals">{{ formatFundamentalRatio(priceToEarnings(fundamental)) }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>ROE</strong><span *ngFor="let fundamental of fundamentals">{{ formatFundamentalPercent(returnOnEquity(fundamental)) }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>Debt to equity</strong><span *ngFor="let fundamental of fundamentals">{{ formatFundamentalRatio(debtToEquity(fundamental)) }}</span></div>
+        <div class="fundamentals-row" role="row"><strong>EPS growth</strong><span *ngFor="let fundamental of fundamentals">—</span></div>
+        <div class="fundamentals-row" role="row"><strong>Dividend yield</strong><span *ngFor="let fundamental of fundamentals">—</span></div>
+      </div>
+    </section>
+
     <section *ngIf="statistics.length" class="statistics-card" aria-labelledby="statistics-title">
       <header class="section-heading"><div><p class="eyebrow">Readout</p><h2 id="statistics-title">Instrument statistics</h2></div></header>
       <div class="statistics-table" role="table">

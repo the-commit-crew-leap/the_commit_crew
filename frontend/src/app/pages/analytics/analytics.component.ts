@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin, of, Subject, takeUntil } from 'rxjs';
-import { InstrumentResponse } from '../../api/trading.models';
+import { catchError, forkJoin, map, of, Subject, takeUntil } from 'rxjs';
+import { FundamentalsResponse, InstrumentResponse } from '../../api/trading.models';
 import {
   AnalyticsApiService,
   AnalyticsInsights,
@@ -40,6 +40,10 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
   volatilityWindow = 30;
   insights?: AnalyticsInsights;
   statistics: AnalyticsStatistic[] = [];
+  fundamentals: FundamentalsResponse[] = [];
+  fundamentalsPrices: Record<string, number | null> = {};
+  loadingFundamentals = false;
+  fundamentalsError = '';
   loadingInstruments = true;
   loadingAnalytics = false;
   error = '';
@@ -128,6 +132,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     this.loadingAnalytics = true;
+    this.loadingFundamentals = true;
+    this.fundamentalsError = '';
     this.error = '';
     const volatilityWindow = this.getVolatilityWindow();
     forkJoin({
@@ -136,18 +142,40 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
       drawdown: this.analyticsApi.getDrawdown(this.selectedSymbols, this.period),
       candlestick: this.selectedSymbols.length === 1
         ? this.analyticsApi.getCandlestick(this.selectedSymbols[0], this.period)
-        : of(null)
+        : of(null),
+      fundamentals: forkJoin(this.selectedSymbols.map((symbol) =>
+        this.tradingApi.getInstrumentFundamentals(symbol).pipe(catchError(() => of(null)))
+      )),
+      prices: forkJoin(this.selectedSymbols.map((symbol) =>
+        this.tradingApi.getInstrumentPrice(symbol).pipe(
+          map((price) => price.price),
+          catchError(() => of(null))
+        )
+      ))
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ insights, volatility, drawdown, candlestick }) => {
+      next: ({ insights, volatility, drawdown, candlestick, fundamentals, prices }) => {
         this.insights = insights;
         this.statistics = insights.statistics;
         this.pendingFigures = { volatility, performance: this.createPerformanceFigure(insights.statistics), drawdown, candlestick };
+        this.fundamentals = fundamentals.filter(
+          (fundamental): fundamental is FundamentalsResponse => fundamental !== null
+        );
+        this.fundamentalsError = this.fundamentals.length === 0
+          ? 'SEC fundamentals are unavailable for the selected instruments.'
+          : '';
+        const currentPrices = prices as Array<number | null>;
+        this.fundamentalsPrices = this.selectedSymbols.reduce<Record<string, number | null>>((result, symbol, index) => {
+          result[symbol] = currentPrices[index] ?? null;
+          return result;
+        }, {});
         this.loadingAnalytics = false;
+        this.loadingFundamentals = false;
         this.cdr.markForCheck();
       },
       error: () => {
         this.error = 'Analytics could not be generated for the selected instruments.';
         this.loadingAnalytics = false;
+        this.loadingFundamentals = false;
         this.cdr.markForCheck();
       }
     });
@@ -159,6 +187,36 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   formatRatio(value: number | null): string {
     return value === null ? '—' : value.toFixed(2);
+  }
+
+  priceToEarnings(fundamental: FundamentalsResponse): number | null {
+    const price = this.fundamentalsPrices[fundamental.symbol];
+    const eps = fundamental.earningsPerShare;
+    return price !== null && price !== undefined && eps !== null && eps > 0 ? price / eps : null;
+  }
+
+  returnOnEquity(fundamental: FundamentalsResponse): number | null {
+    if (fundamental.netIncome === null || fundamental.totalAssets === null || fundamental.totalLiabilities === null) {
+      return null;
+    }
+    const equity = fundamental.totalAssets - fundamental.totalLiabilities;
+    return equity > 0 ? (fundamental.netIncome / equity) * 100 : null;
+  }
+
+  debtToEquity(fundamental: FundamentalsResponse): number | null {
+    if (fundamental.totalLiabilities === null || fundamental.totalAssets === null) {
+      return null;
+    }
+    const equity = fundamental.totalAssets - fundamental.totalLiabilities;
+    return equity > 0 ? fundamental.totalLiabilities / equity : null;
+  }
+
+  formatFundamentalRatio(value: number | null): string {
+    return value === null || !Number.isFinite(value) ? '—' : value.toFixed(2);
+  }
+
+  formatFundamentalPercent(value: number | null): string {
+    return value === null || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`;
   }
 
   private renderFigure(element: HTMLElement, figure: PlotlyFigure): Promise<unknown> {

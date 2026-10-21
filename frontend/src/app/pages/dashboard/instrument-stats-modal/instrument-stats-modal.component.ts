@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
+import { FundamentalsResponse, IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { forkJoin, Subject, takeUntil } from 'rxjs';
+import { catchError, forkJoin, of, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-instrument-stats-modal',
@@ -20,6 +20,9 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
 
   quote?: PriceResponse;
   intraday?: IntradayPriceResponse;
+  fundamentals?: FundamentalsResponse | null;
+  fundamentalsError = '';
+  activeTab: 'session' | 'fundamentals' = 'session';
   loading = false;
   error = '';
   private pendingFigure?: { data: unknown[]; layout: Record<string, unknown> };
@@ -67,6 +70,14 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
 
   close(): void {
     this.closed.emit();
+  }
+
+  setTab(tab: 'session' | 'fundamentals'): void {
+    this.activeTab = tab;
+    if (tab === 'session' && this.intraday) {
+      this.pendingFigure = this.createIntradayFigure(this.intraday);
+      this.cdr.detectChanges();
+    }
   }
 
   formatPrice(value: number | null | undefined): string {
@@ -159,16 +170,24 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   private loadMarketData(): void {
     this.loading = true;
     this.error = '';
+    this.fundamentalsError = '';
     this.quote = undefined;
     this.intraday = undefined;
     this.pendingFigure = undefined;
     forkJoin({
       quote: this.tradingApi.getInstrumentPrice(this.symbol),
-      intraday: this.tradingApi.getInstrumentIntraday(this.symbol)
+      intraday: this.tradingApi.getInstrumentIntraday(this.symbol),
+      fundamentals: this.tradingApi.getInstrumentFundamentals(this.symbol).pipe(
+        catchError(() => {
+          this.fundamentalsError = 'SEC fundamentals are unavailable for this instrument.';
+          return of(null);
+        })
+      )
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ quote, intraday }) => {
+      next: ({ quote, intraday, fundamentals }) => {
         this.quote = quote;
         this.intraday = intraday;
+        this.fundamentals = fundamentals;
         this.pendingFigure = this.createIntradayFigure(intraday);
         this.loading = false;
         this.cdr.markForCheck();

@@ -8,7 +8,12 @@
       <button class="close-button" type="button" aria-label="Close statistics" (click)="close()">×</button>
     </header>
 
-    <div class="modal-body">
+    <nav class="modal-tabs" aria-label="Instrument details">
+      <button type="button" [class.is-active]="activeTab === 'session'" [attr.aria-selected]="activeTab === 'session'" (click)="setTab('session')">Session</button>
+      <button type="button" [class.is-active]="activeTab === 'fundamentals'" [attr.aria-selected]="activeTab === 'fundamentals'" (click)="setTab('fundamentals')">Fundamentals</button>
+    </nav>
+
+    <div *ngIf="activeTab === 'session'" class="modal-body">
       <section class="quote-panel" aria-labelledby="quote-title">
         <div class="panel-heading">
           <div>
@@ -51,6 +56,29 @@
         <ng-template #noBars><p class="modal-state">No regular-session bars are available yet.</p></ng-template>
       </section>
     </div>
+
+    <section *ngIf="activeTab === 'fundamentals' && fundamentals && !loading" class="fundamentals-view" aria-labelledby="fundamentals-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">SEC EDGAR</p>
+            <h3 id="fundamentals-title">Fundamentals</h3>
+          </div>
+          <span *ngIf="fundamentals.filedAt">Filed {{ fundamentals.filedAt | date:'mediumDate' }}</span>
+        </div>
+        <div class="fundamentals-grid">
+          <article><span>Revenue</span><strong>{{ fundamentals.revenue === null ? '—' : (fundamentals.revenue | number:'1.0-0') }}</strong></article>
+          <article><span>Net income</span><strong>{{ fundamentals.netIncome === null ? '—' : (fundamentals.netIncome | number:'1.0-0') }}</strong></article>
+          <article><span>EPS</span><strong>{{ fundamentals.earningsPerShare === null ? '—' : (fundamentals.earningsPerShare | number:'1.2-2') }}</strong></article>
+          <article><span>Assets</span><strong>{{ fundamentals.totalAssets === null ? '—' : (fundamentals.totalAssets | number:'1.0-0') }}</strong></article>
+          <article><span>Liabilities</span><strong>{{ fundamentals.totalLiabilities === null ? '—' : (fundamentals.totalLiabilities | number:'1.0-0') }}</strong></article>
+          <article><span>Operating cash flow</span><strong>{{ fundamentals.operatingCashFlow === null ? '—' : (fundamentals.operatingCashFlow | number:'1.0-0') }}</strong></article>
+        </div>
+    </section>
+    <section *ngIf="activeTab === 'fundamentals' && fundamentalsError && !loading" class="fundamentals-view fundamentals-unavailable" aria-label="Fundamentals status">
+        <p class="eyebrow">SEC EDGAR</p>
+        <p class="modal-state">{{ fundamentalsError }}</p>
+      </section>
+
     <footer>
       <span>{{ sessionLabel() }} · {{ intraday?.sessionDate || '—' }}</span>
       <div class="footer-actions">
