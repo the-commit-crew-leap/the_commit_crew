@@ -111,7 +111,7 @@
             <td><strong>{{ order.symbol }}</strong><small>{{ order.assetClass }}</small></td>
             <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
             <td>{{ order.quantity | number:'1.0-4' }}</td>
-            <td>${{ order.price | number:'1.2-2' }}</td>
+            <td>${{ displayPrice(order) | number:'1.2-2' }}</td>
             <td>${{ orderTotal(order) | number:'1.2-2' }}</td>
             <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
           </tr>

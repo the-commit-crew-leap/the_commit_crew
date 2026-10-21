@@ -192,6 +192,7 @@ class OrderSettlementServiceTest {
         assertEquals(FILL_PRICE, update.fillPrice());
         assertEquals("Order filled at " + FILL_PRICE, update.message());
         assertEquals(EXECUTED_ON, update.timestamp());
+        assertEquals(FILL_PRICE, order.getFillPrice());
     }
 
     @Test

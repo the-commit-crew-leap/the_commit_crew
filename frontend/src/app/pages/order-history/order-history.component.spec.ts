@@ -28,6 +28,26 @@ describe('OrderHistoryComponent', () => {
     })).toBe(376.5);
   });
 
+  it('uses the fill price for filled order totals and display price', () => {
+    const component = createComponent();
+    const order = {
+      orderId: 'order-1',
+      accountId: 'ACC-1001',
+      symbol: 'AMZN',
+      side: 'BUY' as const,
+      quantity: 1,
+      price: 262.78,
+      fillPrice: 262.13,
+      status: 'FILLED' as const,
+      createdOn: '2026-10-15T08:00:00',
+      assetClass: 'EQUITY' as const
+    };
+
+    expect(component.displayPrice(order)).toBe(262.13);
+    expect(component.orderTotal(order)).toBe(262.13);
+    expect(component.orderValue(order)).toBe(262.13);
+  });
+
   it('filters orders by asset class, side, and status', () => {
     const component = createComponent();
     component.orders = [

@@ -262,6 +262,7 @@ class AccountControllerTest {
                 LocalDateTime.now(),
                 "idempotency-key-123"
             );
+            order.setFillPrice(new BigDecimal("149.50"));
             List<Order> orders = List.of(order);
 
             when(accountService.getOrders(TEST_ACCOUNT_ID)).thenReturn(orders);
@@ -273,6 +274,8 @@ class AccountControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].symbol").value("AAPL"))
                 .andExpect(jsonPath("$[0].quantity").value(100))
+                .andExpect(jsonPath("$[0].price").value(150.0))
+                .andExpect(jsonPath("$[0].fillPrice").value(149.50))
                 .andExpect(jsonPath("$[0].status").value("FILLED"));
         }
 

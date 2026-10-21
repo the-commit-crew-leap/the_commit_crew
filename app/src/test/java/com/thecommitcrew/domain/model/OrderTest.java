@@ -227,6 +227,17 @@ class OrderTest {
         }
 
         @Test
+        @DisplayName("Should return the fill price when a fill is recorded")
+        void testFillPrice() {
+            assertEquals(null, order.getFillPrice());
+
+            BigDecimal fillPrice = new BigDecimal("181.75");
+            order.setFillPrice(fillPrice);
+
+            assertEquals(fillPrice, order.getFillPrice());
+        }
+
+        @Test
         @DisplayName("Should return correct status")
         void testGetStatus() {
             assertEquals(validStatus, order.getStatus());
