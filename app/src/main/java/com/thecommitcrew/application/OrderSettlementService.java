@@ -108,7 +108,7 @@ public class OrderSettlementService {
         Optional<Position> existingPosition = positionMapper.findByAccountIdAndSymbol(accountId, order.getSymbol());
         Position position = existingPosition.orElse(new Position(accountId, order.getSymbol(), 0L, BigDecimal.ZERO));
 
-        Position updatedPosition = positionService.applyOrder(position, order);
+        Position updatedPosition = positionService.applyOrder(position, order, fill.price());
 
         BigDecimal value = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
         Account updatedAccount;

@@ -9,9 +9,10 @@
   <div class="assets-table" role="table" aria-label="Your assets">
     <div class="assets-row assets-row-header" role="row">
       <span role="columnheader">Asset</span>
+      <span role="columnheader">Amount</span>
       <span role="columnheader">Current price</span>
       <span role="columnheader">Value</span>
-      <span role="columnheader">Today's P&amp;L</span>
+      <span role="columnheader">Unrealized P&amp;L</span>
     </div>
 
     <p *ngIf="loading" class="assets-state">Loading your assets...</p>
@@ -21,7 +22,6 @@
     <div *ngFor="let position of positions" class="assets-row" role="row">
       <button class="asset-name asset-name-button" type="button" role="cell" (click)="selectInstrument(position.symbol)" [attr.aria-label]="'View statistics for ' + position.symbol">
         <strong>{{ position.symbol }}</strong>
-        <small>{{ formatQuantity(position.quantity) }}</small>
       </button>
       <span role="cell">
         ${{ formatCurrency(position.currentPrice) }}
@@ -30,18 +30,28 @@
         </small>
       </span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
-      <span
-        role="cell"
-        [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
-        [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
-        {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
-          formatCurrency(position.unrealizedPnL) }}
+      <span role="cell">
+        <ng-container *ngIf="marketOpen; else marketClosedPnl">
+          <span
+            [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
+            [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
+            {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
+              formatCurrency(position.unrealizedPnL) }}
+          </span>
+        </ng-container>
+        <ng-template #marketClosedPnl>—</ng-template>
       </span>
     </div>
   </div>
 
   <p class="assets-note">
     Spot holdings · Values shown in USD
-    <span *ngIf="lastUpdated"> · Live prices updated {{ lastUpdated | date:'shortTime' }}</span>
+    <span *ngIf="lastUpdated">
+      · <ng-container *ngIf="!marketOpen && lastTradeAt; else assetsRefreshed">
+        Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
+      </ng-container>
+      <ng-template #assetsRefreshed>Market data</ng-template>
+      Refreshed {{ lastUpdated | date:'shortTime' }}
+    </span>
   </p>
 </section>

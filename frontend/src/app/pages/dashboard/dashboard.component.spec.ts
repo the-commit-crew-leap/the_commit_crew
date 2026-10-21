@@ -149,6 +149,8 @@ describe('DashboardComponent', () => {
   });
 
   it('marks a negative today return as negative', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-20T14:00:00Z'));
     component.ngOnDestroy();
     tradingApi.getPositions.mockReturnValue(of([{
       symbol: 'AAPL',
@@ -169,5 +171,15 @@ describe('DashboardComponent', () => {
     expect(returnValues[2].className).toContain('negative');
     expect(returnValues[2].className).not.toContain('positive');
     negativeComponent.ngOnDestroy();
+    jest.useRealTimers();
+  });
+
+  it('shows zero unrealized P&L outside regular market hours', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-20T13:00:00Z'));
+    fixture.detectChanges();
+
+    expect(component.displayedUnrealizedPnL).toBe(0);
+    jest.useRealTimers();
   });
 });

@@ -4,6 +4,7 @@ import { AuthSessionService } from '../../../auth/auth-session.service';
 import { PositionResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
 import { EMPTY, Subject, catchError, exhaustMap, interval, startWith, takeUntil } from 'rxjs';
+import { isUsMarketOpen } from '../../../shared/market-status';
 
 @Component({
   selector: 'app-assets',
@@ -97,6 +98,20 @@ export class AssetsComponent implements OnDestroy, OnInit {
       minimumFractionDigits: 0,
       maximumFractionDigits: 4
     });
+  }
+
+  get lastTradeAt(): Date | null {
+    const timestamps = this.positions
+      .map((position) => position.lastTradeAt)
+      .filter((timestamp): timestamp is string => timestamp !== null)
+      .map((timestamp) => new Date(timestamp).getTime())
+      .filter((timestamp) => Number.isFinite(timestamp));
+    const latest = Math.max(...timestamps);
+    return Number.isFinite(latest) ? new Date(latest) : null;
+  }
+
+  get marketOpen(): boolean {
+    return isUsMarketOpen();
   }
 
   selectInstrument(symbol: string): void {

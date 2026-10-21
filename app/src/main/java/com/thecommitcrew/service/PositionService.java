@@ -16,6 +16,10 @@ public class PositionService {
     private static final long ZERO_QUANTITY = 0L;
     
     public Position applyOrder(Position position, Order order) {
+        return applyOrder(position, order, order.getPrice());
+    }
+
+    public Position applyOrder(Position position, Order order, BigDecimal executionPrice) {
         long orderQuantity = order.getQuantity();
         long currentQuantity = position.getQuantity();
         long newQuantity = calculateNewQuantity(currentQuantity, orderQuantity, order.getSide());
@@ -24,7 +28,7 @@ public class PositionService {
             throw new IllegalArgumentException("Cannot sell more shares than owned");
         }
         
-        BigDecimal newAverageCost = calculateUpdatedCostBasis(position, order, newQuantity);
+        BigDecimal newAverageCost = calculateUpdatedCostBasis(position, order, executionPrice, newQuantity);
         
         return new Position(position.getAccountId(), order.getSymbol(), newQuantity, newAverageCost);
     }
@@ -33,7 +37,11 @@ public class PositionService {
         return side.apply(currentQuantity, orderQuantity);
     }
     
-    private BigDecimal calculateUpdatedCostBasis(Position position, Order order, long newQuantity) {
+    private BigDecimal calculateUpdatedCostBasis(
+            Position position,
+            Order order,
+            BigDecimal executionPrice,
+            long newQuantity) {
         
         if (newQuantity == ZERO_QUANTITY) {
             return ZERO;
@@ -44,7 +52,7 @@ public class PositionService {
         }
 
         BigDecimal costBasis = calculateCostBasis(position);
-        BigDecimal tradeTotal = new BigDecimal(order.getQuantity()).multiply(order.getPrice());
+        BigDecimal tradeTotal = new BigDecimal(order.getQuantity()).multiply(executionPrice);
         BigDecimal newTotal = costBasis.add(tradeTotal);
         return newTotal.divide(new BigDecimal(newQuantity), RoundingMode.HALF_UP);
     }

@@ -12,6 +12,10 @@
     <name>The Commit Crew</name>
     <description>Trading platform application</description>
 
+    <properties>
+        <tomcat.version>11.0.27</tomcat.version>
+    </properties>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -71,6 +75,9 @@
                     <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     <failBuildOnCVSS>5.0</failBuildOnCVSS>
                     <nvdApiDelay>6000</nvdApiDelay>
+                    <suppressionFiles>
+                        <suppressionFile>${maven.multiModuleProjectDirectory}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
                 </configuration>
             </plugin>
         </plugins>

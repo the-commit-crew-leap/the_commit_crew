@@ -5,6 +5,7 @@ import {
   ElementRef,
   HostListener,
   Input,
+  OnDestroy,
   OnInit,
   ViewChild
 } from '@angular/core';
@@ -25,7 +26,7 @@ import {
   templateUrl: './order-ticket.component.html',
   styleUrl: './order-ticket.component.css'
 })
-export class OrderTicketComponent implements OnInit {
+export class OrderTicketComponent implements OnDestroy, OnInit {
   @Input() balance: BalanceResponse | null = null;
   instruments: InstrumentResponse[] = [];
   instrumentsLoading = true;
@@ -50,6 +51,7 @@ export class OrderTicketComponent implements OnInit {
   @ViewChild('orderErrorElement') private orderErrorElement?: ElementRef<HTMLElement>;
   private pricedSymbol = '';
   private priceRequestToken = 0;
+  private submittedOrderTimeout?: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly authSession: AuthSessionService,
@@ -78,6 +80,12 @@ export class OrderTicketComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.submittedOrderTimeout) {
+      clearTimeout(this.submittedOrderTimeout);
+    }
   }
 
   placeOrder(): void {
@@ -138,6 +146,7 @@ export class OrderTicketComponent implements OnInit {
         this.pricedSymbol = '';
         this.priceRequestToken++;
         this.orderSubmitting = false;
+        this.dismissSubmittedOrderAfterDelay();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -148,6 +157,18 @@ export class OrderTicketComponent implements OnInit {
         this.focusOrderError();
       }
     });
+  }
+
+  private dismissSubmittedOrderAfterDelay(): void {
+    if (this.submittedOrderTimeout) {
+      clearTimeout(this.submittedOrderTimeout);
+    }
+
+    this.submittedOrderTimeout = setTimeout(() => {
+      this.submittedOrder = null;
+      this.cdr.detectChanges();
+      this.submittedOrderTimeout = undefined;
+    }, 10000);
   }
 
   onSymbolChange(value: string): void {
