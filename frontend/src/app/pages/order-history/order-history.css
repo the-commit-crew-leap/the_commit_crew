@@ -34,7 +34,7 @@
 .history-header h1 span,
 .table-header h2 span {
   margin-left: 8px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 400;
   vertical-align: middle;
@@ -42,7 +42,7 @@
 
 .history-header p {
   margin: 6px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .history-header .eyebrow {
@@ -74,7 +74,7 @@
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .overview-card strong {
@@ -181,7 +181,7 @@
   padding: 0;
   border-radius: 50%;
   background: transparent;
-  color: #a8b1c0;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 20px;
 }
@@ -298,7 +298,7 @@ button {
 
 .badge-cancelled {
   background: #29313c;
-  color: #a8b1c0;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 760px) {

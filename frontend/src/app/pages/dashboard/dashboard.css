@@ -82,7 +82,7 @@ app-order-ticket {
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .overview-card strong {
@@ -106,7 +106,7 @@ app-order-ticket {
 
 .welcome-message {
   margin: 4px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .dash-card nav {

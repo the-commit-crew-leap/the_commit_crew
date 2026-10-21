@@ -2,6 +2,16 @@
   box-sizing: border-box;
 }
 
+:root {
+  --text-primary: #f4f6fa;
+  --text-secondary: #c3ccd8;
+  --text-muted: #aeb8c6;
+  --text-accent: #b9c5ff;
+  --surface: #151920;
+  --surface-deep: #101419;
+  --border: #3b4655;
+}
+
 html,
 body {
   min-height: 100%;
@@ -65,7 +75,7 @@ body {
 .instrument-option-details span {
   min-width: 0;
   padding-left: 16px;
-  color: #8f9aaa;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   overflow-wrap: anywhere;
   white-space: normal;
@@ -96,6 +106,6 @@ body {
 .instrument-empty {
   margin: 0;
   padding: 14px 12px;
-  color: #8f9aaa;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }

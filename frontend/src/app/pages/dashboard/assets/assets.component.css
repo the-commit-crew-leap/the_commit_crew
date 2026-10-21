@@ -54,7 +54,7 @@
 
 .assets-row-header {
   min-height: 32px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
   text-transform: uppercase;
 }
@@ -91,14 +91,14 @@
 }
 
 .asset-name small {
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .price-status {
   display: block;
   margin-top: 4px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
