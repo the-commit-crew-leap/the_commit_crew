@@ -66,6 +66,9 @@ ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
 
 ANGULAR_API_URL=http://app:8081
 ANGULAR_AUTH_URL=http://auth:3000
+
+SEC_ENABLED=true
+SEC_USER_AGENT=The Commit Crew email@example.com
 ```  
 
 2.2 Run docker-compose:<br />
