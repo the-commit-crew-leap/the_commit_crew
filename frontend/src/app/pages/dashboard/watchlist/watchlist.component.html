@@ -102,7 +102,6 @@
       </span>
       <span class="watchlist-change" [class.positive]="(getDailyChange(instrument.symbol) ?? 0) >= 0" [class.negative]="(getDailyChange(instrument.symbol) ?? 0) < 0">
         {{ formatDailyChange(instrument.symbol) }}
-        <small>{{ getPriceStatus(instrument.symbol) }}</small>
       </span>
       <span class="watchlist-range">
         <span>H {{ getSessionHigh(instrument.symbol) === null ? '—' : (getSessionHigh(instrument.symbol) | number:'1.2-2') }}</span>

@@ -201,7 +201,6 @@
   white-space: nowrap;
 }
 
-.watchlist-change small,
 .watchlist-range span { color: var(--text-secondary); font-size: 10px; }
 .watchlist-change.positive { color: #53d5ad; }
 .watchlist-change.negative { color: #ff929b; }
