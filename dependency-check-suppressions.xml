@@ -6,7 +6,7 @@
             org.hibernate.validator:hibernate-validator. Verified against the
             resolved Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <gav regex="true">^org\.hibernate\.validator:hibernate-validator$</gav>
+        <filePath regex="true">.*[\\/]hibernate-validator-9\.0\.1\.Final\.jar$</filePath>
         <cve>CVE-2025-15104</cve>
     </suppress>
 
@@ -16,29 +16,8 @@
             org.eclipse.angus:angus-activation. Verified against the resolved
             Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <gav regex="true">^org\.eclipse\.angus:angus-activation$</gav>
+        <filePath regex="true">.*[\\/]angus-activation-2\.0\.3\.jar$</filePath>
         <cve>CVE-2025-7962</cve>
     </suppress>
 
-    <suppress>
-        <notes><![CDATA[
-            The reported CVE is not confirmed to affect the resolved Swagger
-            UI WebJar version. This suppression is scoped to the exact WebJar
-            coordinate and should be reviewed when Dependency-Check updates
-            its vulnerability data.
-        ]]></notes>
-        <gav regex="true">^org\.webjars:swagger-ui$</gav>
-        <cve>CVE-2026-109344</cve>
-    </suppress>
-
-    <suppress>
-        <notes><![CDATA[
-            The reported CVE is not confirmed to affect the resolved Swagger
-            UI WebJar version. This suppression is scoped to the exact WebJar
-            coordinate and should be reviewed when Dependency-Check updates
-            its vulnerability data.
-        ]]></notes>
-        <gav regex="true">^org\.webjars:swagger-ui$</gav>
-        <cve>CVE-2026-109345</cve>
-    </suppress>
 </suppressions>
