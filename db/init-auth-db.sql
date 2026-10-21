@@ -1,5 +1,4 @@
 -- The Commit Crew Auth Database Initialization
-\c auth_db-dev
 
 -- This script creates the auth schema and seed data.
 
