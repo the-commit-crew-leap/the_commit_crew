@@ -1,6 +1,6 @@
 .dash-shell {
   min-height: 100vh;
-  padding: 24px 32px;
+  padding: var(--page-padding);
   background: #0b0e12;
 }
 
@@ -21,7 +21,7 @@
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   box-sizing: border-box;
   margin: 0 auto;
   align-items: start;
@@ -141,6 +141,10 @@ button {
 }
 
 @media (max-width: 760px) {
+  .dash-shell {
+    padding: var(--page-padding-mobile);
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }

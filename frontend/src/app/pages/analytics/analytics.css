@@ -1,6 +1,6 @@
 :host{display:block}
-.analytics-shell{min-height:100vh;padding:32px;background:#0b0e12;color:var(--text-primary)}
-.analytics-workspace{max-width:1600px;margin:0 auto}
+.analytics-shell{min-height:100vh;padding:var(--page-padding);background:#0b0e12;color:var(--text-primary)}
+.analytics-workspace{max-width:var(--content-max-width);margin:0 auto}
 .analytics-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:26px}
 .analytics-heading h1,.section-heading h2,.chart-card h2{margin:0}
 .analytics-heading h1{font-size:var(--page-title-size);font-weight:var(--page-title-weight);line-height:1.15}
@@ -13,7 +13,7 @@
 .control-block{display:flex;min-width:150px;flex-direction:column;gap:7px}
 .control-block-wide{flex:1}
 .control-block label{color:var(--text-secondary);font-size:11px}
-.control-block select,.control-block input{height:38px;box-sizing:border-box;padding:0 11px;border:1px solid #36404e;border-radius:6px;outline:none;background:#0f1318;color:#e8ebf0;font:inherit}
+.control-block select,.control-block input{height:var(--control-height);box-sizing:border-box;padding:0 11px;border:1px solid #36404e;border-radius:6px;outline:none;background:#0f1318;color:#e8ebf0;font:inherit}
 .period-buttons{display:flex;height:38px;gap:4px}
 .period-buttons button{min-width:40px;padding:0 8px;border:1px solid #36404e;border-radius:5px;background:#101419;color:#aeb7c5;font:inherit;font-size:11px;cursor:pointer}
 .period-buttons button:hover,.period-buttons button.is-active{border-color:#a7b8fa;background:#27304a;color:#f0f2f6}
@@ -22,7 +22,7 @@
 .run-button:disabled{cursor:wait;opacity:.55}
 .symbol-picker,.statistics-card{margin-top:18px;padding:20px}
 .section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.section-heading h2,.chart-card h2{font-size:17px;font-weight:500}
+.section-heading h2,.chart-card h2{font-size:var(--section-title-size);font-weight:500}
 .selection-count{color:var(--text-secondary);font-size:12px}
 .symbol-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
 .symbol-chip{display:flex;min-width:128px;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid #36404e;border-radius:7px;background:#101419;color:#e8ebf0;text-align:left;cursor:pointer}
@@ -47,4 +47,4 @@
 .statistics-row span:nth-child(n+3){text-align:right}
 .positive{color:#53d5ad}
 .negative{color:#ed7181}
-@media(max-width:760px){.analytics-shell{padding:22px 16px}.analytics-heading,.controls-panel{align-items:stretch;flex-direction:column}.controls-panel{gap:12px}.control-block,.run-button{width:100%}.metric-strip{grid-template-columns:1fr}.plot-container{height:340px}}
+@media(max-width:760px){.analytics-shell{padding:var(--page-padding-mobile)}.analytics-heading,.controls-panel{align-items:stretch;flex-direction:column}.controls-panel{gap:12px}.control-block,.run-button{width:100%}.metric-strip{grid-template-columns:1fr}.plot-container{height:340px}}

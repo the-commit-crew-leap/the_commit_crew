@@ -4,7 +4,7 @@
 
 .history-page {
   min-height: 100vh;
-  padding: 28px 32px;
+  padding: var(--page-padding);
   background: #0b0e12;
 }
 
@@ -13,7 +13,7 @@
   align-items: flex-start;
   justify-content: space-between;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   margin: 0 auto 28px;
 }
 
@@ -62,7 +62,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   margin: 0 auto 24px;
 }
 
@@ -91,7 +91,7 @@
 
 .history-card {
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid #29313c;
@@ -111,12 +111,12 @@
 .table-header h2 {
   margin: 0;
   color: #e8ebf0;
-  font-size: 16px;
+  font-size: var(--section-title-size);
 }
 
 .table-header p {
   margin: 6px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -138,14 +138,14 @@
   min-width: 170px;
   flex-direction: column;
   gap: 6px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
 }
 
 .filters select {
-  height: 36px;
+  height: var(--control-height);
   padding: 0 10px;
   border: 1px solid #3a4553;
   border-radius: 6px;
@@ -222,7 +222,7 @@ td {
 }
 
 th {
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
@@ -235,7 +235,7 @@ td small {
 
 td small {
   margin-top: 4px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -247,7 +247,7 @@ tbody tr:last-child td {
 .error {
   margin: 0;
   padding: 40px 20px;
-  color: #8993a3;
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -305,7 +305,7 @@ button {
 
 @media (max-width: 760px) {
   .history-page {
-    padding: 24px;
+    padding: var(--page-padding-mobile);
   }
 
   .history-header,
