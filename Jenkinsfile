@@ -593,4 +593,42 @@ pipeline {
             }
         }
     }
+
+    post {
+        always {
+            script {
+                def environment = 'dev'
+
+                if (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'origin/main') {
+                    environment = 'prod'
+                }
+
+                def credentialsId =
+                    environment == 'prod' ? 'env-prod-file' : 'env-dev-file'
+
+                withCredentials([
+                    file(credentialsId: credentialsId, variable: 'ENV_FILE_PATH')
+                ]) {
+                    sh '''
+                        set +e
+
+                        echo "Cleaning up CI containers..."
+
+                        docker rm -f "the-commit-crew-smoke-${BUILD_NUMBER}" 2>/dev/null || true
+
+                        docker-compose \
+                            -p the_commit_crew \
+                            --env-file "$ENV_FILE_PATH" \
+                            down \
+                            --remove-orphans \
+                            -v || true
+
+                        docker image rm "the-commit-crew:${BUILD_NUMBER}" 2>/dev/null || true
+
+                        echo "CI cleanup completed"
+                    '''
+                }
+            }
+        }
+    }
 }
