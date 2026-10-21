@@ -209,7 +209,8 @@ class AnalysisEngine:
 
         analysis_period = self._portfolio_figure_period(symbols, period)
         returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date, acquisition_dates)
-        rolling = returns.rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
+        minimum_periods = min(window, max(2, len(returns)))
+        rolling = returns.rolling(window=window, min_periods=minimum_periods).std() * np.sqrt(252) * 100
         rolling = rolling.dropna()
         if rolling.empty:
             return None
