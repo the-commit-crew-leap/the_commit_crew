@@ -47,6 +47,7 @@ test('shows order history rows and statuses', async ({ page }) => {
           side: 'BUY',
           quantity: 10,
           price: 150.25,
+          executionPrice: 149.75,
           status: 'FILLED',
           createdOn: '2026-10-12T12:00:00'
         },
@@ -86,10 +87,12 @@ test('shows order history rows and statuses', async ({ page }) => {
   await expect(page.getByRole('columnheader', { name: 'Order / Date' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Quantity' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Price' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Execution price' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Total value' })).toBeVisible();
   await expect(page.getByText('AAPL')).toBeVisible();
   await expect(page.getByText('TSLA')).toBeVisible();
   await expect(page.getByText('$1,502.50')).toBeVisible();
+  await expect(page.getByText('$149.75')).toBeVisible();
   await expect(page.getByText('$1,225.50')).toBeVisible();
   await expect(page.getByText('$2,728.00')).toBeVisible();
   const orderTable = page.getByRole('table');

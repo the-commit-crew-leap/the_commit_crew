@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS orders (
     side             VARCHAR(4) NOT NULL CHECK (side IN ('BUY', 'SELL')),
     quantity         INT NOT NULL CHECK (quantity > 0),
     price            NUMERIC(18,2) NOT NULL CHECK (price > 0),
+    execution_price  NUMERIC(18,2) CHECK (execution_price > 0),
     status           VARCHAR(20) NOT NULL CHECK (status IN ('NEW', 'FILLED', 'REJECTED', 'CANCELLED')),
     idempotencyKey   VARCHAR(36) NOT NULL UNIQUE,
     created_on       TIMESTAMP DEFAULT NOW(),

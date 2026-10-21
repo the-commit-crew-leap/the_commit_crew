@@ -98,6 +98,7 @@
             <th>Side</th>
             <th>Quantity</th>
             <th>Price</th>
+            <th>Execution price</th>
             <th>Total value</th>
             <th>Status</th>
           </tr>
@@ -112,6 +113,7 @@
             <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
             <td>{{ order.quantity | number:'1.0-4' }}</td>
             <td>${{ order.price | number:'1.2-2' }}</td>
+            <td>{{ order.executionPrice !== null && order.executionPrice !== undefined ? ('$' + (order.executionPrice | number:'1.2-2')) : '—' }}</td>
             <td>${{ orderTotal(order) | number:'1.2-2' }}</td>
             <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
           </tr>
