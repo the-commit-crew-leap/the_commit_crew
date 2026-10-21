@@ -18,7 +18,8 @@ public record OrderResponseDTO (
     BigDecimal price,
     OrderStatus status,
     LocalDateTime createdOn,
-    AssetClass assetClass
+    AssetClass assetClass,
+    BigDecimal fillPrice
 
 ) {
     public OrderResponseDTO(
@@ -31,7 +32,21 @@ public record OrderResponseDTO (
         OrderStatus status,
         LocalDateTime createdOn
     ) {
-        this(orderId, accountId, symbol, side, quantity, price, status, createdOn, null);
+        this(orderId, accountId, symbol, side, quantity, price, status, createdOn, null, null);
+    }
+
+    public OrderResponseDTO(
+        UUID orderId,
+        String accountId,
+        String symbol,
+        OrderSide side,
+        long quantity,
+        BigDecimal price,
+        OrderStatus status,
+        LocalDateTime createdOn,
+        AssetClass assetClass
+    ) {
+        this(orderId, accountId, symbol, side, quantity, price, status, createdOn, assetClass, null);
     }
 
 }

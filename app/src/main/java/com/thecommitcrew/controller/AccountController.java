@@ -172,7 +172,8 @@ public class AccountController {
                 order.getPrice(),
                 order.getStatus(),
                 order.getCreatedOn(),
-                instrumentService.getInstrument(order.getSymbol()).assetClass()
+                instrumentService.getInstrument(order.getSymbol()).assetClass(),
+                order.getFillPrice()
             ))
             .toList();
         return ResponseEntity.ok(response);

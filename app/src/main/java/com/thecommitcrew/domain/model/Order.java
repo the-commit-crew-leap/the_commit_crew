@@ -17,18 +17,26 @@ public class Order {
     private OrderStatus status;
     private final LocalDateTime createdOn;
     private final String idempotencyKey;
+    private BigDecimal fillPrice;
 
     @SuppressWarnings("java:S107")
     public Order(UUID id, String accountId, String symbol, OrderSide side, long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey) {
+        this(id, accountId, symbol, side, quantity, price, status, createdOn, idempotencyKey, null);
+    }
+
+    @SuppressWarnings("java:S107")
+    public Order(UUID id, String accountId, String symbol, OrderSide side, Long quantity, BigDecimal price, OrderStatus status, LocalDateTime createdOn, String idempotencyKey, BigDecimal fillPrice) {
         this.id = validateNotNull(id, "Order ID cannot be null");
         this.accountId = validateNotBlank(accountId, "Account ID cannot be blank");
         this.symbol = validateNotBlank(symbol, "Symbol cannot be null or blank");
         this.side = validateNotNull(side, "Order side cannot be null");
+        if (quantity == null) throw new IllegalArgumentException("Quantity cannot be null");
         this.quantity = validatePositive(quantity, "Quantity must be positive");
         this.price = validatePriceNotNull(price, "Price cannot be null");
         this.status = validateNotNull(status, "Order status cannot be null");
         this.createdOn = validateNotNull(createdOn, "Created on cannot be null");
         this.idempotencyKey = validateNotBlank(idempotencyKey, "Idempotency key cannot be blank");
+        this.fillPrice = validateFillPrice(fillPrice);
     }
 
     public UUID getId() {
@@ -71,6 +79,14 @@ public class Order {
         return idempotencyKey;
     }
 
+    public BigDecimal getFillPrice() {
+        return fillPrice;
+    }
+
+    public void setFillPrice(BigDecimal fillPrice) {
+        this.fillPrice = validateFillPrice(fillPrice);
+    }
+
     private static <T> T validateNotNull(T value, String message) {
         if (value == null) throw new IllegalArgumentException(message);
         return value;
@@ -94,6 +110,13 @@ public class Order {
             throw new NegativePriceException("Price must be positive");
         }
         return price;
+    }
+
+    private static BigDecimal validateFillPrice(BigDecimal fillPrice) {
+        if (fillPrice != null && fillPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NegativePriceException("Fill price must be positive");
+        }
+        return fillPrice;
     }
 
 }

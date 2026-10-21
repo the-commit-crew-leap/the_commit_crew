@@ -253,6 +253,7 @@ paths:
                   side: BUY
                   quantity: 100
                   price: 150.00
+                  fillPrice: 149.75
                   status: FILLED
                   createdOn: 2026-09-21T10:30:00
         '404':
@@ -484,6 +485,12 @@ components:
         price:
           type: number
           format: double
+          description: Quoted limit price used when submitting the order
+        fillPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Actual execution price for filled orders
         status:
           type: string
           enum: [NEW, FILLED, REJECTED, CANCELLED]

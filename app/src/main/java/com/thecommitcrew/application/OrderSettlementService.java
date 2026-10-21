@@ -135,6 +135,7 @@ public class OrderSettlementService {
                 positionMapper.save(updatedPosition);
             }
 
+            order.setFillPrice(fill.price());
             order.setStatus(OrderStatus.FILLED);
             orderMapper.save(order);
         } catch (Exception e) {

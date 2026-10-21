@@ -4,23 +4,42 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.thecommitcrew.persistence.mapper.OrderMapper">
 
-    <select id="findById" resultType="com.thecommitcrew.domain.model.Order" useCache="false">
-        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey
+    <resultMap id="orderResultMap" type="com.thecommitcrew.domain.model.Order">
+        <constructor>
+            <idArg column="id" javaType="java.util.UUID"
+                   typeHandler="com.thecommitcrew.persistence.typehandler.UuidTypeHandler"/>
+            <arg column="accountId" javaType="java.lang.String"/>
+            <arg column="symbol" javaType="java.lang.String"/>
+            <arg column="side" javaType="com.thecommitcrew.domain.enums.OrderSide"/>
+            <arg column="quantity" javaType="java.lang.Long"/>
+            <arg column="price" javaType="java.math.BigDecimal"/>
+            <arg column="status" javaType="com.thecommitcrew.domain.enums.OrderStatus"/>
+            <arg column="createdOn" javaType="java.time.LocalDateTime"/>
+            <arg column="idempotencyKey" javaType="java.lang.String"/>
+            <arg column="fillPrice" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findById" resultMap="orderResultMap" useCache="false">
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn,
+               idempotencyKey, fill_price as fillPrice
         FROM orders
         WHERE id = #{orderId}
     </select>
 
-    <select id="findByAccountId" resultType="com.thecommitcrew.domain.model.Order">
-        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn, idempotencyKey
+    <select id="findByAccountId" resultMap="orderResultMap">
+        SELECT id, account_id as accountId, symbol, side, quantity, price, status, created_on as createdOn,
+               idempotencyKey, fill_price as fillPrice
         FROM orders
         WHERE account_id = #{accountId}
     </select>
 
     <insert id="save">
-        INSERT INTO orders (id, account_id, symbol, side, quantity, price, status, idempotencyKey, created_on)
-        VALUES (#{id}, #{accountId}, #{symbol}, #{side}, #{quantity}, #{price}, #{status}, #{idempotencyKey}, #{createdOn})
+        INSERT INTO orders (id, account_id, symbol, side, quantity, price, status, idempotencyKey, created_on, fill_price)
+        VALUES (#{id}, #{accountId}, #{symbol}, #{side}, #{quantity}, #{price}, #{status}, #{idempotencyKey}, #{createdOn}, #{fillPrice})
         ON CONFLICT (idempotencyKey) DO UPDATE SET
-            status = #{status}
+            status = #{status},
+            fill_price = COALESCE(EXCLUDED.fill_price, orders.fill_price)
     </insert>
 
     <select id="findPendingOlderThan" resultType="com.thecommitcrew.messaging.OrderEvent">

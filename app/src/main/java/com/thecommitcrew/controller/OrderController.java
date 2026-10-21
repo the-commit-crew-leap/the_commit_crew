@@ -157,7 +157,9 @@ public ResponseEntity<OrderResponseDTO> submitOrder(
             order.getQuantity(),
             order.getPrice(),
             order.getStatus(),
-            order.getCreatedOn()
+            order.getCreatedOn(),
+            null,
+            order.getFillPrice()
         );
     }
 }
