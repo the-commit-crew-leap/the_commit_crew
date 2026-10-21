@@ -6,8 +6,8 @@
             org.hibernate.validator:hibernate-validator. Verified against the
             resolved Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <cve>CVE-2025-15104</cve>
         <gav regex="true">^org\.hibernate\.validator:hibernate-validator$</gav>
+        <cve>CVE-2025-15104</cve>
     </suppress>
 
     <suppress>
@@ -16,8 +16,8 @@
             org.eclipse.angus:angus-activation. Verified against the resolved
             Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <cve>CVE-2025-7962</cve>
         <gav regex="true">^org\.eclipse\.angus:angus-activation$</gav>
+        <cve>CVE-2025-7962</cve>
     </suppress>
 
     <suppress>
@@ -27,8 +27,8 @@
             coordinate and should be reviewed when Dependency-Check updates
             its vulnerability data.
         ]]></notes>
+        <gav regex="true">^org\.webjars:swagger-ui$</gav>
         <cve>CVE-2026-109344</cve>
-        <gav regex="true">^org\.webjars:swagger-ui$</gav>
     </suppress>
 
     <suppress>
@@ -38,7 +38,7 @@
             coordinate and should be reviewed when Dependency-Check updates
             its vulnerability data.
         ]]></notes>
-        <cve>CVE-2026-109345</cve>
         <gav regex="true">^org\.webjars:swagger-ui$</gav>
+        <cve>CVE-2026-109345</cve>
     </suppress>
 </suppressions>
