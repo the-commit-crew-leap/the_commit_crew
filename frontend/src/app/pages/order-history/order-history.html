@@ -37,7 +37,7 @@
         <p *ngIf="!loading && !error">{{ orders.length ? 'Your recent trading activity' : 'No order activity yet' }}</p>
       </div>
       <p class="total-value" *ngIf="!loading && !error">
-        Total value <strong>${{ formatCurrency(filteredOrderValue) }}</strong>
+        Total price <strong>${{ formatCurrency(filteredOrderValue) }}</strong>
       </p>
     </header>
 
@@ -98,7 +98,8 @@
             <th>Side</th>
             <th>Quantity</th>
             <th>Price</th>
-            <th>Total value</th>
+            <th>Execution price</th>
+            <th>Total price</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -112,6 +113,7 @@
             <td [class.buy]="order.side === 'BUY'" [class.sell]="order.side === 'SELL'">{{ order.side }}</td>
             <td>{{ order.quantity | number:'1.0-4' }}</td>
             <td>${{ order.price | number:'1.2-2' }}</td>
+            <td>{{ order.executionPrice !== null && order.executionPrice !== undefined ? ('$' + (order.executionPrice | number:'1.2-2')) : '—' }}</td>
             <td>${{ orderTotal(order) | number:'1.2-2' }}</td>
             <td><span [class]="statusClass(order.status)">{{ order.status }}</span></td>
           </tr>

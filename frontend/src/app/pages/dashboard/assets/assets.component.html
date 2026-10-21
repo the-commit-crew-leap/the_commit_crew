@@ -26,9 +26,6 @@
       <span role="cell">{{ formatQuantity(position.quantity) }}</span>
       <span role="cell">
         ${{ formatCurrency(position.currentPrice) }}
-        <small class="price-status">
-          {{ position.live ? 'Live' : position.currentPrice !== null ? 'Last available session' : 'Unavailable' }}
-        </small>
       </span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span role="cell">

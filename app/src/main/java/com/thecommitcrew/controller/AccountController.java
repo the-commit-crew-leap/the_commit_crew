@@ -248,6 +248,7 @@ public class AccountController {
                 order.getSide(),
                 order.getQuantity(),
                 order.getPrice(),
+                order.getExecutionPrice(),
                 order.getStatus(),
                 order.getCreatedOn(),
                 instrumentService.getInstrument(order.getSymbol()).assetClass()

@@ -311,11 +311,6 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     return this.watchlistDetails[symbol]?.low ?? null;
   }
 
-  getPriceStatus(symbol: string): string {
-    const details = this.watchlistDetails[symbol];
-    return details ? (details.live ? 'Live' : 'Last available session') : 'Unavailable';
-  }
-
   sparklinePoints(symbol: string): string {
     const values = this.watchlistDetails[symbol]?.bars ?? [];
     if (values.length < 2) {

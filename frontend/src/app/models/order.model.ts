@@ -9,6 +9,7 @@ export interface Order {
   side: OrderSide;
   quantity: number;
   price: number;
+  executionPrice?: number | null;
   status: OrderStatus;
   createdOn: string;
   assetClass?: AssetClass;

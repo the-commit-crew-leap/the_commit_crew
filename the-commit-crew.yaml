@@ -484,6 +484,10 @@ components:
         price:
           type: number
           format: double
+        executionPrice:
+          type: number
+          format: double
+          nullable: true
         status:
           type: string
           enum: [NEW, FILLED, REJECTED, CANCELLED]

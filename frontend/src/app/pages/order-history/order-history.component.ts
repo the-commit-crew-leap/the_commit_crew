@@ -132,7 +132,7 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
   }
 
   orderValue(order: Order): number {
-    return order.quantity * order.price;
+    return order.quantity * (order.executionPrice ?? order.price);
   }
 
   formatCurrency(value: number): string {
@@ -140,7 +140,7 @@ export class OrderHistoryComponent implements OnDestroy, OnInit {
   }
 
   orderTotal(order: Order): number {
-    return order.quantity * order.price;
+    return this.orderValue(order);
   }
 
   private getAccountId(): string | null {

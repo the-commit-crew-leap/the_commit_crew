@@ -175,6 +175,7 @@ class OrderSettlementServiceTest {
         settlementService.settle(fill);
 
         assertEquals(OrderStatus.FILLED, order.getStatus());
+        assertEquals(FILL_PRICE, order.getExecutionPrice());
         verify(accountEntity).setCashBalance(new BigDecimal("9000.00"));
         verify(accountRepository).save(accountEntity);
         verify(positionMapper).save(updatedPosition);

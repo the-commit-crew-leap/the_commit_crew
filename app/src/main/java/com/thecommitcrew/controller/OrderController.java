@@ -156,6 +156,7 @@ public ResponseEntity<OrderResponseDTO> submitOrder(
             order.getSide(),
             order.getQuantity(),
             order.getPrice(),
+            order.getExecutionPrice(),
             order.getStatus(),
             order.getCreatedOn()
         );
