@@ -102,7 +102,7 @@ export class AssetsComponent implements OnDestroy, OnInit {
 
   get lastTradeAt(): Date | null {
     const timestamps = this.positions
-      .map((position) => position.lastTradeAt)
+      .map((position) => position.priceUpdatedAt)
       .filter((timestamp): timestamp is string => timestamp !== null)
       .map((timestamp) => new Date(timestamp).getTime())
       .filter((timestamp) => Number.isFinite(timestamp));

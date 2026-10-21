@@ -456,4 +456,20 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       bars: response.bars.map((bar) => bar.close)
     };
   }
+
+  private clearSuccessTimeout(): void {
+    if (this.successTimeout) {
+      clearTimeout(this.successTimeout);
+      this.successTimeout = undefined;
+    }
+  }
+
+  private dismissSuccessAfterDelay(): void {
+    this.clearSuccessTimeout();
+    this.successTimeout = setTimeout(() => {
+      this.success = '';
+      this.successTimeout = undefined;
+      this.cdr.detectChanges();
+    }, 3000);
+  }
 }
