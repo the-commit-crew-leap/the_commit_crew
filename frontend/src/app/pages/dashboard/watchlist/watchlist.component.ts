@@ -296,7 +296,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   }
 
   getLatestPrice(symbol: string): number | null {
-    return this.watchlistDetails[symbol]?.price ?? this.watchlistPrices[symbol] ?? null;
+    return this.watchlistPrices[symbol] ?? this.watchlistDetails[symbol]?.price ?? null;
   }
 
   getDailyChange(symbol: string): number | null {
