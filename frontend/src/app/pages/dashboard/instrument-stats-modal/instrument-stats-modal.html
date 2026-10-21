@@ -24,7 +24,7 @@
         </div>
         <p *ngIf="loading" class="modal-state">Loading today's market data...</p>
         <p *ngIf="error" class="modal-state error" role="alert">{{ error }}</p>
-        <div *ngIf="quote && intraday && !loading" class="stat-grid">
+        <div *ngIf="quote && !error" class="stat-grid">
           <article>
             <span>Live price</span>
             <strong>{{ isLastAvailableSession() ? '—' : '$' + formatPrice(quote.price) }}</strong>
@@ -32,7 +32,7 @@
           <article><span>Session open</span><strong>${{ formatPrice(sessionOpen()) }}</strong></article>
           <article><span>Session high</span><strong>${{ formatPrice(sessionHigh()) }}</strong></article>
           <article><span>Session low</span><strong>${{ formatPrice(sessionLow()) }}</strong></article>
-          <article><span>Bars</span><strong>{{ intraday.bars.length || '—' }}</strong></article>
+          <article><span>Bars</span><strong>{{ intraday?.bars.length || '—' }}</strong></article>
           <ng-container *ngIf="isLastAvailableSession()">
             <article><span>Closing price</span><strong>${{ formatPrice(sessionClose()) }}</strong></article>
             <article>
@@ -45,14 +45,14 @@
         </div>
       </section>
 
-      <section *ngIf="!loading && !error" class="volatility-panel" aria-labelledby="volatility-title">
+      <section *ngIf="intraday && !error" class="volatility-panel" aria-labelledby="volatility-title">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">{{ sessionChartLabel() }}</p>
             <h3 id="volatility-title">Intraday session</h3>
           </div>
         </div>
-        <div *ngIf="intraday?.bars?.length; else noBars" #volatilityChart class="volatility-chart"></div>
+        <div *ngIf="intraday?.bars.length; else noBars" #volatilityChart class="volatility-chart"></div>
         <ng-template #noBars><p class="modal-state">No regular-session bars are available yet.</p></ng-template>
       </section>
     </div>

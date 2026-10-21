@@ -142,6 +142,10 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return isUsMarketOpen();
     }
 
+    get selectedInstrumentPosition(): PositionResponse | undefined {
+      return this.positions.find((position) => position.symbol === this.selectedInstrument);
+    }
+
     openInstrumentStats(symbol: string): void {
       this.selectedInstrument = symbol;
     }
