@@ -6,7 +6,7 @@
             org.hibernate.validator:hibernate-validator. Verified against the
             resolved Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <filePath regex="true">.*[\\/]hibernate-validator-9\.0\.1\.Final\.jar$</filePath>
+        <packageUrl regex="true">^pkg:maven/org\.hibernate\.validator/hibernate-validator@9\.0\.1\.Final$</packageUrl>
         <cve>CVE-2025-15104</cve>
     </suppress>
 
@@ -16,7 +16,7 @@
             org.eclipse.angus:angus-activation. Verified against the resolved
             Maven dependency graph on 2026-10-20.
         ]]></notes>
-        <filePath regex="true">.*[\\/]angus-activation-2\.0\.3\.jar$</filePath>
+        <packageUrl regex="true">^pkg:maven/org\.eclipse\.angus/angus-activation@2\.0\.3$</packageUrl>
         <cve>CVE-2025-7962</cve>
     </suppress>
 
