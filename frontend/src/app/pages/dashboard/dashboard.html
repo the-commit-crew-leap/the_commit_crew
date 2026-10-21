@@ -8,7 +8,11 @@
         Here's what's in your account.
       </p>
       <p class="market-update" *ngIf="lastUpdated">
-        Live prices updated {{ lastUpdated | date:'shortTime' }}
+        <ng-container *ngIf="!marketOpen && lastTradeAt; else refreshedMarket">
+          Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
+        </ng-container>
+        <ng-template #refreshedMarket>Market data</ng-template>
+        Refreshed {{ lastUpdated | date:'shortTime' }}
       </p>
       <p class="market-update" *ngIf="overviewError" role="alert">
         Live prices are temporarily unavailable. Retrying automatically.
@@ -20,8 +24,8 @@
       <article class="overview-card">
         <span>Total portfolio value</span>
         <strong>{{ portfolioValueAvailable ? '$' + formatCurrency(portfolioValue) : '—' }}</strong>
-        <small [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
-          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }} today
+        <small [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }} unrealized P&amp;L
         </small>
       </article>
       <article class="overview-card">
@@ -32,9 +36,9 @@
         <small>USD balance · Ready to invest</small>
       </article>
       <article class="overview-card">
-        <span>Today's return</span>
-        <strong [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
-          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}
+        <span>Unrealized P&amp;L</span>
+        <strong [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }}
         </strong>
         <small>Across your portfolio</small>
       </article>

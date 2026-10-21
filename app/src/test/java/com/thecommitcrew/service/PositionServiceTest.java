@@ -150,6 +150,18 @@ class PositionServiceTest {
         }
 
         @Test
+        @DisplayName("Uses execution fill price when calculating average cost")
+        void applyBuyOrderUsesExecutionPrice() {
+            Position updatedPosition = positionService.applyOrder(
+                    position,
+                    buyOrder,
+                    new BigDecimal("105"));
+
+            assertEquals(new BigDecimal("102"),
+                    updatedPosition.getAverageCost());
+        }
+
+        @Test
         @DisplayName("Subtracts from position successfully with valid inputs")
         void applySellOrderDecreasesQuantity() {
             Position updatedPosition = positionService.applyOrder(position, sellOrder);

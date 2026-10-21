@@ -10,11 +10,12 @@ import {
   inject
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, timeout } from 'rxjs';
+import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, tap, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
 import { InstrumentResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+import { isUsMarketOpen } from '../../../shared/market-status';
 
 @Component({
   selector: 'app-watchlist',
@@ -28,6 +29,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
+  private successTimeout?: ReturnType<typeof setTimeout>;
 
   @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
 
@@ -39,6 +41,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   priceLoading = false;
   priceError = '';
   lastUpdated: Date | null = null;
+  lastTradeAt: Date | null = null;
   saving = false;
   removingSymbol = '';
   error = '';
@@ -82,6 +85,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   }
 
   ngOnDestroy(): void {
+    this.clearSuccessTimeout();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -171,6 +175,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
         this.selectedSymbol = '';
         this.saving = false;
         this.success = `${instrument.symbol} was added to your watchlist.`;
+        this.dismissSuccessAfterDelay();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -208,6 +213,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
           this.refreshPricesNow();
           this.selectedSymbol = '';
           this.success = `${instrument.symbol} was added to your watchlist.`;
+          this.dismissSuccessAfterDelay();
         } else {
           this.error = 'The instrument could not be confirmed in your watchlist.';
         }
@@ -302,6 +308,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
 
     return forkJoin(watchlist.map((instrument) =>
       this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
+        tap((response) => this.recordLastTradeAt(response.updatedAt)),
         map((response) => response.live ? response.price : null),
         catchError((error) => {
           console.error(`Failed to load live price for ${instrument.symbol}`, error);
@@ -324,5 +331,34 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       this.priceError = 'Some live prices are currently unavailable.';
     }
     this.cdr.detectChanges();
+  }
+
+  private dismissSuccessAfterDelay(): void {
+    this.clearSuccessTimeout();
+    this.successTimeout = setTimeout(() => {
+      this.success = '';
+      this.cdr.detectChanges();
+      this.successTimeout = undefined;
+    }, 10000);
+  }
+
+  private clearSuccessTimeout(): void {
+    if (this.successTimeout) {
+      clearTimeout(this.successTimeout);
+      this.successTimeout = undefined;
+    }
+  }
+
+  get marketOpen(): boolean {
+    return isUsMarketOpen();
+  }
+
+  private recordLastTradeAt(timestamp: string): void {
+    const tradeTime = new Date(timestamp).getTime();
+    if (!Number.isFinite(tradeTime)
+      || (this.lastTradeAt !== null && this.lastTradeAt.getTime() >= tradeTime)) {
+      return;
+    }
+    this.lastTradeAt = new Date(tradeTime);
   }
 }

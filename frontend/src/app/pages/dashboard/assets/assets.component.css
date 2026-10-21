@@ -42,7 +42,7 @@
 
 .assets-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
   align-items: center;
   min-height: 78px;
   padding: 0 20px;
@@ -64,7 +64,8 @@
 .assets-row-header span:nth-child(4),
 .assets-row > span:nth-child(2),
 .assets-row > span:nth-child(3),
-.assets-row > span:nth-child(4) {
+.assets-row > span:nth-child(4),
+.assets-row > span:nth-child(5) {
   text-align: right;
 }
 
@@ -88,11 +89,6 @@
 .asset-name-button:hover strong,
 .asset-name-button:focus-visible strong {
   color: #a7b8fa;
-}
-
-.asset-name small {
-  color: #8993a3;
-  font-size: 12px;
 }
 
 .positive {
@@ -128,10 +124,10 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .assets-row > span:nth-child(2),
-  .assets-row > span:nth-child(4),
-  .assets-row-header span:nth-child(2),
-  .assets-row-header span:nth-child(4) {
+  .assets-row > span:nth-child(3),
+  .assets-row > span:nth-child(5),
+  .assets-row-header span:nth-child(3),
+  .assets-row-header span:nth-child(5) {
     display: none;
   }
 }
