@@ -15,7 +15,8 @@
   min-width: 0;
   flex: 1;
   align-items: center;
-  gap: 28px;
+  justify-content: space-evenly;
+  gap: clamp(24px, 5vw, 72px);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -28,7 +29,8 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 0 4px;
   white-space: nowrap;
 }
 
@@ -85,5 +87,10 @@
 
   .market-ticker-status {
     margin-left: 16px;
+  }
+
+  .market-ticker-scroll {
+    justify-content: flex-start;
+    gap: 24px;
   }
 }
