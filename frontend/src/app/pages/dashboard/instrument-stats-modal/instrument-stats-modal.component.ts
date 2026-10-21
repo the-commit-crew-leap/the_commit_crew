@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FundamentalsResponse, IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
+import { FundamentalsResponse, IntradayPriceResponse, PositionResponse, PriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { catchError, forkJoin, of, Subject, takeUntil } from 'rxjs';
+import { catchError, exhaustMap, forkJoin, interval, of, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-instrument-stats-modal',
@@ -16,6 +16,7 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   @ViewChild('volatilityChart') private volatilityChart?: ElementRef<HTMLElement>;
   @Input() symbol = '';
   @Input() visible = false;
+  @Input() initialPosition?: PositionResponse;
   @Output() closed = new EventEmitter<void>();
 
   quote?: PriceResponse;
@@ -29,10 +30,19 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   private readonly tradingApi = inject(TradingApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
+  private readonly refreshStop$ = new Subject<void>();
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initialPosition'] && this.initialPosition?.currentPrice !== null && this.initialPosition?.currentPrice !== undefined) {
+      this.applyQuote(this.createQuoteFromPosition(this.initialPosition));
+      this.cdr.markForCheck();
+    }
+
     if ((changes['symbol'] || changes['visible']) && this.visible && this.symbol) {
+      this.refreshStop$.next();
       this.loadMarketData();
+    } else if (changes['visible'] && !this.visible) {
+      this.refreshStop$.next();
     }
   }
 
@@ -40,8 +50,10 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
     if (this.volatilityChart) {
       Plotly.purge(this.volatilityChart.nativeElement);
     }
+    this.refreshStop$.next();
     this.destroy$.next();
     this.destroy$.complete();
+    this.refreshStop$.complete();
   }
 
   ngAfterViewChecked(): void {
@@ -168,10 +180,12 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
   }
 
   private loadMarketData(): void {
-    this.loading = true;
+    this.quote = this.initialPosition?.currentPrice !== null && this.initialPosition?.currentPrice !== undefined
+      ? this.createQuoteFromPosition(this.initialPosition)
+      : undefined;
+    this.loading = !this.quote;
     this.error = '';
     this.fundamentalsError = '';
-    this.quote = undefined;
     this.intraday = undefined;
     this.pendingFigure = undefined;
     forkJoin({
@@ -183,20 +197,85 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
           return of(null);
         })
       )
-    }).pipe(takeUntil(this.destroy$)).subscribe({
+    }).pipe(
+      takeUntil(this.refreshStop$),
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: ({ quote, intraday, fundamentals }) => {
-        this.quote = quote;
+        this.applyQuote(quote);
         this.intraday = intraday;
         this.fundamentals = fundamentals;
         this.pendingFigure = this.createIntradayFigure(intraday);
         this.loading = false;
         this.cdr.markForCheck();
+        this.startLiveRefresh();
       },
       error: () => {
         this.error = 'Statistics are temporarily unavailable.';
         this.loading = false;
         this.cdr.markForCheck();
       }
+    });
+  }
+
+  private createQuoteFromPosition(position: PositionResponse): PriceResponse {
+    return {
+      symbol: position.symbol,
+      price: position.currentPrice as number,
+      source: position.priceSource ?? 'dashboard',
+      live: position.live ?? false,
+      updatedAt: position.priceUpdatedAt ?? new Date().toISOString()
+    };
+  }
+
+  private applyQuote(nextQuote: PriceResponse): void {
+    if (this.quote) {
+      const currentTimestamp = Date.parse(this.quote.updatedAt);
+      const nextTimestamp = Date.parse(nextQuote.updatedAt);
+      if (Number.isFinite(currentTimestamp) && Number.isFinite(nextTimestamp) && nextTimestamp < currentTimestamp) {
+        return;
+      }
+    }
+
+    this.quote = nextQuote;
+  }
+
+  private startLiveRefresh(): void {
+    interval(1000).pipe(
+      exhaustMap(() => this.tradingApi.getInstrumentPrice(this.symbol).pipe(
+        catchError((error) => {
+          console.error(`Failed to refresh quote for ${this.symbol}`, error);
+          return of(null);
+        })
+      )),
+      takeUntil(this.refreshStop$),
+      takeUntil(this.destroy$)
+    ).subscribe((result) => {
+      if (!result) {
+        return;
+      }
+
+      this.applyQuote(result);
+      this.cdr.markForCheck();
+    });
+
+    interval(5000).pipe(
+      exhaustMap(() => this.tradingApi.getInstrumentIntraday(this.symbol).pipe(
+        catchError((error) => {
+          console.error(`Failed to refresh intraday data for ${this.symbol}`, error);
+          return of(null);
+        })
+      )),
+      takeUntil(this.refreshStop$),
+      takeUntil(this.destroy$)
+    ).subscribe((result) => {
+      if (!result) {
+        return;
+      }
+
+      this.intraday = result;
+      this.pendingFigure = this.createIntradayFigure(result);
+      this.cdr.markForCheck();
     });
   }
 

@@ -56,5 +56,6 @@
 
 <app-instrument-stats-modal
   [symbol]="selectedInstrument"
+  [initialPosition]="selectedInstrumentPosition"
   [visible]="!!selectedInstrument"
   (closed)="closeInstrumentStats()" />
