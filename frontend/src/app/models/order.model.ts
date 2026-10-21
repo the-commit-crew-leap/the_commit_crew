@@ -11,5 +11,6 @@ export interface Order {
   price: number;
   status: OrderStatus;
   createdOn: string;
+  fillPrice?: number | null;
   assetClass?: AssetClass;
 }

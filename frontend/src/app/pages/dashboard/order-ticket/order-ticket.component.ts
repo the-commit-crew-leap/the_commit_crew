@@ -18,6 +18,7 @@ import {
   OrderResponse,
   OrderSide
 } from '../../../api/trading.models';
+import { Order } from '../../../models/order.model';
 
 @Component({
   selector: 'app-order-ticket',
@@ -28,6 +29,7 @@ import {
 })
 export class OrderTicketComponent implements OnDestroy, OnInit {
   @Input() balance: BalanceResponse | null = null;
+  @Input() orders: Order[] = [];
   instruments: InstrumentResponse[] = [];
   instrumentsLoading = true;
   instrumentsError = '';
@@ -289,6 +291,15 @@ export class OrderTicketComponent implements OnDestroy, OnInit {
 
   getOrderTotal(quantity: number, price: number): number {
     return quantity * price;
+  }
+
+  get displayedOrder(): OrderResponse | Order | null {
+    if (!this.submittedOrder) {
+      return null;
+    }
+
+    return this.orders.find((order) => order.orderId === this.submittedOrder?.orderId)
+      ?? this.submittedOrder;
   }
 
   get symbolError(): string {

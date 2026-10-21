@@ -133,9 +133,17 @@
       {{ orderError }}
     </p>
     <p *ngIf="priceError" class="order-error" role="alert">{{ priceError }}</p>
-    <p *ngIf="submittedOrder" class="order-success" role="status">
-      Order submitted: {{ submittedOrder.side }} {{ submittedOrder.quantity }} {{ submittedOrder.symbol }}.
-      Total: ${{ getOrderTotal(submittedOrder.quantity, submittedOrder.price) | number:'1.2-2' }}.
+    <p *ngIf="displayedOrder as order" class="order-success" role="status">
+      <ng-container *ngIf="order.status === 'FILLED'; else submittedMessage">
+        Order filled: {{ order.side }} {{ order.quantity }} {{ order.symbol }} at
+        ${{ (order.fillPrice ?? order.price) | number:'1.2-2' }}.
+        Actual total: ${{ getOrderTotal(order.quantity, order.fillPrice ?? order.price) | number:'1.2-2' }}.
+      </ng-container>
+      <ng-template #submittedMessage>
+        Order submitted: {{ order.side }} {{ order.quantity }} {{ order.symbol }}.
+        Estimated total: ${{ getOrderTotal(order.quantity, order.price) | number:'1.2-2' }}.
+        Waiting for execution.
+      </ng-template>
     </p>
   </section>
 </div>
