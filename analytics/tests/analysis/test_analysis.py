@@ -107,6 +107,22 @@ def test_get_returns_uses_close_when_adj_close_has_no_values(monkeypatch):
     assert result.loc[pd.Timestamp("2026-01-02"), "AAPL"] == pytest.approx(0.02)
 
 
+def test_portfolio_volatility_uses_available_short_history(monkeypatch):
+    returns = pd.Series(
+        [0.01, -0.02, 0.015],
+        index=pd.date_range("2026-01-01", periods=3),
+        name="Portfolio",
+    )
+    monkeypatch.setattr(engine, "get_portfolio_returns", lambda *args, **kwargs: returns)
+
+    figure = engine.create_portfolio_volatility_figure(
+        ["AAPL"], [1.0], "1y", window=30
+    )
+
+    assert figure is not None
+    assert len(figure.data[0].x) == 2
+
+
 # SUMMARY STATISTICS
 def test_calculate_summary_statistics(monkeypatch, csv_file):
     monkeypatch.setattr(

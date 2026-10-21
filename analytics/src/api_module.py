@@ -1,9 +1,12 @@
+import base64
 import json
 import logging
+import math
 import os
 from datetime import date
 from typing import List, Optional
 
+import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -75,7 +78,27 @@ def _figure_response(figure) -> JSONResponse:
     """Serialize a Plotly figure for browser-side rendering."""
     if figure is None:
         raise HTTPException(status_code=404, detail="No chart data available")
-    return JSONResponse(content=json.loads(figure.to_json()))
+    payload = _expand_binary_arrays(json.loads(figure.to_json()))
+    return JSONResponse(content=payload)
+
+
+def _empty_figure_response() -> JSONResponse:
+    """Return an empty chart when a portfolio has no points in the requested range."""
+    return JSONResponse(content={"data": [], "layout": {}})
+
+
+def _expand_binary_arrays(value):
+    """Convert Plotly's binary NumPy arrays into lists supported by Plotly.js."""
+    if isinstance(value, dict):
+        if set(value) == {"dtype", "bdata"}:
+            decoded = base64.b64decode(value["bdata"])
+            return np.frombuffer(decoded, dtype=np.dtype(value["dtype"])).tolist()
+        return {key: _expand_binary_arrays(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_expand_binary_arrays(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _portfolio_inputs(
@@ -305,8 +328,6 @@ def get_portfolio_insights(
     _portfolio_period(period, symbols)
     dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
     statistics = analysis_engine.get_portfolio_statistics(symbols, weights, period, volatility_window, dates)
-    if statistics.empty:
-        raise HTTPException(status_code=404, detail="No portfolio data available")
     return {
         "period": period,
         "symbols": symbols,
@@ -325,7 +346,8 @@ def get_portfolio_cumulative_chart(
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
     dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
-    return _figure_response(analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period, dates))
+    figure = analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period, dates)
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/volatility")
@@ -339,11 +361,10 @@ def get_portfolio_volatility_chart(
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
     dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
-    return _figure_response(
-        analysis_engine.create_portfolio_volatility_figure(
-            symbols, weights, period, volatility_window, dates
-        )
+    figure = analysis_engine.create_portfolio_volatility_figure(
+        symbols, weights, period, volatility_window, dates
     )
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/drawdown")
@@ -356,7 +377,8 @@ def get_portfolio_drawdown_chart(
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
     dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
-    return _figure_response(analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period, dates))
+    figure = analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period, dates)
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/allocation")
