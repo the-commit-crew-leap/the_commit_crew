@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
+import { FundamentalsResponse, IntradayPriceResponse, PriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { forkJoin, Subject, takeUntil } from 'rxjs';
+import { catchError, forkJoin, of, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-instrument-stats-modal',
@@ -20,6 +20,9 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
 
   quote?: PriceResponse;
   intraday?: IntradayPriceResponse;
+  fundamentals?: FundamentalsResponse | null;
+  fundamentalsError = '';
+  activeTab: 'session' | 'fundamentals' = 'session';
   loading = false;
   error = '';
   private pendingFigure?: { data: unknown[]; layout: Record<string, unknown> };
@@ -58,13 +61,23 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
       margin: { l: 42, r: 12, t: 8, b: 38 },
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
-      font: { color: '#b9c2d0', size: 10 },
+      font: { color: '#b9c2d0', family: 'Inter, system-ui, sans-serif', size: 10 },
+      hovermode: 'x unified',
+      hoverlabel: { bgcolor: '#12161d', bordercolor: '#53658a', font: { color: '#f0f2f6', size: 10 } },
       showlegend: false
     }, { responsive: true, displayModeBar: false, staticPlot: true, displaylogo: false });
   }
 
   close(): void {
     this.closed.emit();
+  }
+
+  setTab(tab: 'session' | 'fundamentals'): void {
+    this.activeTab = tab;
+    if (tab === 'session' && this.intraday) {
+      this.pendingFigure = this.createIntradayFigure(this.intraday);
+      this.cdr.detectChanges();
+    }
   }
 
   formatPrice(value: number | null | undefined): string {
@@ -85,19 +98,96 @@ export class InstrumentStatsModalComponent implements OnChanges, OnDestroy, Afte
       : null;
   }
 
+  sessionOpen(): number | null {
+    return this.intraday?.bars[0]?.open ?? null;
+  }
+
+  sessionClose(): number | null {
+    return this.intraday?.bars.length
+      ? this.intraday.bars[this.intraday.bars.length - 1].close
+      : null;
+  }
+
+  openToCloseDifference(): number | null {
+    const open = this.sessionOpen();
+    const close = this.sessionClose();
+    return open === null || close === null ? null : close - open;
+  }
+
+  formatDifference(value: number | null): string {
+    if (value === null) {
+      return '—';
+    }
+
+    const sign = value >= 0 ? '+' : '-';
+    return `${sign}$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  isLastAvailableSession(): boolean {
+    return !this.isCurrentSession();
+  }
+
+  sessionLabel(): string {
+    return this.isCurrentSession() ? 'Live market session' : 'Last available session';
+  }
+
+  sessionChartLabel(): string {
+    return this.isCurrentSession() ? "Today's price action" : 'Last available price action';
+  }
+
+  private isCurrentSession(): boolean {
+    if (!this.intraday) {
+      return false;
+    }
+
+    const now = new Date();
+    const easternDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    const timeParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(now);
+    const hour = Number(timeParts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(timeParts.find((part) => part.type === 'minute')?.value);
+    const weekday = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short'
+    }).format(now);
+
+    return easternDate === this.intraday.sessionDate
+      && weekday !== 'Sat'
+      && weekday !== 'Sun'
+      && (hour > 9 || (hour === 9 && minute >= 30))
+      && hour < 16;
+  }
+
   private loadMarketData(): void {
     this.loading = true;
     this.error = '';
+    this.fundamentalsError = '';
     this.quote = undefined;
     this.intraday = undefined;
     this.pendingFigure = undefined;
     forkJoin({
       quote: this.tradingApi.getInstrumentPrice(this.symbol),
-      intraday: this.tradingApi.getInstrumentIntraday(this.symbol)
+      intraday: this.tradingApi.getInstrumentIntraday(this.symbol),
+      fundamentals: this.tradingApi.getInstrumentFundamentals(this.symbol).pipe(
+        catchError(() => {
+          this.fundamentalsError = 'SEC fundamentals are unavailable for this instrument.';
+          return of(null);
+        })
+      )
     }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ({ quote, intraday }) => {
+      next: ({ quote, intraday, fundamentals }) => {
         this.quote = quote;
         this.intraday = intraday;
+        this.fundamentals = fundamentals;
         this.pendingFigure = this.createIntradayFigure(intraday);
         this.loading = false;
         this.cdr.markForCheck();

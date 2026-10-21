@@ -33,7 +33,7 @@
 }
 
 .market-ticker-item strong {
-  color: #a5adba;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
 }
@@ -45,7 +45,7 @@
 
 .market-ticker-price.is-unavailable,
 .market-ticker-change.is-neutral {
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .market-ticker-change {
@@ -63,7 +63,7 @@
 .market-ticker-status {
   flex: 0 0 auto;
   margin-left: 32px;
-  color: #a5adba;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 

@@ -30,7 +30,7 @@
 
 .watchlist-header p {
   margin: 6px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -49,7 +49,7 @@
 
 .watchlist-form label {
   grid-column: 1 / -1;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -104,11 +104,40 @@
   opacity: 0.6;
 }
 
+.watchlist-tools {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 128px minmax(180px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 0 20px 14px;
+}
+
+.watchlist-tools input,
+.watchlist-tools select {
+  min-width: 0;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid #29313c;
+  border-radius: 6px;
+  background: #0b0e12;
+  color: #e8ebf0;
+  font: inherit;
+  font-size: 11px;
+}
+
+.freshness-status {
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .watchlist-state {
   margin: 0;
   padding: 24px 20px;
   border-top: 1px solid #29313c;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 13px;
   text-align: center;
 }
@@ -131,7 +160,7 @@
 .watchlist-item {
   --watchlist-action-width: 88px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) var(--watchlist-action-width);
+  grid-template-columns: minmax(150px, 1.25fr) minmax(92px, .75fr) minmax(92px, .75fr) minmax(100px, .8fr) minmax(110px, .9fr) var(--watchlist-action-width);
   gap: 16px;
   align-items: center;
   min-height: 62px;
@@ -142,14 +171,12 @@
 .watchlist-columns {
   min-height: 34px;
   border-top: 1px solid #29313c;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
   text-transform: uppercase;
 }
 
-.watchlist-columns span:nth-child(2) {
-  text-align: right;
-}
+.watchlist-columns span:nth-child(n+2) { text-align: right; }
 
 .watchlist-asset {
   display: flex;
@@ -159,13 +186,48 @@
 
 .watchlist-asset span,
 .watchlist-price {
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
-.watchlist-price {
+.watchlist-change,
+.watchlist-range {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #e8ebf0;
+  font-size: 12px;
   text-align: right;
   white-space: nowrap;
+}
+
+.watchlist-change small,
+.watchlist-range span { color: var(--text-secondary); font-size: 10px; }
+.watchlist-change.positive { color: #53d5ad; }
+.watchlist-change.negative { color: #ff929b; }
+.watchlist-sparkline { width: 110px; height: 32px; justify-self: end; }
+.watchlist-sparkline svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.watchlist-sparkline polyline { fill: none; stroke: var(--text-secondary); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.watchlist-sparkline.positive polyline { stroke: #53d5ad; }
+.watchlist-sparkline.negative polyline { stroke: #ff929b; }
+
+.watchlist-price {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.watchlist-price strong {
+  color: #e8ebf0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.watchlist-price small {
+  color: var(--text-secondary);
+  font-size: 10px;
 }
 
 .remove-button {
@@ -186,5 +248,16 @@
   .watchlist-columns,
   .watchlist-item {
     gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(92px, auto) var(--watchlist-action-width);
   }
+
+  .watchlist-tools { grid-template-columns: 1fr 128px; }
+  .freshness-status { grid-column: 1 / -1; text-align: left; }
+
+  .watchlist-columns span:nth-child(3),
+  .watchlist-columns span:nth-child(4),
+  .watchlist-columns span:nth-child(5),
+  .watchlist-item > .watchlist-change,
+  .watchlist-item > .watchlist-range,
+  .watchlist-item > .watchlist-sparkline { display: none; }
 }

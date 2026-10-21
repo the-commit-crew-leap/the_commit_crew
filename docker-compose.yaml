@@ -58,6 +58,9 @@ services:
       ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
       ALPACA_DATA_URL: ${ALPACA_DATA_URL:-https://data.alpaca.markets}
       ALPACA_FEED: ${ALPACA_FEED:-iex}
+      SEC_ENABLED: ${SEC_ENABLED:-false}
+      SEC_DATA_URL: ${SEC_DATA_URL:-https://data.sec.gov}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-}
     healthcheck:
       test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
       interval: 10s

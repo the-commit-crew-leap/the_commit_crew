@@ -1,6 +1,6 @@
 .dash-shell {
   min-height: 100vh;
-  padding: 24px 32px;
+  padding: var(--page-padding);
   background: #0b0e12;
 }
 
@@ -21,7 +21,7 @@
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   box-sizing: border-box;
   margin: 0 auto;
   align-items: start;
@@ -53,6 +53,9 @@ app-order-ticket {
 
 .dash-card h1 {
   margin: 0;
+  font-size: var(--page-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: 1.15;
 }
 
 .eyebrow {
@@ -82,7 +85,7 @@ app-order-ticket {
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .overview-card strong {
@@ -106,7 +109,7 @@ app-order-ticket {
 
 .welcome-message {
   margin: 4px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .dash-card nav {
@@ -138,6 +141,10 @@ button {
 }
 
 @media (max-width: 760px) {
+  .dash-shell {
+    padding: var(--page-padding-mobile);
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }

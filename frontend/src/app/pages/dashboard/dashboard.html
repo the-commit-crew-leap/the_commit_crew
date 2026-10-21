@@ -8,11 +8,7 @@
         Here's what's in your account.
       </p>
       <p class="market-update" *ngIf="lastUpdated">
-        <ng-container *ngIf="!marketOpen && lastTradeAt; else refreshedMarket">
-          Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
-        </ng-container>
-        <ng-template #refreshedMarket>Market data</ng-template>
-        Refreshed {{ lastUpdated | date:'shortTime' }}
+        {{ hasLastSessionPrices ? 'Last available session prices' : 'Live prices' }} updated {{ lastUpdated | date:'shortTime' }}
       </p>
       <p class="market-update" *ngIf="overviewError" role="alert">
         Live prices are temporarily unavailable. Retrying automatically.

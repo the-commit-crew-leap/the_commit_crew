@@ -112,12 +112,16 @@ export class DashboardComponent implements OnDestroy, OnInit {
       return this.positions.length > 0 && this.positions.every((position) => position.marketValue !== null);
     }
 
+    get hasLastSessionPrices(): boolean {
+      return this.positions.some((position) => !position.live && position.currentPrice !== null);
+    }
+
     get todayReturn(): number {
       return this.positions.reduce((total, position) => total + (position.unrealizedPnL ?? 0), 0);
     }
 
     get displayedUnrealizedPnL(): number {
-      return this.marketOpen ? this.todayReturn : 0;
+      return this.todayReturn;
     }
 
     get openOrders(): number {
@@ -126,8 +130,8 @@ export class DashboardComponent implements OnDestroy, OnInit {
 
     get lastTradeAt(): Date | null {
       const timestamps = this.positions
-        .map((position) => position.lastTradeAt)
-        .filter((timestamp): timestamp is string => timestamp !== null)
+        .map((position) => position.priceUpdatedAt)
+        .filter((timestamp): timestamp is string => timestamp != null)
         .map((timestamp) => new Date(timestamp).getTime())
         .filter((timestamp) => Number.isFinite(timestamp));
       const latest = Math.max(...timestamps);

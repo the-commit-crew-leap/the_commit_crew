@@ -48,7 +48,7 @@
   place-items: center;
   border: 2px solid #9aa5b5;
   border-radius: 50%;
-  color: #9aa5b5;
+  color: var(--text-secondary);
   font-weight: 700;
 }
 
@@ -88,7 +88,7 @@ fieldset {
 .side-options label {
   padding: 16px;
   border-radius: 8px;
-  color: #a8b1c0;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 20px;
   text-align: center;
@@ -107,7 +107,7 @@ fieldset {
 .balance-row,
 .quote-row,
 .ticket-note {
-  color: #8f9aaa;
+  color: var(--text-secondary);
 }
 
 .balance-row strong,
@@ -118,12 +118,12 @@ fieldset {
 }
 
 .total-row {
-  color: #a8b1c0;
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
 .field-label {
-  color: #a8b1c0;
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
@@ -156,7 +156,7 @@ fieldset {
 
 .input-wrap span {
   padding-right: 12px;
-  color: #8f9aaa;
+  color: var(--text-secondary);
 }
 
 .submit-order {
@@ -203,7 +203,7 @@ button:disabled {
 
 .field-help {
   margin: -8px 0 0;
-  color: #8f9aaa;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 

@@ -13,9 +13,18 @@ import { FormsModule } from '@angular/forms';
 import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, tap, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
-import { InstrumentResponse } from '../../../api/trading.models';
+import { InstrumentResponse, IntradayPriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
-import { isUsMarketOpen } from '../../../shared/market-status';
+import { MarketDataService } from '../../../services/market-data.service';
+
+interface WatchlistDetails {
+  price: number;
+  changePercent: number | null;
+  high: number;
+  low: number;
+  live: boolean;
+  bars: number[];
+}
 
 @Component({
   selector: 'app-watchlist',
@@ -27,6 +36,7 @@ import { isUsMarketOpen } from '../../../shared/market-status';
 export class WatchlistComponent implements OnDestroy, OnInit {
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
+  private readonly marketData = inject(MarketDataService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
   private successTimeout?: ReturnType<typeof setTimeout>;
@@ -36,6 +46,7 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
   watchlistPrices: Record<string, number | null> = {};
+  watchlistDetails: Record<string, WatchlistDetails | null> = {};
   selectedSymbol = '';
   loading = true;
   priceLoading = false;
@@ -48,6 +59,8 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   success = '';
   pickerOpen = false;
   highlightedInstrumentIndex = 0;
+  watchlistFilter = '';
+  sortMode: 'symbol' | 'change' | 'price' = 'symbol';
 
   @HostListener('document:click', ['$event'])
   closePickerOnOutsideClick(event: MouseEvent): void {
@@ -105,6 +118,32 @@ export class WatchlistComponent implements OnDestroy, OnInit {
       instrument.symbol.toLowerCase().includes(query) ||
       instrument.name.toLowerCase().includes(query)
     );
+  }
+
+  get displayedWatchlist(): InstrumentResponse[] {
+    const query = this.watchlistFilter.trim().toLowerCase();
+    const filtered = this.watchlist.filter((instrument) =>
+      !query || instrument.symbol.toLowerCase().includes(query) || instrument.name.toLowerCase().includes(query)
+    );
+    return [...filtered].sort((left, right) => {
+      if (this.sortMode === 'change') {
+        return (this.getDailyChange(right.symbol) ?? -Infinity) - (this.getDailyChange(left.symbol) ?? -Infinity);
+      }
+      if (this.sortMode === 'price') {
+        return (this.getLatestPrice(right.symbol) ?? -Infinity) - (this.getLatestPrice(left.symbol) ?? -Infinity);
+      }
+      return left.symbol.localeCompare(right.symbol);
+    });
+  }
+
+  get freshnessLabel(): string {
+    if (!this.lastUpdated) {
+      return 'Waiting for market data';
+    }
+    if (Object.values(this.watchlistDetails).some((detail) => detail && !detail.live)) {
+      return `Last available session · updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    }
+    return `Updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   }
 
   openPicker(): void {
@@ -257,7 +296,43 @@ export class WatchlistComponent implements OnDestroy, OnInit {
   }
 
   getLatestPrice(symbol: string): number | null {
-    return this.watchlistPrices[symbol] ?? null;
+    return this.watchlistDetails[symbol]?.price ?? this.watchlistPrices[symbol] ?? null;
+  }
+
+  getDailyChange(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.changePercent ?? null;
+  }
+
+  getSessionHigh(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.high ?? null;
+  }
+
+  getSessionLow(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.low ?? null;
+  }
+
+  getPriceStatus(symbol: string): string {
+    const details = this.watchlistDetails[symbol];
+    return details ? (details.live ? 'Live' : 'Last available session') : 'Unavailable';
+  }
+
+  sparklinePoints(symbol: string): string {
+    const values = this.watchlistDetails[symbol]?.bars ?? [];
+    if (values.length < 2) {
+      return '';
+    }
+    const minimum = Math.min(...values);
+    const spread = Math.max(...values) - minimum || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 28 - ((value - minimum) / spread) * 24;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+
+  formatDailyChange(symbol: string): string {
+    const change = this.getDailyChange(symbol);
+    return change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
   }
 
   isPricePending(symbol: string): boolean {
@@ -307,9 +382,8 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     }
 
     return forkJoin(watchlist.map((instrument) =>
-      this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
-        tap((response) => this.recordLastTradeAt(response.updatedAt)),
-        map((response) => response.live ? response.price : null),
+      this.marketData.getQuote(instrument.symbol).pipe(
+        map((response) => response.price),
         catchError((error) => {
           console.error(`Failed to load live price for ${instrument.symbol}`, error);
           return of(null);
@@ -325,6 +399,10 @@ export class WatchlistComponent implements OnDestroy, OnInit {
 
   private applyPrices(prices: Record<string, number | null>): void {
     this.watchlistPrices = prices;
+    this.fetchWatchlistDetails().subscribe((details) => {
+      this.watchlistDetails = details;
+      this.cdr.detectChanges();
+    });
     this.priceLoading = false;
     this.lastUpdated = new Date();
     if (Object.values(prices).some((price) => price === null)) {
@@ -333,13 +411,50 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     this.cdr.detectChanges();
   }
 
-  private dismissSuccessAfterDelay(): void {
-    this.clearSuccessTimeout();
-    this.successTimeout = setTimeout(() => {
-      this.success = '';
-      this.cdr.detectChanges();
-      this.successTimeout = undefined;
-    }, 10000);
+  private fetchWatchlistDetails(): Observable<Record<string, WatchlistDetails | null>> {
+    if (this.watchlist.length === 0 || typeof this.tradingApi.getInstrumentIntraday !== 'function') {
+      return of({});
+    }
+
+    return forkJoin(this.watchlist.map((instrument) =>
+      this.marketData.getIntraday(instrument.symbol).pipe(
+        map((response) => this.toWatchlistDetails(response)),
+        catchError(() => of(null))
+      )
+    )).pipe(
+      map((details) => details.reduce<Record<string, WatchlistDetails | null>>((result, detail, index) => {
+        result[this.watchlist[index].symbol] = detail;
+        return result;
+      }, {}))
+    );
+  }
+
+  private toWatchlistDetails(response: IntradayPriceResponse): WatchlistDetails | null {
+    if (response.bars.length === 0) {
+      return null;
+    }
+
+    const first = response.bars[0];
+    const last = response.bars[response.bars.length - 1];
+    const now = new Date();
+    const easternDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(now);
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value);
+    const live = response.sessionDate === easternDate && weekday !== 'Sat' && weekday !== 'Sun'
+      && (hour > 9 || (hour === 9 && minute >= 30)) && hour < 16;
+
+    return {
+      price: last.close,
+      changePercent: first.open === 0 ? null : ((last.close - first.open) / first.open) * 100,
+      high: Math.max(...response.bars.map((bar) => bar.high)),
+      low: Math.min(...response.bars.map((bar) => bar.low)),
+      live,
+      bars: response.bars.map((bar) => bar.close)
+    };
   }
 
   private clearSuccessTimeout(): void {
@@ -349,16 +464,12 @@ export class WatchlistComponent implements OnDestroy, OnInit {
     }
   }
 
-  get marketOpen(): boolean {
-    return isUsMarketOpen();
-  }
-
-  private recordLastTradeAt(timestamp: string): void {
-    const tradeTime = new Date(timestamp).getTime();
-    if (!Number.isFinite(tradeTime)
-      || (this.lastTradeAt !== null && this.lastTradeAt.getTime() >= tradeTime)) {
-      return;
-    }
-    this.lastTradeAt = new Date(tradeTime);
+  private dismissSuccessAfterDelay(): void {
+    this.clearSuccessTimeout();
+    this.successTimeout = setTimeout(() => {
+      this.success = '';
+      this.successTimeout = undefined;
+      this.cdr.detectChanges();
+    }, 3000);
   }
 }

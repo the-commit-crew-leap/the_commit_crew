@@ -22,7 +22,9 @@ export interface PositionResponse {
     marketValue: number | null;
     unrealizedPnL: number | null;
     unrealizedPnLPercent: number | null;
-    lastTradeAt?: string | null;
+    priceSource?: string | null;
+    priceUpdatedAt?: string | null;
+    live?: boolean;
 }
 
 export interface TradingApiError {
@@ -95,6 +97,21 @@ export interface IntradayBar {
     low: number;
     close: number;
     volume: number;
+}
+
+export interface FundamentalsResponse {
+    symbol: string;
+    companyName: string;
+    revenue: number | null;
+    netIncome: number | null;
+    earningsPerShare: number | null;
+    totalAssets: number | null;
+    totalLiabilities: number | null;
+    cashAndEquivalents: number | null;
+    operatingCashFlow: number | null;
+    sharesOutstanding: number | null;
+    filedAt: string | null;
+    fiscalPeriod: string | null;
 }
 
 export interface MarketTickerResponse {

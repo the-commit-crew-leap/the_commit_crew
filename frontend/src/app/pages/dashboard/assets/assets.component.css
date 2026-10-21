@@ -54,7 +54,7 @@
 
 .assets-row-header {
   min-height: 32px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 12px;
   text-transform: uppercase;
 }
@@ -89,6 +89,18 @@
 .asset-name-button:hover strong,
 .asset-name-button:focus-visible strong {
   color: #a7b8fa;
+}
+
+.asset-name small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.price-status {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
 }
 
 .positive {

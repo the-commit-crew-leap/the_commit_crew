@@ -29,6 +29,7 @@ import org.springframework.web.client.RestTemplate;
 import com.thecommitcrew.auth.AuthServiceClient;
 import com.thecommitcrew.auth.JwtAuthenticationFilter;
 import com.thecommitcrew.domain.enums.AccountStatus;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.OrderSide;
 import com.thecommitcrew.domain.enums.OrderStatus;
@@ -51,6 +52,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
 @WebMvcTest(AccountController.class)
@@ -182,7 +184,17 @@ class AccountControllerTest {
                 currentPrice,
                 "ALPACA_IEX",
                 true,
-                java.time.Instant.parse("2026-10-19T10:00:00Z")
+                Instant.now()
+            ));
+            when(priceService.getIntradayPrices("AAPL")).thenReturn(new IntradayPriceResponse(
+                "AAPL",
+                java.time.LocalDate.now(),
+                "ALPACA_IEX",
+                true,
+                Instant.now(),
+                List.of(new IntradayPriceResponse.IntradayBar(
+                    Instant.now(), currentPrice, currentPrice, currentPrice, currentPrice, 1000
+                ))
             ));
             when(positionService.marketValue(position, currentPrice)).thenReturn(marketValue);
             when(positionService.unrealizedProfitLoss(position, currentPrice)).thenReturn(unrealizedPnL);
@@ -216,6 +228,41 @@ class AccountControllerTest {
                 .andExpect(jsonPath("$[0].symbol").value("UNKNOWN"))
                 .andExpect(jsonPath("$[0].currentPrice").doesNotExist())
                 .andExpect(jsonPath("$[0].marketValue").doesNotExist());
+        }
+
+        @Test
+        @DisplayName("Uses the latest regular-session close when live price is unavailable")
+        void usesLastSessionCloseWhenLivePriceUnavailable() throws Exception {
+            Position position = new Position(TEST_ACCOUNT_ID, "AAPL", 100L, new BigDecimal("150.00"));
+            IntradayPriceResponse intraday = new IntradayPriceResponse(
+                "AAPL",
+                java.time.LocalDate.of(2026, 10, 19),
+                "ALPACA_IEX",
+                true,
+                Instant.parse("2026-10-19T19:59:00Z"),
+                List.of(new IntradayPriceResponse.IntradayBar(
+                    Instant.parse("2026-10-19T19:59:00Z"),
+                    new BigDecimal("195.00"),
+                    new BigDecimal("196.00"),
+                    new BigDecimal("194.50"),
+                    new BigDecimal("195.50"),
+                    1000
+                ))
+            );
+
+            when(accountService.getPositions(TEST_ACCOUNT_ID)).thenReturn(List.of(position));
+            when(priceService.getCurrentLivePrice("AAPL"))
+                .thenThrow(new com.thecommitcrew.domain.exception.LivePriceUnavailableException("closed"));
+            when(priceService.getIntradayPrices("AAPL")).thenReturn(intraday);
+            when(positionService.marketValue(position, new BigDecimal("195.50"))).thenReturn(new BigDecimal("19550.00"));
+            when(positionService.unrealizedProfitLoss(position, new BigDecimal("195.50"))).thenReturn(new BigDecimal("4550.00"));
+            when(positionService.unrealizedPnLPercent(position, new BigDecimal("195.50"))).thenReturn(new BigDecimal("30.3333"));
+
+            mockMvc.perform(get("/api/v1/accounts/{id}/positions", TEST_ACCOUNT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].currentPrice").value("195.5"))
+                .andExpect(jsonPath("$[0].priceSource").value("ALPACA_IEX"))
+                .andExpect(jsonPath("$[0].live").value(false));
         }
 
         @Test

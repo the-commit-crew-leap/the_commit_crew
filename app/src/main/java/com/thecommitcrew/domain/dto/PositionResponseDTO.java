@@ -14,7 +14,9 @@ public record PositionResponseDTO (
     @Nullable BigDecimal marketValue,
     @Nullable BigDecimal unrealizedPnL,
     @Nullable BigDecimal unrealizedPnLPercent,
-    @Nullable Instant lastTradeAt
+    @Nullable String priceSource,
+    @Nullable Instant priceUpdatedAt,
+    boolean live
 
 ) {
     public PositionResponseDTO(
@@ -26,6 +28,6 @@ public record PositionResponseDTO (
         BigDecimal unrealizedPnL,
         BigDecimal unrealizedPnLPercent
     ) {
-        this(symbol, quantity, averageCost, currentPrice, marketValue, unrealizedPnL, unrealizedPnLPercent, null);
+        this(symbol, quantity, averageCost, currentPrice, marketValue, unrealizedPnL, unrealizedPnLPercent, null, null, false);
     }
 }

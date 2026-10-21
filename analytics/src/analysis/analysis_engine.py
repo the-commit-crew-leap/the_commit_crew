@@ -48,7 +48,13 @@ class AnalysisEngine:
 
 
     # RETURN CALCULATIONS
-    def get_returns_for_tickers(self, tickers: list, start_date: str, end_date: str) -> pd.DataFrame:
+    def get_returns_for_tickers(
+        self,
+        tickers: list,
+        start_date: str,
+        end_date: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
+    ) -> pd.DataFrame:
         """
         Calculate daily close-to-close returns for multiple instruments.
         Adjusted closing price is used when available. Otherwise, regular
@@ -113,6 +119,10 @@ class AnalysisEngine:
             
             # Do not fill missing observations when calculating returns.
             returns = price_df["price"].pct_change(fill_method=None)
+            acquisition_date = (acquisition_dates or {}).get(symbol)
+            if acquisition_date:
+                returns = returns.loc[returns.index >= pd.Timestamp(acquisition_date)]
+                returns.loc[returns.index == pd.Timestamp(acquisition_date)] = np.nan
             returns.name = symbol
             returns_data[symbol] = returns
 
@@ -132,12 +142,13 @@ class AnalysisEngine:
         weights: list[float],
         start_date: str,
         end_date: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> pd.Series:
         """Calculate weighted daily returns for a portfolio of symbols."""
         if len(symbols) != len(weights) or not symbols:
             raise ValueError("Portfolio symbols and weights must have the same non-zero length")
 
-        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date)
+        returns_df = self.get_returns_for_tickers(symbols, start_date, end_date, acquisition_dates)
         if returns_df.empty:
             return pd.Series(dtype="float64", name="Portfolio")
 
@@ -157,18 +168,34 @@ class AnalysisEngine:
     ) -> AnalysisPeriod:
         return self._resolve_period(period, symbols)
 
+    @staticmethod
+    def _portfolio_start_date(
+        analysis_period: AnalysisPeriod,
+        acquisition_dates: Optional[dict[str, str]],
+    ) -> str:
+        if not acquisition_dates:
+            return analysis_period.start_date
+
+        first_purchase = min(pd.Timestamp(value) for value in acquisition_dates.values())
+        period_start = pd.Timestamp(analysis_period.start_date)
+        period_end = pd.Timestamp(analysis_period.end_date)
+        return max(period_start, min(first_purchase, period_end)).strftime("%Y-%m-%d")
+
     def create_portfolio_cumulative_figure(
         self,
         symbols: list[str],
         weights: list[float],
         period: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        start_date = self._portfolio_start_date(analysis_period, acquisition_dates)
+        returns = self.get_portfolio_returns(symbols, weights, start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return None
 
         cumulative = ((1 + returns).cumprod() - 1) * 100
+        cumulative = self._prepend_purchase_baseline(cumulative, acquisition_dates)
         figure = go.Figure(go.Scatter(
             x=cumulative.index,
             y=cumulative.values,
@@ -183,6 +210,7 @@ class AnalysisEngine:
             yaxis_title="Cumulative return (%)",
             template="plotly_white",
         )
+        self._set_purchase_start_axis(figure, acquisition_dates, analysis_period.end_date)
         return figure
 
     def create_portfolio_volatility_figure(
@@ -191,23 +219,33 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         if window < 2:
             raise ValueError("Volatility window must be at least 2 trading days")
 
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
-        rolling = returns.rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
+        start_date = self._portfolio_start_date(analysis_period, acquisition_dates)
+        returns = self.get_portfolio_returns(
+            symbols, weights, start_date, analysis_period.end_date, acquisition_dates
+        )
+        if len(returns) < 2:
+            return None
+
+        effective_window = min(window, len(returns))
+        rolling = returns.rolling(window=effective_window, min_periods=2).std() * np.sqrt(252) * 100
         rolling = rolling.dropna()
         if rolling.empty:
             return None
 
+        single_point = len(rolling) == 1
         figure = go.Figure(go.Scatter(
             x=rolling.index,
             y=rolling.values,
-            mode="lines",
+            mode="lines+markers",
             name="Portfolio volatility",
             line={"color": "#f2bf69", "width": 3},
+            marker={"color": "#f2bf69", "size": 14 if single_point else 7},
             hovertemplate="%{x|%Y-%m-%d}<br>Volatility: %{y:.2f}%<extra></extra>",
         ))
         figure.update_layout(
@@ -223,14 +261,17 @@ class AnalysisEngine:
         symbols: list[str],
         weights: list[float],
         period: str,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> Optional[go.Figure]:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        start_date = self._portfolio_start_date(analysis_period, acquisition_dates)
+        returns = self.get_portfolio_returns(symbols, weights, start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return None
 
         cumulative = (1 + returns).cumprod()
         drawdown = (cumulative / cumulative.cummax() - 1) * 100
+        drawdown = self._prepend_purchase_baseline(drawdown, acquisition_dates)
         figure = go.Figure(go.Scatter(
             x=drawdown.index,
             y=drawdown.values,
@@ -246,7 +287,32 @@ class AnalysisEngine:
             yaxis_title="Drawdown (%)",
             template="plotly_white",
         )
+        self._set_purchase_start_axis(figure, acquisition_dates, analysis_period.end_date)
         return figure
+
+    @staticmethod
+    def _set_purchase_start_axis(
+        figure: go.Figure,
+        acquisition_dates: Optional[dict[str, str]],
+        end_date: str,
+    ) -> None:
+        if acquisition_dates:
+            first_purchase = min(pd.Timestamp(value) for value in acquisition_dates.values())
+            first_purchase = min(first_purchase, pd.Timestamp(end_date))
+            figure.update_xaxes(range=[first_purchase.strftime("%Y-%m-%d"), end_date])
+
+    @staticmethod
+    def _prepend_purchase_baseline(
+        values: pd.Series,
+        acquisition_dates: Optional[dict[str, str]],
+    ) -> pd.Series:
+        if not acquisition_dates:
+            return values
+
+        first_purchase = min(pd.Timestamp(value) for value in acquisition_dates.values())
+        if values.empty or first_purchase < values.index.min():
+            return pd.concat([pd.Series([0.0], index=[first_purchase]), values]).sort_index()
+        return values
 
     def create_portfolio_allocation_figure(
         self,
@@ -271,9 +337,11 @@ class AnalysisEngine:
         weights: list[float],
         period: str,
         volatility_window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> pd.DataFrame:
         analysis_period = self._portfolio_figure_period(symbols, period)
-        returns = self.get_portfolio_returns(symbols, weights, analysis_period.start_date, analysis_period.end_date)
+        start_date = self._portfolio_start_date(analysis_period, acquisition_dates)
+        returns = self.get_portfolio_returns(symbols, weights, start_date, analysis_period.end_date, acquisition_dates)
         if returns.empty:
             return pd.DataFrame()
         return self.statistics_calculator.calculate(pd.DataFrame({"Portfolio": returns}))
@@ -337,6 +405,7 @@ class AnalysisEngine:
         period: str,
         cash_value: float = 0.0,
         volatility_window: int = 30,
+        acquisition_dates: Optional[dict[str, str]] = None,
     ) -> dict:
         """Compare current portfolio metrics with a proposed additional purchase."""
         if len(symbols) != len(values) or not symbols:
@@ -372,7 +441,7 @@ class AnalysisEngine:
                 raise ValueError("Portfolio value must be positive")
             weights = [portfolio_values[symbol] / total_value for symbol in snapshot_symbols]
             statistics = self.get_portfolio_statistics(
-                snapshot_symbols, weights, period, volatility_window
+                snapshot_symbols, weights, period, volatility_window, acquisition_dates
             )
             return {
                 "total_value": total_value,
@@ -510,11 +579,12 @@ class AnalysisEngine:
 
         for symbol in returns_df.columns:
             rolling_volatility = returns_df[symbol].rolling(window=window, min_periods=window).std() * np.sqrt(252) * 100
+            valid_volatility = rolling_volatility.dropna()
 
-            if rolling_volatility.notna().any():
+            if not valid_volatility.empty:
                 fig.add_trace(go.Scatter(
-                    x=rolling_volatility.index,
-                    y=rolling_volatility.values,
+                    x=valid_volatility.index,
+                    y=valid_volatility.values,
                     mode="lines",
                     name=symbol,
                     line=dict(width=2)

@@ -4,7 +4,6 @@
       <p class="eyebrow">Portfolio snapshot</p>
       <h2 id="assets-title">Your assets</h2>
     </div>
-    <span class="portfolio-link">View portfolio <span aria-hidden="true">↗</span></span>
   </header>
 
   <div class="assets-table" role="table" aria-label="Your assets">
@@ -25,18 +24,20 @@
         <strong>{{ position.symbol }}</strong>
       </button>
       <span role="cell">{{ formatQuantity(position.quantity) }}</span>
-      <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
+      <span role="cell">
+        ${{ formatCurrency(position.currentPrice) }}
+        <small class="price-status">
+          {{ position.live ? 'Live' : position.currentPrice !== null ? 'Last available session' : 'Unavailable' }}
+        </small>
+      </span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
       <span role="cell">
-        <ng-container *ngIf="marketOpen; else marketClosedPnl">
-          <span
-            [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
-            [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
-            {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
-              formatCurrency(position.unrealizedPnL) }}
-          </span>
-        </ng-container>
-        <ng-template #marketClosedPnl>—</ng-template>
+        <span
+          [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
+          [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
+          {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
+            formatCurrency(position.unrealizedPnL) }}
+        </span>
       </span>
     </div>
   </div>

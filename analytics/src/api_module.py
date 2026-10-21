@@ -1,8 +1,12 @@
+import base64
 import json
 import logging
+import math
 import os
+from datetime import date
 from typing import List, Optional
 
+import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -74,7 +78,27 @@ def _figure_response(figure) -> JSONResponse:
     """Serialize a Plotly figure for browser-side rendering."""
     if figure is None:
         raise HTTPException(status_code=404, detail="No chart data available")
-    return JSONResponse(content=json.loads(figure.to_json()))
+    payload = _expand_binary_arrays(json.loads(figure.to_json()))
+    return JSONResponse(content=payload)
+
+
+def _empty_figure_response() -> JSONResponse:
+    """Return an empty chart when a portfolio has no points in the requested range."""
+    return JSONResponse(content={"data": [], "layout": {}})
+
+
+def _expand_binary_arrays(value):
+    """Convert Plotly's binary NumPy arrays into lists supported by Plotly.js."""
+    if isinstance(value, dict):
+        if set(value) == {"dtype", "bdata"}:
+            decoded = base64.b64decode(value["bdata"])
+            return np.frombuffer(decoded, dtype=np.dtype(value["dtype"])).tolist()
+        return {key: _expand_binary_arrays(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_expand_binary_arrays(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
 
 
 def _portfolio_inputs(
@@ -93,6 +117,24 @@ def _portfolio_period(period: str, symbols: list[str]) -> None:
     _validate_period(period)
     if not symbols:
         raise HTTPException(status_code=400, detail="Portfolio has no holdings")
+
+
+def _portfolio_acquisition_dates(
+    symbols: list[str],
+    acquisition_dates: Optional[List[str]],
+) -> dict[str, str]:
+    if acquisition_dates is None:
+        return {}
+    if len(acquisition_dates) != len(symbols):
+        raise HTTPException(status_code=400, detail="Portfolio acquisition dates must match symbols")
+    try:
+        parsed_dates = [date.fromisoformat(value) for value in acquisition_dates]
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Portfolio acquisition dates must use YYYY-MM-DD") from error
+    return {
+        helper.normalize_ticker(symbol): parsed_date.isoformat()
+        for symbol, parsed_date in zip(symbols, parsed_dates)
+    }
 
 
 # HEALTH
@@ -279,13 +321,13 @@ def get_portfolio_insights(
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
+    acquisition_dates: Optional[List[str]] = Query(default=None),
 ):
     """Return weighted statistics for the user's current holdings snapshot."""
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    statistics = analysis_engine.get_portfolio_statistics(symbols, weights, period, volatility_window)
-    if statistics.empty:
-        raise HTTPException(status_code=404, detail="No portfolio data available")
+    dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
+    statistics = analysis_engine.get_portfolio_statistics(symbols, weights, period, volatility_window, dates)
     return {
         "period": period,
         "symbols": symbols,
@@ -299,10 +341,13 @@ def get_portfolio_cumulative_chart(
     symbols: Optional[List[str]] = Query(default=None),
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
+    acquisition_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    return _figure_response(analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period))
+    dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
+    figure = analysis_engine.create_portfolio_cumulative_figure(symbols, weights, period, dates)
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/volatility")
@@ -311,14 +356,15 @@ def get_portfolio_volatility_chart(
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
+    acquisition_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    return _figure_response(
-        analysis_engine.create_portfolio_volatility_figure(
-            symbols, weights, period, volatility_window
-        )
+    dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
+    figure = analysis_engine.create_portfolio_volatility_figure(
+        symbols, weights, period, volatility_window, dates
     )
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/drawdown")
@@ -326,10 +372,13 @@ def get_portfolio_drawdown_chart(
     symbols: Optional[List[str]] = Query(default=None),
     weights: Optional[List[float]] = Query(default=None),
     period: str = "1y",
+    acquisition_dates: Optional[List[str]] = Query(default=None),
 ):
     symbols, weights = _portfolio_inputs(symbols, weights)
     _portfolio_period(period, symbols)
-    return _figure_response(analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period))
+    dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
+    figure = analysis_engine.create_portfolio_drawdown_figure(symbols, weights, period, dates)
+    return _figure_response(figure) if figure is not None else _empty_figure_response()
 
 
 @app.get("/portfolio/charts/allocation")
@@ -350,11 +399,13 @@ def get_portfolio_scenario(
     cash_value: float = Query(default=0.0, ge=0),
     period: str = "1y",
     volatility_window: int = Query(default=30, ge=2),
+    acquisition_dates: Optional[List[str]] = Query(default=None),
 ):
     """Compare the current portfolio with a proposed additional purchase."""
     if not symbols or not values or len(symbols) != len(values):
         raise HTTPException(status_code=400, detail="Portfolio symbols and values are required")
     _portfolio_period(period, symbols)
+    dates = _portfolio_acquisition_dates(symbols, acquisition_dates)
     try:
         return analysis_engine.calculate_portfolio_scenario(
             symbols,
@@ -364,6 +415,7 @@ def get_portfolio_scenario(
             period,
             cash_value,
             volatility_window,
+            dates,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

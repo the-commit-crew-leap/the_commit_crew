@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
 import com.thecommitcrew.domain.dto.IntradayPriceResponse;
+import com.thecommitcrew.service.SecCompanyFactsClient;
 import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
@@ -56,6 +57,9 @@ class InstrumentControllerTest {
 
     @MockitoBean
     private MarketTickerService marketTickerService;
+
+    @MockitoBean
+    private SecCompanyFactsClient secCompanyFactsClient;
 
     @MockitoBean
     private AuthServiceClient authServiceClient;

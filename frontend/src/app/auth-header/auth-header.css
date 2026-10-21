@@ -40,7 +40,7 @@ nav {
 
 nav a {
   padding: 8px 0;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 13px;
   text-decoration: none;
 }

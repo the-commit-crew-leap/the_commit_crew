@@ -1,14 +1,38 @@
 <section class="portfolio-analytics-shell">
   <div class="portfolio-analytics-workspace">
-    <header class="page-heading"><div><p class="eyebrow">Account research</p><h1>Portfolio analytics</h1><p>See how your current holdings behave as one portfolio.</p></div><span class="status">{{ loading ? 'Calculating' : 'Ready' }}</span></header>
-    <section class="portfolio-controls" aria-label="Portfolio period controls">
+    <header class="page-heading"><div><p class="eyebrow">Account research</p><h1>Portfolio analytics</h1><p>See how your current holdings behave as one portfolio.</p></div><span class="status">{{ viewMode === 'live' ? (liveLoading ? 'Refreshing' : 'Live') : loading ? 'Calculating' : 'Ready' }}</span></header>
+    <section class="view-switch" aria-label="Portfolio view">
+      <button type="button" [class.is-active]="viewMode === 'historical'" [attr.aria-pressed]="viewMode === 'historical'" (click)="setViewMode('historical')">Historical analytics</button>
+      <button type="button" [class.is-active]="viewMode === 'live'" [attr.aria-pressed]="viewMode === 'live'" (click)="setViewMode('live')">Live snapshot</button>
+    </section>
+    <ng-container *ngIf="viewMode === 'live'">
+      <section *ngIf="!liveLoading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
+      <p *ngIf="liveError" class="state-message error-message" role="alert">{{ liveError }}</p>
+      <p *ngIf="liveLoading && !liveError" class="state-message">Refreshing live portfolio data...</p>
+      <section *ngIf="!liveLoading || positions.length" class="live-summary" aria-label="Live portfolio summary">
+        <article><span>Portfolio value</span><strong>{{ liveTotalValue() | number:'1.2-2' }} USD</strong><small>{{ liveHasUnavailablePrices() ? 'Includes last available sessions' : 'Live holdings plus cash' }}</small></article>
+        <article><span>Holdings value</span><strong>{{ livePortfolioValue() | number:'1.2-2' }} USD</strong><small>{{ positions.length }} position{{ positions.length === 1 ? '' : 's' }}</small></article>
+        <article><span>Unrealized P&amp;L</span><strong [class.positive]="liveUnrealizedPnL() >= 0" [class.negative]="liveUnrealizedPnL() < 0">{{ liveUnrealizedPnL() >= 0 ? '+' : '' }}{{ liveUnrealizedPnL() | number:'1.2-2' }} USD</strong><small>Against average cost</small></article>
+        <article><span>Updated</span><strong>{{ liveUpdatedAt ? (liveUpdatedAt | date:'shortTime') : '—' }}</strong><small>{{ liveHasUnavailablePrices() ? 'Last available session' : 'Live market data' }}</small></article>
+      </section>
+      <section *ngIf="!liveLoading || positions.length" class="portfolio-charts live-charts" aria-label="Live portfolio charts">
+        <article class="chart-card"><header><p class="eyebrow">Allocation</p><h2>Current position weights</h2></header><div #liveAllocationChart class="plot-container allocation"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Growth</p><h2>Live portfolio value</h2></header><div #liveValueChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Risk</p><h2>Live unrealized P&amp;L</h2></header><div #livePnlChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Downside</p><h2>Unrealized P&amp;L by holding</h2></header><div #livePriceChangeChart class="plot-container"></div></article>
+      </section>
+    </ng-container>
+    <section *ngIf="viewMode === 'historical'" class="portfolio-controls" aria-label="Portfolio period controls">
       <span>Lookback</span>
       <div class="period-buttons"><button *ngFor="let period of periods" type="button" [class.is-active]="selectedPeriod === period.value" [attr.aria-pressed]="selectedPeriod === period.value" (click)="setPeriod(period.value)">{{ period.label }}</button></div>
     </section>
-    <p *ngIf="error" class="state-message" role="alert">{{ error }}</p>
-    <p *ngIf="loading && !error" class="state-message">Loading portfolio analytics...</p>
-    <ng-container *ngIf="!loading && !error">
-      <section class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue | number:'1.0-0' }} USD</span></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
+    <div *ngIf="viewMode === 'historical' && error" class="historical-error" role="alert">
+      <p class="state-message">{{ error }}</p>
+      <button type="button" class="scenario-button" (click)="retryHistoricalAnalytics()">Retry analytics</button>
+    </div>
+    <p *ngIf="viewMode === 'historical' && loading && !error" class="state-message">Loading portfolio analytics...</p>
+    <section *ngIf="viewMode === 'historical' && !loading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
+    <ng-container *ngIf="viewMode === 'historical' && !loading && !error">
       <section *ngIf="statistics[0] as statistic" class="metric-strip" aria-label="Portfolio statistics">
         <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
         <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>

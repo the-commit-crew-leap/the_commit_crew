@@ -2,6 +2,7 @@ package com.thecommitcrew.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +82,6 @@ public class PriceService {
                 "Live Alpaca market data is not configured for symbol: " + symbol
             );
         }
-
         try {
             return alpacaMarketDataClient.getIntradayPrices(symbol);
         } catch (RuntimeException exception) {
@@ -90,6 +90,24 @@ public class PriceService {
                 exception
             );
         }
+    }
+
+    public LivePriceResponse getLastAvailableClose(String symbol) {
+        Optional<PriceHistory> priceHistory = priceHistoryMapper.findLatestPriceBySymbol(symbol);
+        if (priceHistory.isEmpty()) {
+            throw new LivePriceUnavailableException(
+                "No last available session price for symbol: " + symbol
+            );
+        }
+
+        PriceHistory history = priceHistory.get();
+        return new LivePriceResponse(
+            symbol,
+            validatePrice(symbol, history.getClosePrice()),
+            "DATABASE_LAST_CLOSE",
+            false,
+            history.getPriceDate().atStartOfDay(ZoneOffset.UTC).toInstant()
+        );
     }
 
     private BigDecimal validatePrice(String symbol, BigDecimal price) {

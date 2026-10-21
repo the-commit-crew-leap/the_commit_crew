@@ -182,7 +182,7 @@ describe('WatchlistComponent', () => {
     jest.useRealTimers();
   });
 
-  it('does not display a database fallback as a live price', () => {
+  it('displays a database fallback as the last available session', () => {
     tradingApi.getInstrumentPrice.mockReturnValue(of({
       symbol: 'BTC',
       price: 121.26,
@@ -195,7 +195,7 @@ describe('WatchlistComponent', () => {
     const fallbackComponent = fallbackFixture.componentInstance;
     fallbackComponent.ngOnInit();
 
-    expect(fallbackComponent.getLatestPrice('BTC')).toBeNull();
-    expect(fallbackComponent.isPriceUnavailable('BTC')).toBe(true);
+    expect(fallbackComponent.getLatestPrice('BTC')).toBe(121.26);
+    expect(fallbackComponent.isPriceUnavailable('BTC')).toBe(false);
   });
 });
