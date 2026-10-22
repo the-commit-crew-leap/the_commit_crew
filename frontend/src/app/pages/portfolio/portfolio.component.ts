@@ -309,6 +309,9 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private calculateIntradayPortfolioHistory(): Array<{ time: string; value: number; pnl: number }> {
     const positionsBySymbol = new Map(this.positions.map((position) => [position.symbol, position]));
+    const heldSymbols = this.positions
+      .filter((position) => position.quantity > 0)
+      .map((position) => position.symbol);
     const timestamps = [...new Set(this.liveIntraday.flatMap((intraday) =>
       intraday.bars.map((bar) => bar.timestamp)
     ))].sort();
@@ -320,6 +323,10 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
         if (bar) {
           latestPrices.set(intraday.symbol, bar.close);
         }
+      }
+
+      if (!heldSymbols.every((symbol) => latestPrices.has(symbol))) {
+        return null;
       }
 
       let holdingsValue = 0;
@@ -338,7 +345,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
         value: holdingsValue + this.cashBalance,
         pnl: unrealizedPnl
       };
-    });
+    }).filter((point): point is { time: string; value: number; pnl: number } => point !== null);
   }
 
   private createLiveFigures(): PlotlyFigure[] {
@@ -346,6 +353,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const symbols = valuedPositions.map((position) => position.symbol);
     const values = valuedPositions.map((position) => position.marketValue ?? 0);
     const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
+    const livePnlValues = this.liveHistory.map((point) => point.pnl);
     const axis = {
       showgrid: false,
       zeroline: false,
@@ -356,8 +364,25 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       tickformat: ',.0f'
     };
     const timeline = this.liveHistory.map((point) => point.time);
-    const baselineValue = this.liveHistory[0]?.value ?? 0;
-    const valueChanges = this.liveHistory.map((point) => point.value - baselineValue);
+    const liveValues = this.liveHistory.map((point) => point.value);
+    const minimumValue = liveValues.length ? Math.min(...liveValues) : 0;
+    const maximumValue = liveValues.length ? Math.max(...liveValues) : 0;
+    const valuePadding = Math.max((maximumValue - minimumValue) * 0.1, 1);
+    const valueAxis = {
+      ...axis,
+      autorange: false,
+      range: [minimumValue - valuePadding, maximumValue + valuePadding]
+    };
+    const minimumPnl = livePnlValues.length ? Math.min(...livePnlValues) : 0;
+    const maximumPnl = livePnlValues.length ? Math.max(...livePnlValues) : 0;
+    const pnlPadding = Math.max((maximumPnl - minimumPnl) * 0.1, 1);
+    const pnlAxis = {
+      ...axis,
+      autorange: false,
+      range: [minimumPnl - pnlPadding, maximumPnl + pnlPadding],
+      zeroline: true,
+      zerolinecolor: '#36404e'
+    };
     return [
       {
         data: [{
@@ -375,12 +400,11 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       },
       {
         data: [{
-          type: 'scatter', mode: 'lines', x: timeline, y: valueChanges,
+          type: 'scatter', mode: 'lines', x: timeline, y: liveValues,
           line: { color: '#a7b8fa', width: 2.5, shape: 'spline' },
-          fill: 'tozeroy', fillcolor: 'rgba(167,184,250,0.10)',
-          hovertemplate: '%{x|%H:%M}<br>%{y:+,.2f} USD<extra></extra>'
+          hovertemplate: '%{x|%H:%M}<br>%{y:,.2f} USD<extra></extra>'
         }],
-        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: axis }
+        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: valueAxis }
       },
       {
         data: [{
@@ -389,7 +413,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
           fill: 'tozeroy', fillcolor: 'rgba(100,214,160,0.09)',
           hovertemplate: '%{x|%H:%M}<br>%{y:+,.2f} USD<extra></extra>'
         }],
-        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: { ...axis, zeroline: true, zerolinecolor: '#36404e' } }
+        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: pnlAxis }
       },
       {
         data: [{
