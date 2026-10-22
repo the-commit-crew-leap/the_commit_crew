@@ -11,9 +11,11 @@ import { AssetsComponent } from './assets/assets.component';
 import { WatchlistComponent } from './watchlist/watchlist.component';
 import { InstrumentStatsModalComponent } from './instrument-stats-modal/instrument-stats-modal.component';
 import { isUsMarketOpen } from '../../shared/market-status';
+import { PortfolioCatService } from '../../services/portfolio-cat.service';
+import { PortfolioCatComponent } from './portfolio-cat/portfolio-cat.component';
 
 @Component({
-  imports: [CommonModule, OrderTicketComponent, AssetsComponent, WatchlistComponent, InstrumentStatsModalComponent],
+  imports: [CommonModule, OrderTicketComponent, AssetsComponent, WatchlistComponent, InstrumentStatsModalComponent, PortfolioCatComponent],
   selector: 'app-dashboard',
   styleUrl: './dashboard.css',
   templateUrl: './dashboard.html',
@@ -34,7 +36,8 @@ export class DashboardComponent implements OnDestroy, OnInit {
   constructor(
     readonly authSession: AuthSessionService,
     private readonly tradingApi: TradingApiService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    readonly portfolioCat: PortfolioCatService
   ) {
   }
 

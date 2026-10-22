@@ -29,15 +29,20 @@
 
 .portfolio-column {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+.portfolio-cat-panel {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
 app-order-ticket {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 4;
   align-self: start;
 }
 
@@ -151,7 +156,8 @@ button {
 
   .dash-card,
   .portfolio-overview,
-  .portfolio-column {
+  .portfolio-column,
+  .portfolio-cat-panel {
     grid-column: 1;
     grid-row: auto;
   }

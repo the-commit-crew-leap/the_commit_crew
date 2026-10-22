@@ -129,6 +129,25 @@
   text-align: left;
 }
 
+.tcc-beginner-button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 1px solid #53d5ad;
+  border-radius: 6px;
+  background: #18372f;
+  color: #53d5ad;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.tcc-beginner-button:hover {
+  background: #235543;
+  color: #f0f2f6;
+}
+
 .tcc-dropdown-logout:hover {
   background: #713b46;
   color: #fff;
