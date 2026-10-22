@@ -3,8 +3,8 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 72px;
-  padding: 0 48px;
+  min-height: 84px;
+  padding: 0 52px;
   box-sizing: border-box;
   border-bottom: 1px solid #222936;
   background: #0b0e12;
@@ -13,23 +13,21 @@
 .auth-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   color: #e8ebf0;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 600;
   text-decoration: none;
 }
 
 .auth-brand-mark {
-  display: grid;
-  width: 26px;
-  height: 26px;
-  place-items: center;
-  border-radius: 6px;
-  background: #a7b8fa;
-  color: #0d1015;
-  font-size: 18px;
-  font-weight: 700;
+  display: block;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 38px;
+  border-radius: 7px;
+  object-fit: contain;
+  transform: translateY(-6px);
 }
 
 nav {

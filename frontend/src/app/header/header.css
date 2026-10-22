@@ -3,8 +3,8 @@
   display: flex;
   align-items: center;
   gap: 48px;
-  min-height: 72px;
-  padding: 0 32px;
+  min-height: 84px;
+  padding: 0 36px;
   background: #15191f;
   border-bottom: 1px solid #2a3039;
   color: #f0f2f6;
@@ -15,18 +15,22 @@
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   color: inherit;
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 700;
-  line-height: 27px;
+  line-height: 30px;
   text-decoration: none;
 }
 
 .tcc-brand-mark {
-  width: 26px;
-  height: 26px;
-  background: #a7b8fa;
+  display: block;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 38px;
+  border-radius: 7px;
+  object-fit: contain;
+  transform: translateY(-8px);
 }
 
 .tcc-primary-nav {
