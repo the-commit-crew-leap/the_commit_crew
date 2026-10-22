@@ -353,7 +353,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     const symbols = valuedPositions.map((position) => position.symbol);
     const values = valuedPositions.map((position) => position.marketValue ?? 0);
     const pnl = valuedPositions.map((position) => position.unrealizedPnL ?? 0);
-    const livePnlValues = this.liveHistory.map((point) => point.pnl);
     const axis = {
       showgrid: false,
       zeroline: false,
@@ -372,16 +371,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
       ...axis,
       autorange: false,
       range: [minimumValue - valuePadding, maximumValue + valuePadding]
-    };
-    const minimumPnl = livePnlValues.length ? Math.min(...livePnlValues) : 0;
-    const maximumPnl = livePnlValues.length ? Math.max(...livePnlValues) : 0;
-    const pnlPadding = Math.max((maximumPnl - minimumPnl) * 0.1, 1);
-    const pnlAxis = {
-      ...axis,
-      autorange: false,
-      range: [minimumPnl - pnlPadding, maximumPnl + pnlPadding],
-      zeroline: true,
-      zerolinecolor: '#36404e'
     };
     return [
       {
@@ -413,7 +402,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
           fill: 'tozeroy', fillcolor: 'rgba(100,214,160,0.09)',
           hovertemplate: '%{x|%H:%M}<br>%{y:+,.2f} USD<extra></extra>'
         }],
-        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: pnlAxis }
+        layout: { xaxis: { showgrid: false, fixedrange: true }, yaxis: { ...axis, zeroline: true, zerolinecolor: '#36404e' } }
       },
       {
         data: [{
