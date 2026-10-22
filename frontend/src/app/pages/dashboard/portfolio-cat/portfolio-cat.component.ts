@@ -27,9 +27,9 @@ export class PortfolioCatComponent {
 
   get stateLabel(): string {
     return {
-      skinny: 'Skinny · Loss',
-      base: 'Base · Neutral',
-      fat: 'Fat · Profit'
+      skinny: 'Loss',
+      base: 'Neutral',
+      fat: 'Profit'
     }[this.state];
   }
 
