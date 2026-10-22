@@ -52,7 +52,7 @@
             <h3 id="volatility-title">Intraday session</h3>
           </div>
         </div>
-        <div *ngIf="intraday?.bars.length; else noBars" #volatilityChart class="volatility-chart"></div>
+        <div *ngIf="intraday.bars.length; else noBars" #volatilityChart class="volatility-chart"></div>
         <ng-template #noBars><p class="modal-state">No regular-session bars are available yet.</p></ng-template>
       </section>
     </div>

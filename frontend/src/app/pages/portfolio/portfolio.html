@@ -22,10 +22,6 @@
         <article class="chart-card"><header><p class="eyebrow">Downside</p><h2>Unrealized P&amp;L by holding</h2></header><div #livePriceChangeChart class="plot-container"></div></article>
       </section>
     </ng-container>
-    <section *ngIf="viewMode === 'historical'" class="portfolio-controls" aria-label="Portfolio period controls">
-      <span>Lookback</span>
-      <div class="period-buttons"><button *ngFor="let period of periods" type="button" [class.is-active]="selectedPeriod === period.value" [attr.aria-pressed]="selectedPeriod === period.value" (click)="setPeriod(period.value)">{{ period.label }}</button></div>
-    </section>
     <div *ngIf="viewMode === 'historical' && error" class="historical-error" role="alert">
       <p class="state-message">{{ error }}</p>
       <button type="button" class="scenario-button" (click)="retryHistoricalAnalytics()">Retry analytics</button>

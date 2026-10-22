@@ -24,10 +24,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('livePnlChart') private livePnlChart?: ElementRef<HTMLElement>;
   @ViewChild('livePriceChangeChart') private livePriceChangeChart?: ElementRef<HTMLElement>;
 
-  readonly periods = [
-    { value: '1w', label: '1W' }, { value: '1m', label: '1M' }, { value: '6m', label: '6M' },
-    { value: '1y', label: '1Y' }, { value: '5y', label: '5Y' }, { value: '10y', label: '10Y' }
-  ];
+  readonly portfolioPeriod = 'since_purchase';
   positions: PositionResponse[] = [];
   orders: OrderResponse[] = [];
   instruments: InstrumentResponse[] = [];
@@ -36,7 +33,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   scenario?: PortfolioScenario;
   cashBalance = 0;
   scenarioLoading = false;
-  selectedPeriod = '1y';
   volatilityWindow = 30;
   statistics: AnalyticsStatistic[] = [];
   loading = true;
@@ -144,13 +140,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     return this.positions.some((position) => position.currentPrice === null || !position.live);
   }
 
-  setPeriod(period: string): void {
-    if (period !== this.selectedPeriod) {
-      this.selectedPeriod = period;
-      this.runPortfolioAnalytics();
-    }
-  }
-
   retryHistoricalAnalytics(): void {
     this.runPortfolioAnalytics();
   }
@@ -168,7 +157,7 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.error = '';
     this.analyticsApi.getPortfolioScenario(
       symbols, values, this.scenarioSymbol, this.scenarioQuantity,
-      this.selectedPeriod, this.cashBalance, this.getVolatilityWindow(), acquisitionDates
+      this.portfolioPeriod, this.cashBalance, this.getVolatilityWindow(), acquisitionDates
     ).pipe(takeUntil(this.destroy$)).subscribe({
       next: (scenario) => {
         this.scenario = scenario;
@@ -212,11 +201,11 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.loading = true;
     this.error = '';
     forkJoin({
-      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.selectedPeriod, window, acquisitionDates),
+      insights: this.analyticsApi.getPortfolioInsights(symbols, weights, this.portfolioPeriod, window, acquisitionDates),
       allocation: this.analyticsApi.getPortfolioAllocation(allocationSymbols, allocationWeights),
-      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.selectedPeriod, acquisitionDates),
-      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.selectedPeriod, window, acquisitionDates),
-      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.selectedPeriod, acquisitionDates)
+      cumulative: this.analyticsApi.getPortfolioCumulative(symbols, weights, this.portfolioPeriod, acquisitionDates),
+      volatility: this.analyticsApi.getPortfolioVolatility(symbols, weights, this.portfolioPeriod, window, acquisitionDates),
+      drawdown: this.analyticsApi.getPortfolioDrawdown(symbols, weights, this.portfolioPeriod, acquisitionDates)
     }).pipe(takeUntil(this.destroy$)).subscribe({
       next: ({ insights, allocation, cumulative, volatility, drawdown }) => {
         this.statistics = insights.statistics;
@@ -448,9 +437,6 @@ export class PortfolioComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private getVolatilityWindow(): number {
-    if (this.selectedPeriod === '1w') return 2;
-    if (this.selectedPeriod === '1m') return 5;
-    if (this.selectedPeriod === '6m') return 10;
     return this.volatilityWindow;
   }
 }

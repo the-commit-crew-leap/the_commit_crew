@@ -83,14 +83,12 @@ class AnalysisHelper:
             "1y"  - approximately one year.
             "5y"  - approximately five years.
             "10y" - approximately ten years.
-            "all" - all available historical data.
 
         Calendar days are used when calculating the starting date. Trading-day
         filtering is handled naturally by the data available in the CSV files.
 
         Args:
-            period: Analysis period. Supported values are "1y", "5y", "10y",
-                and "all".
+            period: Analysis period. Supported values are "1y", "5y", and "10y".
 
         Returns:
             Tuple containing:
@@ -114,10 +112,8 @@ class AnalysisHelper:
             start_date = resolved_end_date - timedelta(days=365 * 5)
         elif period == "10y":
             start_date = resolved_end_date - timedelta(days=365 * 10)
-        elif period == "all":
-            start_date = datetime(1900, 1, 1)
         else:
-            raise ValueError(f"Unknown period '{period}'. Use '1y', '5y', '10y', or 'all'.")
+            raise ValueError(f"Unknown period '{period}'. Use '1y', '5y', or '10y'.")
 
         return start_date.strftime("%Y-%m-%d"), resolved_end_date.strftime("%Y-%m-%d")
     
