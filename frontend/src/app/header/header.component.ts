@@ -3,6 +3,7 @@ import { DepositModalComponent } from '../deposit/deposit.component';
 import { AuthSessionService } from '../auth/auth-session.service';
 import { NgIf } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { PortfolioCatService } from '../services/portfolio-cat.service';
 
 @Component({
   selector: 'app-header',
@@ -25,7 +26,8 @@ export class TCC_HeaderComponent {
 
     constructor( 
       private readonly authSession: AuthSessionService, 
-      private readonly router: Router
+      private readonly router: Router,
+      readonly portfolioCat: PortfolioCatService
     ) {
     }
 
@@ -47,6 +49,11 @@ export class TCC_HeaderComponent {
 
     onDepositSuccess(): void {
       // DepositModalComponent updates the shared balance from the response.
+    }
+
+    togglePortfolioCat(): void {
+      this.portfolioCat.toggle();
+      this.accountMenuOpen = false;
     }
   accountMenuOpen = false;
 

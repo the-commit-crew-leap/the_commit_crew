@@ -45,6 +45,11 @@
       </article>
     </section>
 
+    <app-portfolio-cat
+      *ngIf="portfolioCat.visible()"
+      class="portfolio-cat-panel"
+      [unrealizedPnl]="displayedUnrealizedPnL"></app-portfolio-cat>
+
     <main class="portfolio-column">
       <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>

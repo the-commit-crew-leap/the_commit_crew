@@ -33,6 +33,14 @@
       <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
         <span class="tcc-account-label">Account</span>
         <strong>{{ accountId() || 'Unknown account' }}</strong>
+        <button
+          class="tcc-beginner-button"
+          type="button"
+          role="menuitem"
+          [attr.aria-pressed]="portfolioCat.visible()"
+          (click)="togglePortfolioCat()">
+          {{ portfolioCat.visible() ? 'Hide portfolio cat' : 'Beginner? Click here!' }}
+        </button>
         <button #logoutButton class="tcc-dropdown-logout" type="button" role="menuitem" aria-label="Log out" (click)="logout()">
           Log out
         </button>
