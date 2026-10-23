@@ -1,6 +1,7 @@
 package com.thecommitcrew.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -164,6 +165,36 @@ class AlpacaMarketDataClientTest {
     }
 
     @Test
+    void getIntradayPricesRejectsInvalidJson() {
+        server.expect(request -> assertEquals("/v2/stocks/AAPL/bars", request.getURI().getPath()))
+            .andRespond(withSuccess("not-json", MediaType.APPLICATION_JSON));
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> client.getIntradayPrices("AAPL")
+        );
+
+        assertEquals("Alpaca returned invalid intraday JSON for symbol: AAPL", exception.getMessage());
+    }
+
+    @Test
+    void getIntradayPricesSkipsMalformedBarsWhenValidBarsRemain() {
+        server.expect(request -> assertEquals("/v2/stocks/AAPL/bars", request.getURI().getPath()))
+            .andRespond(withSuccess("""
+                {"bars":[
+                  {"t":"not-an-instant","o":190,"h":191,"l":189,"c":190.5,"v":10},
+                  {"t":"2026-10-20T13:30:00Z","o":191,"h":192,"l":190,"c":191.5,"v":20}
+                ]}
+                """, MediaType.APPLICATION_JSON));
+
+        IntradayPriceResponse response = client.getIntradayPrices("AAPL");
+
+        assertEquals(1, response.bars().size());
+        assertEquals(Instant.parse("2026-10-20T13:30:00Z"), response.updatedAt());
+        assertEquals(new BigDecimal("191.5"), response.bars().get(0).close());
+    }
+
+    @Test
     void getLatestCryptoSnapshotParsesAndCachesSnapshot() {
         server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
             .andExpect(method(HttpMethod.GET))
@@ -207,5 +238,32 @@ class AlpacaMarketDataClientTest {
             IllegalStateException.class,
             () -> client.getLatestCryptoSnapshot("BTC/USD")
         );
+    }
+
+    @Test
+    void getLatestCryptoSnapshotFindsNormalizedSymbolAndAllowsOptionalFieldsToBeMissing() {
+        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
+            .andRespond(withSuccess("""
+                {"snapshots":{"btcusd":{"latestTrade":{"p":68123.45}}}}
+                """, MediaType.APPLICATION_JSON));
+
+        AlpacaMarketDataClient.CryptoSnapshot snapshot = client.getLatestCryptoSnapshot("BTC/USD");
+
+        assertEquals(new BigDecimal("68123.45"), snapshot.price());
+        assertNull(snapshot.previousClose());
+        assertNull(snapshot.timestamp());
+    }
+
+    @Test
+    void getLatestCryptoSnapshotRejectsMissingSnapshot() {
+        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
+            .andRespond(withSuccess("{\"snapshots\":{}}", MediaType.APPLICATION_JSON));
+
+        IllegalStateException exception = assertThrows(
+            IllegalStateException.class,
+            () -> client.getLatestCryptoSnapshot("BTC/USD")
+        );
+
+        assertEquals("Alpaca returned no crypto snapshot for symbol: BTC/USD", exception.getMessage());
     }
 }
