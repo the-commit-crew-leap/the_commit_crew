@@ -1,7 +1,19 @@
 .dash-shell {
   min-height: 100vh;
-  padding: 24px 32px;
+  padding: var(--page-padding);
   background: #0b0e12;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .workspace {
@@ -9,7 +21,7 @@
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--content-max-width);
   box-sizing: border-box;
   margin: 0 auto;
   align-items: start;
@@ -17,15 +29,20 @@
 
 .portfolio-column {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+.portfolio-cat-panel {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
 app-order-ticket {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 4;
   align-self: start;
 }
 
@@ -41,6 +58,18 @@ app-order-ticket {
 
 .dash-card h1 {
   margin: 0;
+  font-size: var(--page-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: 1.15;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  color: #93a4e8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
 }
 
 .portfolio-overview {
@@ -61,7 +90,7 @@ app-order-ticket {
   border: 1px solid #29313c;
   border-radius: 12px;
   background: #151920;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .overview-card strong {
@@ -85,7 +114,7 @@ app-order-ticket {
 
 .welcome-message {
   margin: 4px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 .dash-card nav {
@@ -117,13 +146,18 @@ button {
 }
 
 @media (max-width: 760px) {
+  .dash-shell {
+    padding: var(--page-padding-mobile);
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }
 
   .dash-card,
   .portfolio-overview,
-  .portfolio-column {
+  .portfolio-column,
+  .portfolio-cat-panel {
     grid-column: 1;
     grid-row: auto;
   }

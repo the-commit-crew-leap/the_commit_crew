@@ -14,6 +14,7 @@ public class Order {
     private final OrderSide side;
     private final long quantity;
     private final BigDecimal price;
+    private BigDecimal executionPrice;
     private OrderStatus status;
     private final LocalDateTime createdOn;
     private final String idempotencyKey;
@@ -53,6 +54,14 @@ public class Order {
 
     public BigDecimal getPrice() {
         return price;
+    }
+
+    public BigDecimal getExecutionPrice() {
+        return executionPrice;
+    }
+
+    public void setExecutionPrice(BigDecimal executionPrice) {
+        this.executionPrice = validatePriceNotNull(executionPrice, "Execution price cannot be null");
     }
 
     public OrderStatus getStatus() {

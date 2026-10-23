@@ -66,6 +66,9 @@ ENGINE_MAX_PRICE_IMPROVEMENT_BPS=50
 
 ANGULAR_API_URL=http://app:8081
 ANGULAR_AUTH_URL=http://auth:3000
+
+SEC_ENABLED=true
+SEC_USER_AGENT=The Commit Crew email@example.com
 ```  
 
 2.2 Run docker-compose:<br />
@@ -125,8 +128,8 @@ sudo dnf install -y   atk   at-spi2-atk   cups-libs   libdrm   libXcomposite   l
 
 ### If you get an error saying you need Node.js 20+:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 #### Verify: 
@@ -137,7 +140,7 @@ node --version
 ### Start the frontend service:
 ```bash
 cd frontend
-ng serve
+npm start
 ```
 
 ### Run the playwright tests (in a different terminal):
@@ -247,6 +250,38 @@ docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down
 ```bash
 docker-compose -f docker-compose.yaml --env-file .env.dev -p commitcrew-dev down -v
 ```
+
+### Enable Alpaca market data
+
+The Spring app can use Alpaca's latest-trade API for current prices. Add your
+paper-trading credentials to the local `.env.dev` file (never commit them):
+
+```text
+ALPACA_ENABLED=true
+ALPACA_API_KEY=your-paper-api-key
+ALPACA_API_SECRET=your-paper-api-secret
+ALPACA_DATA_URL=https://data.alpaca.markets
+ALPACA_FEED=iex
+```
+
+Then restart the app:
+
+```bash
+docker-compose -p commitcrew-dev --env-file .env.dev up -d --build app
+```
+
+The live-price endpoint requires Alpaca to be enabled and configured. If live
+data is unavailable, it returns an error instead of presenting an old database
+price as current market data. The free Alpaca feed is real-time IEX data, so it
+may not represent every U.S. exchange. Simulated order processing remains
+unchanged.
+
+Authenticated pages also show a four-market crypto ticker for BTC/USD, ETH/USD,
+SOL/USD, and AVAX/USD. It uses `GET /api/v1/instruments/markets`, refreshes
+through the Angular app every five seconds, and gets crypto data from Alpaca
+through the Spring backend. Unavailable symbols show a dash rather than a
+database fallback. The ticker stays fixed on desktop and can be horizontally
+scrolled on smaller screens; it does not automatically move.
 
 ## Coding Conventions
 

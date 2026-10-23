@@ -170,7 +170,7 @@ def test_get_tickers_for_analysis_explicit_tickers_take_priority(
 # DATE RANGE
 @pytest.mark.parametrize(
     "period",
-    ["1y", "5y", "10y", "all"]
+    ["1y", "5y", "10y"]
 )
 def test_get_date_range_valid_periods(period):
     start_date, end_date = helper.get_date_range(period)
@@ -210,13 +210,6 @@ def test_get_date_range_10y():
     end = datetime.strptime(end_date, "%Y-%m-%d")
 
     assert (end - start).days == 365 * 10
-
-
-def test_get_date_range_all():
-    start_date, end_date = helper.get_date_range("all")
-
-    assert start_date == "1900-01-01"
-    assert start_date < end_date
 
 
 def test_get_date_range_invalid_period():

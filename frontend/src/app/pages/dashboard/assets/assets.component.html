@@ -1,15 +1,18 @@
 <section class="assets-card" aria-labelledby="assets-title">
   <header class="assets-header">
-    <h2 id="assets-title">Your assets</h2>
-    <span class="portfolio-link">View portfolio <span aria-hidden="true">↗</span></span>
+    <div>
+      <p class="eyebrow">Portfolio snapshot</p>
+      <h2 id="assets-title">Your assets</h2>
+    </div>
   </header>
 
   <div class="assets-table" role="table" aria-label="Your assets">
     <div class="assets-row assets-row-header" role="row">
       <span role="columnheader">Asset</span>
+      <span role="columnheader">Amount</span>
       <span role="columnheader">Current price</span>
       <span role="columnheader">Value</span>
-      <span role="columnheader">Today's P&amp;L</span>
+      <span role="columnheader">Unrealized P&amp;L</span>
     </div>
 
     <p *ngIf="loading" class="assets-state">Loading your assets...</p>
@@ -17,21 +20,33 @@
     <p *ngIf="!loading && !error && positions.length === 0" class="assets-state">No assets yet.</p>
 
     <div *ngFor="let position of positions" class="assets-row" role="row">
-      <div class="asset-name" role="cell">
+      <button class="asset-name asset-name-button" type="button" role="cell" (click)="selectInstrument(position.symbol)" [attr.aria-label]="'View statistics for ' + position.symbol">
         <strong>{{ position.symbol }}</strong>
-        <small>{{ formatQuantity(position.quantity) }}</small>
-      </div>
-      <span role="cell">${{ formatCurrency(position.currentPrice) }}</span>
+      </button>
+      <span role="cell">{{ formatQuantity(position.quantity) }}</span>
+      <span role="cell">
+        ${{ formatCurrency(position.currentPrice) }}
+      </span>
       <span role="cell">${{ formatCurrency(position.marketValue) }}</span>
-      <span
-        role="cell"
-        [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
-        [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
-        {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
-          formatCurrency(position.unrealizedPnL) }}
+      <span role="cell">
+        <span
+          [class.positive]="position.unrealizedPnL !== null && position.unrealizedPnL >= 0"
+          [class.negative]="position.unrealizedPnL !== null && position.unrealizedPnL < 0">
+          {{ position.unrealizedPnL !== null && position.unrealizedPnL >= 0 ? '+' : '' }}${{
+            formatCurrency(position.unrealizedPnL) }}
+        </span>
       </span>
     </div>
   </div>
 
-  <p class="assets-note">Spot holdings · Values shown in USD</p>
+  <p class="assets-note">
+    Spot holdings · Values shown in USD
+    <span *ngIf="lastUpdated">
+      · <ng-container *ngIf="!marketOpen && lastTradeAt; else assetsRefreshed">
+        Market closed · Last trade {{ lastTradeAt | date:'shortTime' }} ·
+      </ng-container>
+      <ng-template #assetsRefreshed>Market data</ng-template>
+      Refreshed {{ lastUpdated | date:'shortTime' }}
+    </span>
+  </p>
 </section>

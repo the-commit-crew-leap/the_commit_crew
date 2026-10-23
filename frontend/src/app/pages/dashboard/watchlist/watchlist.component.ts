@@ -1,11 +1,30 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TimeoutError, catchError, forkJoin, map, of, timeout } from 'rxjs';
+import { Observable, Subject, TimeoutError, catchError, exhaustMap, forkJoin, interval, map, of, startWith, takeUntil, tap, timeout } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
-import { InstrumentResponse } from '../../../api/trading.models';
+import { InstrumentResponse, IntradayPriceResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
+import { MarketDataService } from '../../../services/market-data.service';
+
+interface WatchlistDetails {
+  price: number;
+  changePercent: number | null;
+  high: number;
+  low: number;
+  live: boolean;
+  bars: number[];
+}
 
 @Component({
   selector: 'app-watchlist',
@@ -14,21 +33,41 @@ import { TradingApiService } from '../../../api/trading-api.service';
   templateUrl: './watchlist.component.html',
   styleUrl: './watchlist.component.css'
 })
-export class WatchlistComponent implements OnInit {
+export class WatchlistComponent implements OnDestroy, OnInit {
   private readonly authSession = inject(AuthSessionService);
   private readonly tradingApi = inject(TradingApiService);
+  private readonly marketData = inject(MarketDataService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroy$ = new Subject<void>();
+  private successTimeout?: ReturnType<typeof setTimeout>;
+
+  @ViewChild('instrumentPicker') private instrumentPicker?: ElementRef<HTMLElement>;
 
   instruments: InstrumentResponse[] = [];
   watchlist: InstrumentResponse[] = [];
   watchlistPrices: Record<string, number | null> = {};
+  watchlistDetails: Record<string, WatchlistDetails | null> = {};
   selectedSymbol = '';
   loading = true;
   priceLoading = false;
+  priceError = '';
+  lastUpdated: Date | null = null;
+  lastTradeAt: Date | null = null;
   saving = false;
   removingSymbol = '';
   error = '';
   success = '';
+  pickerOpen = false;
+  highlightedInstrumentIndex = 0;
+  watchlistFilter = '';
+  sortMode: 'symbol' | 'change' | 'price' = 'symbol';
+
+  @HostListener('document:click', ['$event'])
+  closePickerOnOutsideClick(event: MouseEvent): void {
+    if (!this.instrumentPicker?.nativeElement.contains(event.target as Node)) {
+      this.pickerOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     const accountId = this.authSession.getAccountId();
@@ -45,7 +84,7 @@ export class WatchlistComponent implements OnInit {
       next: ({ instruments, watchlist }) => {
         this.instruments = instruments;
         this.watchlist = watchlist;
-        this.loadWatchlistPrices(watchlist);
+        this.startPriceRefresh();
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -58,14 +97,107 @@ export class WatchlistComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.clearSuccessTimeout();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   get availableInstruments(): InstrumentResponse[] {
     const symbols = new Set(this.watchlist.map((instrument) => instrument.symbol));
     return this.instruments.filter((instrument) => !symbols.has(instrument.symbol));
   }
 
+  get filteredAvailableInstruments(): InstrumentResponse[] {
+    const query = this.selectedSymbol.trim().toLowerCase();
+    if (!query) {
+      return this.availableInstruments;
+    }
+
+    return this.availableInstruments.filter((instrument) =>
+      instrument.symbol.toLowerCase().includes(query) ||
+      instrument.name.toLowerCase().includes(query)
+    );
+  }
+
+  get displayedWatchlist(): InstrumentResponse[] {
+    const query = this.watchlistFilter.trim().toLowerCase();
+    const filtered = this.watchlist.filter((instrument) =>
+      !query || instrument.symbol.toLowerCase().includes(query) || instrument.name.toLowerCase().includes(query)
+    );
+    return [...filtered].sort((left, right) => {
+      if (this.sortMode === 'change') {
+        return (this.getDailyChange(right.symbol) ?? -Infinity) - (this.getDailyChange(left.symbol) ?? -Infinity);
+      }
+      if (this.sortMode === 'price') {
+        return (this.getLatestPrice(right.symbol) ?? -Infinity) - (this.getLatestPrice(left.symbol) ?? -Infinity);
+      }
+      return left.symbol.localeCompare(right.symbol);
+    });
+  }
+
+  get freshnessLabel(): string {
+    if (!this.lastUpdated) {
+      return 'Waiting for market data';
+    }
+    if (Object.values(this.watchlistDetails).some((detail) => detail && !detail.live)) {
+      return `Last available session · updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    }
+    return `Updated ${this.lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  openPicker(): void {
+    if (!this.loading && !this.error && !this.saving) {
+      this.pickerOpen = true;
+    }
+  }
+
+  closePicker(): void {
+    setTimeout(() => {
+      this.pickerOpen = false;
+    }, 150);
+  }
+
+  onPickerKeydown(event: KeyboardEvent): void {
+    const instruments = this.filteredAvailableInstruments;
+    if (!this.pickerOpen && event.key !== 'ArrowDown') {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.pickerOpen = true;
+      this.highlightedInstrumentIndex = Math.min(
+        this.highlightedInstrumentIndex + 1,
+        Math.max(instruments.length - 1, 0)
+      );
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlightedInstrumentIndex = Math.max(this.highlightedInstrumentIndex - 1, 0);
+    } else if (event.key === 'Enter' && instruments[this.highlightedInstrumentIndex]) {
+      event.preventDefault();
+      this.selectInstrument(instruments[this.highlightedInstrumentIndex]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.pickerOpen = false;
+    }
+  }
+
+  selectInstrument(instrument: InstrumentResponse): void {
+    this.selectedSymbol = instrument.symbol;
+    this.highlightedInstrumentIndex = 0;
+    this.pickerOpen = false;
+  }
+
   addInstrument(): void {
     const accountId = this.authSession.getAccountId();
-    if (!accountId || !this.selectedSymbol || this.saving) {
+    const selectedInstrument = this.availableInstruments.find(
+      (instrument) => instrument.symbol === this.selectedSymbol.trim().toUpperCase()
+    );
+    if (!accountId || !selectedInstrument || this.saving) {
+      if (accountId && this.selectedSymbol && !selectedInstrument) {
+        this.error = 'Select a valid instrument from the list.';
+      }
       return;
     }
 
@@ -78,10 +210,11 @@ export class WatchlistComponent implements OnInit {
     ).subscribe({
       next: (instrument) => {
         this.watchlist = [...this.watchlist, instrument];
-        this.loadWatchlistPrices(this.watchlist);
+        this.refreshPricesNow();
         this.selectedSymbol = '';
         this.saving = false;
         this.success = `${instrument.symbol} was added to your watchlist.`;
+        this.dismissSuccessAfterDelay();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -104,15 +237,22 @@ export class WatchlistComponent implements OnInit {
     });
   }
 
+  onSelectedSymbolChange(value: string): void {
+    this.selectedSymbol = value;
+    this.highlightedInstrumentIndex = 0;
+    this.pickerOpen = true;
+  }
+
   private reconcileTimedOutAdd(accountId: string, symbol: string): void {
     this.tradingApi.getWatchlist(accountId).subscribe({
       next: (watchlist) => {
         const instrument = watchlist.find((item) => item.symbol === symbol);
         if (instrument) {
           this.watchlist = watchlist;
-          this.loadWatchlistPrices(watchlist);
+          this.refreshPricesNow();
           this.selectedSymbol = '';
           this.success = `${instrument.symbol} was added to your watchlist.`;
+          this.dismissSuccessAfterDelay();
         } else {
           this.error = 'The instrument could not be confirmed in your watchlist.';
         }
@@ -156,7 +296,38 @@ export class WatchlistComponent implements OnInit {
   }
 
   getLatestPrice(symbol: string): number | null {
-    return this.watchlistPrices[symbol] ?? null;
+    return this.watchlistPrices[symbol] ?? this.watchlistDetails[symbol]?.price ?? null;
+  }
+
+  getDailyChange(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.changePercent ?? null;
+  }
+
+  getSessionHigh(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.high ?? null;
+  }
+
+  getSessionLow(symbol: string): number | null {
+    return this.watchlistDetails[symbol]?.low ?? null;
+  }
+
+  sparklinePoints(symbol: string): string {
+    const values = this.watchlistDetails[symbol]?.bars ?? [];
+    if (values.length < 2) {
+      return '';
+    }
+    const minimum = Math.min(...values);
+    const spread = Math.max(...values) - minimum || 1;
+    return values.map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const y = 28 - ((value - minimum) / spread) * 24;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }
+
+  formatDailyChange(symbol: string): string {
+    const change = this.getDailyChange(symbol);
+    return change === null ? '—' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
   }
 
   isPricePending(symbol: string): boolean {
@@ -167,29 +338,133 @@ export class WatchlistComponent implements OnInit {
     return symbol in this.watchlistPrices && this.watchlistPrices[symbol] === null;
   }
 
-  private loadWatchlistPrices(watchlist: InstrumentResponse[]): void {
-    this.watchlistPrices = {};
+  private startPriceRefresh(): void {
+    interval(5000).pipe(
+      startWith(0),
+      exhaustMap(() => this.fetchWatchlistPrices()),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (prices) => this.applyPrices(prices),
+      error: (error) => {
+        console.error('Watchlist price refresh stopped unexpectedly', error);
+        this.priceLoading = false;
+        this.priceError = 'Live prices are temporarily unavailable.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private refreshPricesNow(): void {
+    this.fetchWatchlistPrices().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (prices) => this.applyPrices(prices),
+      error: (error) => {
+        console.error('Failed to refresh watchlist prices', error);
+        this.priceLoading = false;
+        this.priceError = 'Live prices are temporarily unavailable.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private fetchWatchlistPrices(): Observable<Record<string, number | null>> {
+    const watchlist = [...this.watchlist];
+    this.priceError = '';
+    this.priceLoading = watchlist.length > 0;
+    this.cdr.detectChanges();
+
     if (watchlist.length === 0) {
-      this.priceLoading = false;
-      return;
+      return of({});
     }
 
-    this.priceLoading = true;
-    forkJoin(watchlist.map((instrument) =>
-      this.tradingApi.getInstrumentPrice(instrument.symbol).pipe(
+    return forkJoin(watchlist.map((instrument) =>
+      this.marketData.getQuote(instrument.symbol).pipe(
         map((response) => response.price),
         catchError((error) => {
-          console.error(`Failed to load latest price for ${instrument.symbol}`, error);
+          console.error(`Failed to load live price for ${instrument.symbol}`, error);
           return of(null);
         })
       )
-    )).subscribe((prices) => {
-      this.watchlistPrices = prices.reduce<Record<string, number | null>>((result, price, index) => {
+    )).pipe(
+      map((prices) => prices.reduce<Record<string, number | null>>((result, price, index) => {
         result[watchlist[index].symbol] = price;
         return result;
-      }, {});
-      this.priceLoading = false;
+      }, {}))
+    );
+  }
+
+  private applyPrices(prices: Record<string, number | null>): void {
+    this.watchlistPrices = prices;
+    this.fetchWatchlistDetails().subscribe((details) => {
+      this.watchlistDetails = details;
       this.cdr.detectChanges();
     });
+    this.priceLoading = false;
+    this.lastUpdated = new Date();
+    if (Object.values(prices).some((price) => price === null)) {
+      this.priceError = 'Some live prices are currently unavailable.';
+    }
+    this.cdr.detectChanges();
+  }
+
+  private fetchWatchlistDetails(): Observable<Record<string, WatchlistDetails | null>> {
+    if (this.watchlist.length === 0 || typeof this.tradingApi.getInstrumentIntraday !== 'function') {
+      return of({});
+    }
+
+    return forkJoin(this.watchlist.map((instrument) =>
+      this.marketData.getIntraday(instrument.symbol).pipe(
+        map((response) => this.toWatchlistDetails(response)),
+        catchError(() => of(null))
+      )
+    )).pipe(
+      map((details) => details.reduce<Record<string, WatchlistDetails | null>>((result, detail, index) => {
+        result[this.watchlist[index].symbol] = detail;
+        return result;
+      }, {}))
+    );
+  }
+
+  private toWatchlistDetails(response: IntradayPriceResponse): WatchlistDetails | null {
+    if (response.bars.length === 0) {
+      return null;
+    }
+
+    const first = response.bars[0];
+    const last = response.bars[response.bars.length - 1];
+    const now = new Date();
+    const easternDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(now);
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value);
+    const live = response.sessionDate === easternDate && weekday !== 'Sat' && weekday !== 'Sun'
+      && (hour > 9 || (hour === 9 && minute >= 30)) && hour < 16;
+
+    return {
+      price: last.close,
+      changePercent: first.open === 0 ? null : ((last.close - first.open) / first.open) * 100,
+      high: Math.max(...response.bars.map((bar) => bar.high)),
+      low: Math.min(...response.bars.map((bar) => bar.low)),
+      live,
+      bars: response.bars.map((bar) => bar.close)
+    };
+  }
+
+  private clearSuccessTimeout(): void {
+    if (this.successTimeout) {
+      clearTimeout(this.successTimeout);
+      this.successTimeout = undefined;
+    }
+  }
+
+  private dismissSuccessAfterDelay(): void {
+    this.clearSuccessTimeout();
+    this.successTimeout = setTimeout(() => {
+      this.success = '';
+      this.successTimeout = undefined;
+      this.cdr.detectChanges();
+    }, 3000);
   }
 }

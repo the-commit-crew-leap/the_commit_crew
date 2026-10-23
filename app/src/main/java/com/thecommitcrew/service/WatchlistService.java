@@ -1,6 +1,7 @@
 package com.thecommitcrew.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -44,7 +45,7 @@ public class WatchlistService {
                 "Instrument not found for symbol: " + normalizedSymbol));
 
         if (watchlistRepository.findByAccountIdAndSymbol(accountId, normalizedSymbol).isEmpty()) {
-            watchlistRepository.save(new WatchlistEntity(accountId, normalizedSymbol, LocalDateTime.now()));
+            watchlistRepository.save(new WatchlistEntity(accountId, normalizedSymbol, LocalDateTime.now(ZoneId.of("UTC"))));
         }
 
         return toResponse(instrument);

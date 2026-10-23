@@ -33,7 +33,7 @@
 .intro-copy {
   max-width: 480px;
   margin: 24px 0 32px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -72,7 +72,7 @@
 .intro-stats span {
   display: grid;
   gap: 6px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -103,9 +103,33 @@ form {
   gap: 10px;
 }
 
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 label {
   margin-top: 8px;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -123,7 +147,7 @@ input {
 }
 
 input::placeholder {
-  color: #8993a3;
+  color: var(--text-secondary);
 }
 
 input:focus {
@@ -157,6 +181,7 @@ button:disabled {
   margin: 0;
   color: #ed7181;
   font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .api-error {
@@ -168,7 +193,7 @@ button:disabled {
 
 .hint {
   margin: 18px 0 0;
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   text-align: center;
 }
@@ -180,6 +205,13 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #a7b8fa;
+  outline-offset: 3px;
 }
 
 @media (max-width: 480px) {

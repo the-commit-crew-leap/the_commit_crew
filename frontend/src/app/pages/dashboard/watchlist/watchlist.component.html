@@ -1,6 +1,7 @@
 <section class="watchlist-card" aria-labelledby="watchlist-title">
   <header class="watchlist-header">
     <div>
+      <p class="eyebrow">Market watch</p>
       <h2 id="watchlist-title">Watchlist</h2>
       <p>Track instruments you may want to trade.</p>
     </div>
@@ -8,48 +9,106 @@
 
   <form class="watchlist-form" (ngSubmit)="addInstrument()">
     <label for="instrument-select">Add an instrument</label>
-    <select
-      id="instrument-select"
-      name="selectedSymbol"
-      [(ngModel)]="selectedSymbol"
-      [disabled]="loading || saving || availableInstruments.length === 0"
-      aria-label="Instrument to add">
-      <option value="">Select an instrument</option>
-      <option *ngFor="let instrument of availableInstruments" [value]="instrument.symbol">
-        {{ instrument.symbol }} · {{ instrument.name }}
-      </option>
-    </select>
+    <div #instrumentPicker class="instrument-picker">
+      <div class="watchlist-input-wrap">
+        <input
+          id="instrument-select"
+          name="selectedSymbol"
+          type="text"
+          [(ngModel)]="selectedSymbol"
+          (ngModelChange)="onSelectedSymbolChange($event)"
+          placeholder="Search symbol"
+          autocomplete="off"
+          [disabled]="loading || saving || availableInstruments.length === 0"
+          aria-label="Instrument to add"
+          (focus)="openPicker()"
+          (blur)="closePicker()"
+          (keydown)="onPickerKeydown($event)">
+      </div>
+      <div
+        *ngIf="pickerOpen"
+        class="instrument-options"
+        role="listbox"
+        aria-label="Available instruments">
+        <button
+          *ngFor="let instrument of filteredAvailableInstruments; let index = index"
+          type="button"
+          class="instrument-option"
+          [class.highlighted]="index === highlightedInstrumentIndex"
+          (mousedown)="$event.preventDefault()"
+          (click)="selectInstrument(instrument)"
+          role="option"
+          [attr.aria-selected]="index === highlightedInstrumentIndex">
+          <span class="instrument-option-details">
+            <strong>{{ instrument.symbol }}</strong>
+            <span>{{ instrument.name }}</span>
+          </span>
+        </button>
+        <p *ngIf="filteredAvailableInstruments.length === 0" class="instrument-empty">
+          No matching instruments
+        </p>
+      </div>
+    </div>
     <button type="submit" [disabled]="loading || saving || !selectedSymbol">
       {{ saving ? 'Adding...' : 'Add' }}
     </button>
   </form>
+
+  <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-tools">
+    <input type="search" [(ngModel)]="watchlistFilter" placeholder="Filter watchlist" aria-label="Filter watchlist">
+    <select [(ngModel)]="sortMode" aria-label="Sort watchlist">
+      <option value="symbol">Sort: Symbol</option>
+      <option value="change">Sort: Change</option>
+      <option value="price">Sort: Price</option>
+    </select>
+    <span class="freshness-status">{{ freshnessLabel }}</span>
+  </div>
 
   <p *ngIf="loading" class="watchlist-state">Loading your watchlist...</p>
   <p *ngIf="!loading && error" class="watchlist-state watchlist-error" role="alert">{{ error }}</p>
   <p *ngIf="!loading && !error && success" class="watchlist-state watchlist-success" role="status">
     {{ success }}
   </p>
+  <p *ngIf="!loading && !error && priceError" class="watchlist-state watchlist-error" role="status">
+    {{ priceError }}
+  </p>
   <p *ngIf="!loading && !error && watchlist.length === 0" class="watchlist-state">
     Your watchlist is empty. Search for an instrument above to get started.
   </p>
 
-  <div *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-columns" aria-hidden="true">
+  <div *ngIf="!loading && !error && displayedWatchlist.length > 0" class="watchlist-columns" aria-hidden="true">
     <span>Asset</span>
     <span>Latest price</span>
+    <span>Change</span>
+    <span>Range</span>
+    <span>Trend</span>
     <span></span>
   </div>
-  <ul *ngIf="!loading && !error && watchlist.length > 0" class="watchlist-items">
-    <li *ngFor="let instrument of watchlist" class="watchlist-item">
+  <ul *ngIf="!loading && !error && displayedWatchlist.length > 0" class="watchlist-items">
+    <li *ngFor="let instrument of displayedWatchlist" class="watchlist-item">
       <div class="watchlist-asset">
         <strong>{{ instrument.symbol }}</strong>
         <span>{{ instrument.name }}</span>
       </div>
       <span class="watchlist-price">
         <span *ngIf="isPricePending(instrument.symbol)">Loading...</span>
-        <span *ngIf="isPriceUnavailable(instrument.symbol)">Unavailable</span>
-        <span *ngIf="!isPricePending(instrument.symbol) && !isPriceUnavailable(instrument.symbol)">
+        <span *ngIf="isPriceUnavailable(instrument.symbol) && !watchlistDetails[instrument.symbol]">Unavailable</span>
+        <span *ngIf="!isPricePending(instrument.symbol) && !isPriceUnavailable(instrument.symbol) && !watchlistDetails[instrument.symbol]">
           ${{ getLatestPrice(instrument.symbol) | number:'1.2-2' }}
         </span>
+        <ng-container *ngIf="watchlistDetails[instrument.symbol] as details">
+          <strong>${{ getLatestPrice(instrument.symbol) | number:'1.2-2' }}</strong>
+        </ng-container>
+      </span>
+      <span class="watchlist-change" [class.positive]="(getDailyChange(instrument.symbol) ?? 0) >= 0" [class.negative]="(getDailyChange(instrument.symbol) ?? 0) < 0">
+        {{ formatDailyChange(instrument.symbol) }}
+      </span>
+      <span class="watchlist-range">
+        <span>H {{ getSessionHigh(instrument.symbol) === null ? '—' : (getSessionHigh(instrument.symbol) | number:'1.2-2') }}</span>
+        <span>L {{ getSessionLow(instrument.symbol) === null ? '—' : (getSessionLow(instrument.symbol) | number:'1.2-2') }}</span>
+      </span>
+      <span class="watchlist-sparkline" [class.positive]="(getDailyChange(instrument.symbol) ?? 0) >= 0" [class.negative]="(getDailyChange(instrument.symbol) ?? 0) < 0">
+        <svg *ngIf="sparklinePoints(instrument.symbol) as points" viewBox="0 0 100 32" role="img" [attr.aria-label]="instrument.symbol + ' session trend'"><polyline [attr.points]="points" /></svg>
       </span>
       <button
         type="button"
@@ -60,4 +119,7 @@
       </button>
     </li>
   </ul>
+  <p *ngIf="!loading && !error && watchlist.length > 0 && displayedWatchlist.length === 0" class="watchlist-state">
+    No instruments match this filter.
+  </p>
 </section>

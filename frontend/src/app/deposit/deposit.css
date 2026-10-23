@@ -28,6 +28,15 @@
   margin: 0 0 0.5rem;
 }
 
+.tcc-modal-header .eyebrow {
+  margin: 0 0 0.4rem;
+  color: #6b5bd2;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 .tcc-modal-header p,
 .tcc-demo-notice {
   color: #64748b;

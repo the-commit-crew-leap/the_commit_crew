@@ -22,6 +22,9 @@ export interface PositionResponse {
     marketValue: number | null;
     unrealizedPnL: number | null;
     unrealizedPnLPercent: number | null;
+    priceSource?: string | null;
+    priceUpdatedAt?: string | null;
+    live?: boolean;
 }
 
 export interface TradingApiError {
@@ -47,6 +50,7 @@ export interface OrderResponse {
     price: number;
     status: 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED';
     createdOn: string;
+    assetClass?: 'EQUITY' | 'BOND' | 'FUND' | 'CASH';
 }
 
 export interface DepositRequest {
@@ -72,4 +76,49 @@ export interface InstrumentResponse {
 export interface PriceResponse {
     symbol: string;
     price: number;
+    source: string;
+    live: boolean;
+    updatedAt: string;
+}
+
+export interface IntradayPriceResponse {
+    symbol: string;
+    sessionDate: string;
+    source: string;
+    live: boolean;
+    updatedAt: string | null;
+    bars: IntradayBar[];
+}
+
+export interface IntradayBar {
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+}
+
+export interface FundamentalsResponse {
+    symbol: string;
+    companyName: string;
+    revenue: number | null;
+    netIncome: number | null;
+    earningsPerShare: number | null;
+    totalAssets: number | null;
+    totalLiabilities: number | null;
+    cashAndEquivalents: number | null;
+    operatingCashFlow: number | null;
+    sharesOutstanding: number | null;
+    filedAt: string | null;
+    fiscalPeriod: string | null;
+}
+
+export interface MarketTickerResponse {
+    symbol: string;
+    price: number | null;
+    changePercent: number | null;
+    source: string | null;
+    live: boolean;
+    updatedAt: string | null;
 }

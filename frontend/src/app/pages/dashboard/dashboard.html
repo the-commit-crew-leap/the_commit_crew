@@ -1,16 +1,27 @@
-<section class="dash-shell">
+<main id="main-content" class="dash-shell">
   <div class="workspace">
     <div class="dash-card">
+      <p class="eyebrow">Account overview</p>
       <h1>Trading overview</h1>
-      <p class="welcome-message">Welcome back. Here's what's in your account.</p>
+      <p class="welcome-message">
+        Welcome back<span *ngIf="authSession.username()">, {{ authSession.username() }}</span>.
+        Here's what's in your account.
+      </p>
+      <p class="market-update" *ngIf="lastUpdated">
+        {{ hasLastSessionPrices ? 'Last available session prices' : 'Live prices' }} updated {{ lastUpdated | date:'shortTime' }}
+      </p>
+      <p class="market-update" *ngIf="overviewError" role="alert">
+        Live prices are temporarily unavailable. Retrying automatically.
+      </p>
     </div>
 
-    <section class="portfolio-overview" aria-label="Portfolio overview">
+    <section class="portfolio-overview" aria-labelledby="portfolio-overview-title">
+      <h2 id="portfolio-overview-title" class="sr-only">Portfolio overview</h2>
       <article class="overview-card">
         <span>Total portfolio value</span>
-        <strong>${{ formatCurrency(portfolioValue) }}</strong>
-        <small [class.positive]="todayReturn >= 0" [class.negative]="todayReturn < 0">
-          {{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }} today
+        <strong>{{ portfolioValueAvailable ? '$' + formatCurrency(portfolioValue) : '—' }}</strong>
+        <small [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }} unrealized P&amp;L
         </small>
       </article>
       <article class="overview-card">
@@ -21,9 +32,11 @@
         <small>USD balance · Ready to invest</small>
       </article>
       <article class="overview-card">
-        <span>Today's return</span>
-        <strong class="positive">{{ todayReturn >= 0 ? '+' : '' }}${{ formatCurrency(todayReturn) }}</strong>
-        <small class="positive">Across your portfolio</small>
+        <span>Unrealized P&amp;L</span>
+        <strong [class.positive]="displayedUnrealizedPnL >= 0" [class.negative]="displayedUnrealizedPnL < 0">
+          {{ displayedUnrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(displayedUnrealizedPnL) }}
+        </strong>
+        <small>Across your portfolio</small>
       </article>
       <article class="overview-card">
         <span>Open orders</span>
@@ -32,11 +45,22 @@
       </article>
     </section>
 
+    <app-portfolio-cat
+      *ngIf="portfolioCat.visible()"
+      class="portfolio-cat-panel"
+      [unrealizedPnl]="displayedUnrealizedPnL"></app-portfolio-cat>
+
     <main class="portfolio-column">
-      <app-assets></app-assets>
+      <app-assets (instrumentSelected)="openInstrumentStats($event)"></app-assets>
       <app-watchlist></app-watchlist>
     </main>
 
     <app-order-ticket [balance]="balance()"></app-order-ticket>
   </div>
-</section>
+</main>
+
+<app-instrument-stats-modal
+  [symbol]="selectedInstrument"
+  [initialPosition]="selectedInstrumentPosition"
+  [visible]="!!selectedInstrument"
+  (closed)="closeInstrumentStats()" />

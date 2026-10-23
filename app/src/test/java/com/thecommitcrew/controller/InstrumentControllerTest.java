@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,9 +29,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.thecommitcrew.domain.dto.InstrumentResponseDTO;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
+import com.thecommitcrew.service.SecCompanyFactsClient;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
 import com.thecommitcrew.domain.enums.AssetClass;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.service.InstrumentService;
+import com.thecommitcrew.service.MarketTickerService;
 import com.thecommitcrew.service.PriceService;
 
 @WebMvcTest(InstrumentController.class)
@@ -42,13 +49,19 @@ class InstrumentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private InstrumentService instrumentService;
 
-    @MockBean
+    @MockitoBean
     private PriceService priceService;
 
-    @MockBean
+    @MockitoBean
+    private MarketTickerService marketTickerService;
+
+    @MockitoBean
+    private SecCompanyFactsClient secCompanyFactsClient;
+
+    @MockitoBean
     private AuthServiceClient authServiceClient;
 
     private InstrumentResponseDTO tradableInstrument;
@@ -174,13 +187,53 @@ class InstrumentControllerTest {
         @Test
         @DisplayName("Returns the latest price for an instrument")
         void returnsCurrentPrice() throws Exception {
-            when(priceService.getCurrentPrice(TEST_SYMBOL))
-                .thenReturn(new java.math.BigDecimal("195.50"));
+            when(priceService.getCurrentLivePrice(TEST_SYMBOL))
+                .thenReturn(new LivePriceResponse(
+                    TEST_SYMBOL,
+                    new java.math.BigDecimal("195.50"),
+                    "ALPACA_IEX",
+                    true,
+                    java.time.Instant.parse("2026-10-19T10:00:00Z")
+                ));
 
             mockMvc.perform(get("/api/v1/instruments/{symbol}/price", "aapl"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value(TEST_SYMBOL))
-                .andExpect(jsonPath("$.price").value(195.50));
+                .andExpect(jsonPath("$.price").value(195.50))
+                .andExpect(jsonPath("$.source").value("ALPACA_IEX"))
+                .andExpect(jsonPath("$.live").value(true))
+                .andExpect(jsonPath("$.updatedAt").value("2026-10-19T10:00:00Z"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/instruments/{symbol}/intraday")
+    class GetInstrumentIntradayEndpoint {
+        @Test
+        @DisplayName("Returns normalized intraday bars")
+        void returnsIntradayBars() throws Exception {
+            when(priceService.getIntradayPrices(TEST_SYMBOL))
+                .thenReturn(new IntradayPriceResponse(
+                    TEST_SYMBOL,
+                    LocalDate.of(2026, 10, 20),
+                    "ALPACA_IEX",
+                    true,
+                    Instant.parse("2026-10-20T14:31:00Z"),
+                    List.of(new IntradayPriceResponse.IntradayBar(
+                        Instant.parse("2026-10-20T14:30:00Z"),
+                        new BigDecimal("195.00"),
+                        new BigDecimal("196.00"),
+                        new BigDecimal("194.50"),
+                        new BigDecimal("195.50"),
+                        1000
+                    ))
+                ));
+
+            mockMvc.perform(get("/api/v1/instruments/{symbol}/intraday", "aapl"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.symbol").value(TEST_SYMBOL))
+                .andExpect(jsonPath("$.source").value("ALPACA_IEX"))
+                .andExpect(jsonPath("$.bars[0].close").value(195.50));
         }
     }
 
@@ -188,7 +241,7 @@ class InstrumentControllerTest {
     @EnableWebSecurity
     public static class TestSecurityConfig {
         @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        public SecurityFilterChain filterChain(HttpSecurity http) {
             http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth

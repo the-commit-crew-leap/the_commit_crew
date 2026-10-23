@@ -2,6 +2,24 @@
   box-sizing: border-box;
 }
 
+:root {
+  --page-padding: 32px;
+  --page-padding-mobile: 16px;
+  --content-max-width: 1600px;
+  --section-title-size: 17px;
+  --control-height: 38px;
+  --panel-radius: 12px;
+  --page-title-size: 32px;
+  --page-title-weight: 500;
+  --text-primary: #f4f6fa;
+  --text-secondary: #c3ccd8;
+  --text-muted: #aeb8c6;
+  --text-accent: #b9c5ff;
+  --surface: #151920;
+  --surface-deep: #101419;
+  --border: #3b4655;
+}
+
 html,
 body {
   min-height: 100%;
@@ -13,4 +31,89 @@ body {
 
 body {
   font-size: 14px;
+}
+
+.instrument-picker {
+  position: relative;
+}
+
+.instrument-options {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #29313c;
+  border-radius: 10px;
+  background: #151920;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+}
+.instrument-option {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-bottom: 1px solid #29313c;
+  background: transparent;
+  color: #e8ebf0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.instrument-option-details {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+}
+
+.instrument-option-details strong {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.instrument-option-details span {
+  min-width: 0;
+  padding-left: 16px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 560px) {
+  .instrument-option-details {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .instrument-option-details span {
+    padding-left: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
+.instrument-option:last-child {
+  border-bottom: 0;
+}
+
+.instrument-option.highlighted,
+.instrument-option:hover {
+  background: #173d35;
+  color: #53d5ad;
+}
+
+.instrument-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }

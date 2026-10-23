@@ -3,6 +3,7 @@ package com.thecommitcrew.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -167,13 +168,14 @@ class OrderSettlementServiceTest {
     void settle_fillsBuyOrderAndPublishesUpdate() {
         givenAccountAndInstrument(true);
         when(positionMapper.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL)).thenReturn(Optional.empty());
-        when(positionService.applyOrder(any(Position.class), any(Order.class))).thenReturn(updatedPosition);
+        when(positionService.applyOrder(any(Position.class), any(Order.class), eq(FILL_PRICE))).thenReturn(updatedPosition);
         when(account.debit(any(Money.class))).thenReturn(updatedAccount);
         when(updatedAccount.getCashBalance()).thenReturn(new Money(new BigDecimal("9000.00")));
 
         settlementService.settle(fill);
 
         assertEquals(OrderStatus.FILLED, order.getStatus());
+        assertEquals(FILL_PRICE, order.getExecutionPrice());
         verify(accountEntity).setCashBalance(new BigDecimal("9000.00"));
         verify(accountRepository).save(accountEntity);
         verify(positionMapper).save(updatedPosition);
@@ -221,7 +223,7 @@ class OrderSettlementServiceTest {
         when(positionMapper.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL))
                 .thenReturn(Optional.of(existingPosition));
         Position closedPosition = new Position(ACCOUNT_ID, SYMBOL, 0L, BigDecimal.ZERO);
-        when(positionService.applyOrder(existingPosition, order)).thenReturn(closedPosition);
+        when(positionService.applyOrder(existingPosition, order, FILL_PRICE)).thenReturn(closedPosition);
         when(account.credit(any(Money.class))).thenReturn(updatedAccount);
         when(updatedAccount.getCashBalance()).thenReturn(new Money(new BigDecimal("9000.00")));
 
@@ -238,7 +240,7 @@ class OrderSettlementServiceTest {
     void settle_rejectsWhenAccountCannotBeUpdated() {
         givenAccountAndInstrument(true);
         when(positionMapper.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL)).thenReturn(Optional.empty());
-        when(positionService.applyOrder(any(Position.class), any(Order.class))).thenReturn(updatedPosition);
+        when(positionService.applyOrder(any(Position.class), any(Order.class), eq(FILL_PRICE))).thenReturn(updatedPosition);
         when(account.debit(any(Money.class)))
                 .thenThrow(new IllegalArgumentException("Insufficient funds"));
 
@@ -255,7 +257,7 @@ class OrderSettlementServiceTest {
     void settle_wrapsPersistenceFailure() {
         givenAccountAndInstrument(true);
         when(positionMapper.findByAccountIdAndSymbol(ACCOUNT_ID, SYMBOL)).thenReturn(Optional.empty());
-        when(positionService.applyOrder(any(Position.class), any(Order.class))).thenReturn(updatedPosition);
+        when(positionService.applyOrder(any(Position.class), any(Order.class), eq(FILL_PRICE))).thenReturn(updatedPosition);
         when(account.debit(any(Money.class))).thenReturn(updatedAccount);
         when(updatedAccount.getCashBalance()).thenReturn(new Money(new BigDecimal("9000.00")));
         when(accountRepository.save(accountEntity)).thenThrow(new IllegalStateException("database unavailable"));

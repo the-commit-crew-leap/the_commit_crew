@@ -1,8 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ChangeDetectorRef } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { AuthSessionService } from '../../../auth/auth-session.service';
+import { InstrumentResponse } from '../../../api/trading.models';
 import { TradingApiService } from '../../../api/trading-api.service';
 import { OrderTicketComponent } from './order-ticket.component';
 
@@ -11,6 +12,13 @@ describe('OrderTicketComponent', () => {
   let component: OrderTicketComponent;
   let authSession: jest.Mocked<AuthSessionService>;
   let tradingApi: jest.Mocked<TradingApiService>;
+  const bitcoin: InstrumentResponse = {
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    assetClass: 'CRYPTO',
+    currency: 'USD',
+    tradable: true
+  };
 
   beforeEach(async () => {
     authSession = {
@@ -18,7 +26,8 @@ describe('OrderTicketComponent', () => {
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
       placeOrder: jest.fn(),
-      getInstrumentPrice: jest.fn()
+      getInstrumentPrice: jest.fn(),
+      getInstruments: jest.fn().mockReturnValue(of([bitcoin]))
     } as unknown as jest.Mocked<TradingApiService>;
 
     await TestBed.configureTestingModule({
@@ -31,6 +40,7 @@ describe('OrderTicketComponent', () => {
 
     fixture = TestBed.createComponent(OrderTicketComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('rejects a missing symbol and invalid quantity', () => {
@@ -49,6 +59,34 @@ describe('OrderTicketComponent', () => {
     expect(component.orderError).toBe('Quantity must be a positive whole number.');
     expect(tradingApi.placeOrder).not.toHaveBeenCalled();
   });
+
+  it('marks invalid fields and focuses the first invalid field', fakeAsync(() => {
+    component.symbol = '';
+    component.quantity = 0;
+    fixture.detectChanges();
+    component.placeOrder();
+    fixture.detectChanges();
+    tick();
+
+    const symbolInput = fixture.nativeElement.querySelector('#ticket-symbol');
+    expect(symbolInput.getAttribute('aria-invalid')).toBe('true');
+    expect(symbolInput.getAttribute('aria-describedby')).toBe('ticket-symbol-error');
+    expect(document.activeElement).toBe(symbolInput);
+  }));
+
+  it('focuses the quantity field when the symbol is valid', fakeAsync(() => {
+    component.symbol = 'BTC';
+    component.quantity = 0;
+    fixture.detectChanges();
+    component.placeOrder();
+    fixture.detectChanges();
+    tick();
+
+    const quantityInput = fixture.nativeElement.querySelector('#ticket-quantity');
+    expect(quantityInput.getAttribute('aria-invalid')).toBe('true');
+    expect(quantityInput.getAttribute('aria-describedby')).toBe('ticket-quantity-error');
+    expect(document.activeElement).toBe(quantityInput);
+  }));
 
   it('normalizes the symbol and submits the order', () => {
     const response = {
@@ -79,6 +117,35 @@ describe('OrderTicketComponent', () => {
     expect(component.orderSubmitting).toBe(false);
   });
 
+  it('rejects a symbol that is not in the available instruments', () => {
+    component.symbol = 'UNKNOWN';
+    component.quantity = 2;
+
+    component.placeOrder();
+
+    expect(component.orderError).toBe('Select a valid instrument from the list.');
+    expect(tradingApi.placeOrder).not.toHaveBeenCalled();
+  });
+
+  it('renders available instruments in the styled picker', () => {
+    const symbolInput = fixture.nativeElement.querySelector('#ticket-symbol');
+    symbolInput.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.instrument-options')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.instrument-option').textContent).toContain('BTC');
+  });
+
+  it('closes the picker when clicking outside the picker', () => {
+    fixture.detectChanges();
+    component.instrumentPickerOpen = true;
+    fixture.detectChanges();
+
+    component.closePickerOnOutsideClick(new MouseEvent('click', { bubbles: true }));
+
+    expect(component.instrumentPickerOpen).toBe(false);
+  });
+
   it('shows an error when order submission fails', () => {
     tradingApi.placeOrder.mockReturnValue(throwError(() => new Error('failed')));
     component.symbol = 'BTC';
@@ -95,7 +162,10 @@ describe('OrderTicketComponent', () => {
   it('loads the current price and calculates the estimated order value', () => {
     tradingApi.getInstrumentPrice.mockReturnValue(of({
       symbol: 'BTC',
-      price: 50000
+      price: 50000,
+      source: 'ALPACA_IEX',
+      live: true,
+      updatedAt: '2026-10-19T10:00:00Z'
     }));
     component.symbol = 'btc';
     component.quantity = 2;

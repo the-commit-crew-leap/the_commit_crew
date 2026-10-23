@@ -57,7 +57,7 @@ describe('AssetsComponent', () => {
     component = fixture.componentInstance;
     component.ngOnInit();
 
-    expect(component.error).toBe('Unable to load your assets.');
+    expect(component.error).toBe('Live prices are temporarily unavailable.');
     expect(component.loading).toBe(false);
   });
 

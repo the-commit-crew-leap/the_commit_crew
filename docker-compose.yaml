@@ -53,6 +53,14 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       AUTH_SERVICE_URL: http://auth:3000
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-http://*,https://*}
+      ALPACA_ENABLED: ${ALPACA_ENABLED:-false}
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
+      ALPACA_DATA_URL: ${ALPACA_DATA_URL:-https://data.alpaca.markets}
+      ALPACA_FEED: ${ALPACA_FEED:-iex}
+      SEC_ENABLED: ${SEC_ENABLED:-false}
+      SEC_DATA_URL: ${SEC_DATA_URL:-https://data.sec.gov}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-}
     healthcheck:
       test: ["CMD-SHELL", "netstat -tuln | grep 8081 > /dev/null || exit 1"]
       interval: 10s
@@ -72,6 +80,7 @@ services:
       PYTHONUNBUFFERED: 1
       LOG_LEVEL: INFO
       ANALYTICS_CORS_ORIGINS: ${ANALYTICS_CORS_ORIGINS:-http://localhost:8086,http://127.0.0.1:8086}
+      ANALYTICS_CORS_ORIGIN_REGEX: ${ANALYTICS_CORS_ORIGIN_REGEX:-https?://10\.9\.\d{1,3}\.\d{1,3}:8086}
     volumes:
       - ./analytics:/app/analytics
       - ./analytics/outputs:/app/analytics/outputs

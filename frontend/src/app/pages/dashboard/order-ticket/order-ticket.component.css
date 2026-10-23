@@ -32,6 +32,15 @@
   font-size: 24px;
 }
 
+.eyebrow {
+  margin: 0 0 6px;
+  color: #93a4e8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
 .info-icon {
   display: grid;
   width: 24px;
@@ -39,7 +48,7 @@
   place-items: center;
   border: 2px solid #9aa5b5;
   border-radius: 50%;
-  color: #9aa5b5;
+  color: var(--text-secondary);
   font-weight: 700;
 }
 
@@ -47,6 +56,13 @@ form {
   display: grid;
   gap: 14px;
   margin-top: 32px;
+}
+
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .side-options {
@@ -57,10 +73,22 @@ form {
   background: #0f1318;
 }
 
+.side-options legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .side-options label {
   padding: 16px;
   border-radius: 8px;
-  color: #a8b1c0;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 20px;
   text-align: center;
@@ -79,7 +107,7 @@ form {
 .balance-row,
 .quote-row,
 .ticket-note {
-  color: #8f9aaa;
+  color: var(--text-secondary);
 }
 
 .balance-row strong,
@@ -90,21 +118,28 @@ form {
 }
 
 .total-row {
-  color: #a8b1c0;
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
 .field-label {
-  color: #a8b1c0;
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
 .input-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   border: 1px solid #2d3642;
   border-radius: 10px;
   background: #0f1318;
+}
+
+.input-wrap:focus-within {
+  border-color: #a7b6ff;
+  outline: 3px solid rgb(167 182 255 / 35%);
+  outline-offset: 2px;
 }
 
 .input-wrap input {
@@ -121,7 +156,7 @@ form {
 
 .input-wrap span {
   padding-right: 12px;
-  color: #8f9aaa;
+  color: var(--text-secondary);
 }
 
 .submit-order {
@@ -158,6 +193,26 @@ button:disabled {
 
 .order-error {
   color: #ff929b;
+}
+
+.field-error {
+  margin: -8px 0 0;
+  color: #ff929b;
+  font-size: 0.875rem;
+}
+
+.field-help {
+  margin: -8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.input-wrap:has(input[aria-invalid="true"]) {
+  border-color: #ff929b;
+}
+
+.input-wrap input:focus-visible {
+  outline: none;
 }
 
 .order-success {

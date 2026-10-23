@@ -2,8 +2,9 @@ package com.thecommitcrew;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.thecommitcrew.persistence.repository.InstrumentRepository;
 
@@ -17,37 +18,38 @@ import com.thecommitcrew.application.OrderSettlementService;
 import com.thecommitcrew.messaging.ExecutionListener;
 import com.thecommitcrew.messaging.PendingOrderRepublisher;
 
-@SpringBootTest()
+@SpringBootTest
+@ActiveProfiles("h2")
 class MainTests {
 
-  @MockBean
+  @MockitoBean
   private InstrumentRepository instrumentRepository;
   
-  @MockBean
+  @MockitoBean
   private AccountRepository accountRepository;
   
-  @MockBean
+  @MockitoBean
   private OrderMapper orderMapper;
   
-  @MockBean
+  @MockitoBean
   private PositionMapper positionMapper;
   
-  @MockBean
+  @MockitoBean
   private AccountMapper accountMapper;
   
-  @MockBean
+  @MockitoBean
   private InstrumentMapper instrumentMapper;
 
-  @MockBean
+  @MockitoBean
   private OrderEventPublisher orderEventPublisher;
 
-  @MockBean
+  @MockitoBean
   private OrderSettlementService orderSettlementService;
 
-  @MockBean
+  @MockitoBean
   private ExecutionListener executionListener;
 
-  @MockBean
+  @MockitoBean
   private PendingOrderRepublisher pendingOrderRepublisher;
 
   @Test

@@ -216,7 +216,11 @@ class ExecutionEngineKafkaTest {
     }
 
     private Consumer<String, String> topicConsumer(String topic, String groupId) {
-        Map<String, Object> props = KafkaTestUtils.consumerProps(groupId + "-" + UUID.randomUUID(), "true", broker);
+        Map<String, Object> props = KafkaTestUtils.consumerProps(
+                broker,
+                groupId + "-" + UUID.randomUUID(),
+                true
+        );
 
         props.put("auto.offset.reset", "earliest");
 

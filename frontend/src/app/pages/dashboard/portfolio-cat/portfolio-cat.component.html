@@ -1,0 +1,29 @@
+<section class="portfolio-cat" aria-labelledby="portfolio-cat-title">
+  <div class="cat-intro">
+    <h2 id="portfolio-cat-title">Portfolio cat</h2>
+    <p>Your unrealized P&amp;L, personified.</p>
+    <span class="cat-state">{{ stateLabel }}</span>
+    <small>Original cat at $0. Base appearance within −$100 to +$100.</small>
+  </div>
+
+  <div class="cat-image">
+    <img [class.cat-image-fat]="state === 'fat'" [src]="imagePath" [alt]="stateLabel + ' portfolio cat'" />
+  </div>
+
+  <div class="cat-legend" aria-label="Portfolio cat states">
+    <div><span class="dot skinny"></span><span>Loss</span><strong>&lt; −$100</strong></div>
+    <div><span class="dot base"></span><span>Neutral</span><strong>±$100</strong></div>
+    <div><span class="dot fat"></span><span>Profit</span><strong>&gt; +$100</strong></div>
+  </div>
+
+  <dl class="cat-stats">
+    <div>
+      <dt>Unrealized P&amp;L</dt>
+      <dd>{{ formatCurrency(unrealizedPnl) }}</dd>
+    </div>
+    <div>
+      <dt>State threshold</dt>
+      <dd>{{ stateThreshold }}</dd>
+    </div>
+  </dl>
+</section>

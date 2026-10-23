@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +18,7 @@ import com.thecommitcrew.domain.exception.InsufficientHoldingsException;
 import com.thecommitcrew.domain.exception.InstrumentNotFoundException;
 import com.thecommitcrew.domain.exception.NegativePriceException;
 import com.thecommitcrew.domain.exception.PriceNotFoundException;
+import com.thecommitcrew.domain.exception.LivePriceUnavailableException;
 import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
 
 @RestControllerAdvice
@@ -40,6 +42,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handlePriceNotFound(PriceNotFoundException e) {
         ErrorResponseDTO error = new ErrorResponseDTO("PRICE_NOT_FOUND", e.getMessage());
         return ResponseEntity.status(404).body(error);
+    }
+
+    @ExceptionHandler(LivePriceUnavailableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleLivePriceUnavailable(LivePriceUnavailableException e) {
+        ErrorResponseDTO error = new ErrorResponseDTO("LIVE_PRICE_UNAVAILABLE", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
     // 422 Unprocessable Entity (Business Rule Violations)
@@ -93,6 +101,12 @@ public class GlobalExceptionHandler {
             .findFirst()
             .orElse("Invalid request body");
         ErrorResponseDTO error = new ErrorResponseDTO("VALIDATION_ERROR", message);
+        return ResponseEntity.status(400).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
+        ErrorResponseDTO error = new ErrorResponseDTO("INVALID_REQUEST", "Invalid request body");
         return ResponseEntity.status(400).body(error);
     }
 

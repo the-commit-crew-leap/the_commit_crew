@@ -1,0 +1,60 @@
+<section class="portfolio-analytics-shell">
+  <div class="portfolio-analytics-workspace">
+    <header class="page-heading"><div><p class="eyebrow">Account research</p><h1>Portfolio analytics</h1><p>See how your current holdings behave as one portfolio.</p></div><span class="status">{{ viewMode === 'live' ? (liveLoading ? 'Refreshing' : 'Live') : loading ? 'Calculating' : 'Ready' }}</span></header>
+    <section class="view-switch" aria-label="Portfolio view">
+      <button type="button" [class.is-active]="viewMode === 'historical'" [attr.aria-pressed]="viewMode === 'historical'" (click)="setViewMode('historical')">Historical analytics</button>
+      <button type="button" [class.is-active]="viewMode === 'live'" [attr.aria-pressed]="viewMode === 'live'" (click)="setViewMode('live')">Live snapshot</button>
+    </section>
+    <ng-container *ngIf="viewMode === 'live'">
+      <section *ngIf="!liveLoading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
+      <p *ngIf="liveError" class="state-message error-message" role="alert">{{ liveError }}</p>
+      <p *ngIf="liveLoading && !liveError" class="state-message">Refreshing live portfolio data...</p>
+      <section *ngIf="!liveLoading || positions.length" class="live-summary" aria-label="Live portfolio summary">
+        <article><span>Portfolio value</span><strong>{{ liveTotalValue() | number:'1.2-2' }} USD</strong><small>{{ liveHasUnavailablePrices() ? 'Includes last available sessions' : 'Live holdings plus cash' }}</small></article>
+        <article><span>Holdings value</span><strong>{{ livePortfolioValue() | number:'1.2-2' }} USD</strong><small>{{ positions.length }} position{{ positions.length === 1 ? '' : 's' }}</small></article>
+        <article><span>Unrealized P&amp;L</span><strong [class.positive]="liveUnrealizedPnL() >= 0" [class.negative]="liveUnrealizedPnL() < 0">{{ liveUnrealizedPnL() >= 0 ? '+' : '' }}{{ liveUnrealizedPnL() | number:'1.2-2' }} USD</strong><small>Against average cost</small></article>
+        <article><span>Updated</span><strong>{{ liveUpdatedAt ? (liveUpdatedAt | date:'shortTime') : '—' }}</strong><small>{{ liveHasUnavailablePrices() ? 'Last available session' : 'Live market data' }}</small></article>
+      </section>
+      <section *ngIf="!liveLoading || positions.length" class="portfolio-charts live-charts" aria-label="Live portfolio charts">
+        <article class="chart-card"><header><p class="eyebrow">Allocation</p><h2>Current position weights</h2></header><div #liveAllocationChart class="plot-container allocation"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Growth</p><h2>Live portfolio value</h2></header><div #liveValueChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Risk</p><h2>Live unrealized P&amp;L</h2></header><div #livePnlChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Downside</p><h2>Unrealized P&amp;L by holding</h2></header><div #livePriceChangeChart class="plot-container"></div></article>
+      </section>
+    </ng-container>
+    <div *ngIf="viewMode === 'historical' && error" class="historical-error" role="alert">
+      <p class="state-message">{{ error }}</p>
+      <button type="button" class="scenario-button" (click)="retryHistoricalAnalytics()">Retry analytics</button>
+    </div>
+    <p *ngIf="viewMode === 'historical' && loading && !error" class="state-message">Loading portfolio analytics...</p>
+    <section *ngIf="viewMode === 'historical' && !loading" class="holdings-strip" aria-label="Current holdings"><article *ngFor="let position of positions"><strong>{{ position.symbol }}</strong><span>{{ position.marketValue === null ? '—' : (position.marketValue | number:'1.0-0') + ' USD' }}</span><small>{{ position.marketValue === null ? 'Unavailable' : position.live ? 'Live' : 'Last available session' }}</small></article><article><strong>Cash</strong><span>{{ cashBalance | number:'1.0-0' }} USD</span></article></section>
+    <ng-container *ngIf="viewMode === 'historical' && !loading && !error">
+      <section *ngIf="statistics[0] as statistic" class="metric-strip" aria-label="Portfolio statistics">
+        <article><span>Annualized return</span><strong>{{ formatPercent(statistic['Annualized Return (%)']) }}</strong></article>
+        <article><span>Volatility</span><strong>{{ formatPercent(statistic['Annualized Volatility (%)']) }}</strong></article>
+        <article><span>Sharpe ratio</span><strong>{{ formatRatio(statistic['Sharpe Ratio']) }}</strong></article>
+        <article><span>Max drawdown</span><strong>{{ formatPercent(statistic['Maximum Drawdown (%)']) }}</strong></article>
+      </section>
+      <section class="scenario-panel" aria-labelledby="scenario-title">
+        <div class="section-heading"><div><p class="eyebrow">What if?</p><h2 id="scenario-title">Simulate an additional purchase</h2></div><span class="scenario-note">Historical risk comparison</span></div>
+        <div class="scenario-controls">
+          <label>Instrument<select [(ngModel)]="scenarioSymbol"><option *ngFor="let instrument of instruments" [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option></select></label>
+          <label>Whole shares<input type="number" min="1" step="1" [(ngModel)]="scenarioQuantity"></label>
+          <button type="button" class="scenario-button" [disabled]="scenarioLoading" (click)="runScenario()">{{ scenarioLoading ? 'Calculating...' : 'Compare scenario' }}</button>
+        </div>
+        <div *ngIf="scenario" class="scenario-result">
+          <div><span>Added value</span><strong>{{ scenario.scenario.purchase_value | number:'1.2-2' }} USD</strong></div>
+          <div><span>New portfolio value</span><strong>{{ scenario.proposed.total_value | number:'1.2-2' }} USD</strong></div>
+          <div><span>New {{ scenario.scenario.symbol }} weight</span><strong>{{ formatWeight(scenario.proposed.weights[scenario.proposed.symbols.indexOf(scenario.scenario.symbol)] || 0) }}</strong></div>
+          <div><span>Volatility change</span><strong>{{ formatPercent((scenarioMetric('proposed', 'Annualized Volatility (%)') ?? 0) - (scenarioMetric('current', 'Annualized Volatility (%)') ?? 0)) }}</strong></div>
+        </div>
+      </section>
+      <section class="portfolio-charts" aria-label="Portfolio charts">
+        <article class="chart-card"><header><p class="eyebrow">Allocation</p><h2>Current position weights</h2></header><div #allocationChart class="plot-container allocation"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Growth</p><h2>Cumulative return</h2></header><div #cumulativeChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Risk</p><h2>Rolling volatility</h2></header><div #volatilityChart class="plot-container"></div></article>
+        <article class="chart-card"><header><p class="eyebrow">Downside</p><h2>Drawdown</h2></header><div #drawdownChart class="plot-container"></div></article>
+      </section>
+    </ng-container>
+  </div>
+</section>

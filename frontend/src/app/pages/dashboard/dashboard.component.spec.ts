@@ -20,7 +20,9 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     authSession = {
-      getAccountId: jest.fn().mockReturnValue('ACC-1001')
+      accountId: signal('ACC-3F842FBE'),
+      getAccountId: jest.fn().mockReturnValue('ACC-3F842FBE'),
+      username: signal('alice')
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
       getPositions: jest.fn().mockReturnValue(of([{
@@ -35,7 +37,7 @@ describe('DashboardComponent', () => {
       getAccountOrders: jest.fn().mockReturnValue(of([
         {
           orderId: 'order-1',
-          accountId: 'ACC-1001',
+          accountId: 'ACC-3F842FBE',
           symbol: 'BTC',
           side: 'BUY',
           quantity: 1,
@@ -45,7 +47,7 @@ describe('DashboardComponent', () => {
         },
         {
           orderId: 'order-2',
-          accountId: 'ACC-1001',
+          accountId: 'ACC-3F842FBE',
           symbol: 'ETH',
           side: 'BUY',
           quantity: 1,
@@ -53,15 +55,24 @@ describe('DashboardComponent', () => {
           status: 'FILLED',
           createdOn: '2026-10-15T07:00:00'
         }
-      ]))
+      ])),
+      getInstruments: jest.fn().mockReturnValue(of([])),
+      getWatchlist: jest.fn().mockReturnValue(of([])),
+      getInstrumentPrice: jest.fn().mockReturnValue(of({
+        symbol: 'AAPL',
+        price: 100,
+        source: 'ALPACA_IEX',
+        live: true,
+        updatedAt: '2026-10-19T10:00:00Z'
+      }))
     } as unknown as jest.Mocked<TradingApiService>;
     depositService = {
       balance: signal({
-        accountId: 'ACC-1001',
+        accountId: 'ACC-3F842FBE',
         cashBalance: { amount: '10000.00', currency: 'USD' }
       }),
       getBalance: jest.fn().mockReturnValue(of({
-        accountId: 'ACC-1001',
+        accountId: 'ACC-3F842FBE',
         cashBalance: { amount: '10000.00', currency: 'USD' }
       }))
     };
@@ -86,5 +97,90 @@ describe('DashboardComponent', () => {
     expect(component.todayReturn).toBe(5000);
     expect(component.openOrders).toBe(1);
     expect(component.balance()?.cashBalance.amount).toBe('10000.00');
+  });
+
+  it('personalizes the greeting with the signed-in username', () => {
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.welcome-message').textContent)
+      .toContain("Welcome back, alice. Here's what's in your account.");
+  });
+
+  it('falls back to a generic greeting when no username is available', () => {
+    authSession.username.set(null);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.welcome-message').textContent)
+      .toContain("Welcome back. Here's what's in your account.");
+  });
+
+  it('updates portfolio value when the live position price changes', () => {
+    component.ngOnDestroy();
+    jest.useFakeTimers();
+    tradingApi.getPositions.mockReset()
+      .mockReturnValueOnce(of([{
+        symbol: 'AAPL',
+        quantity: 50,
+        averageCost: 100,
+        currentPrice: 100,
+        marketValue: 5000,
+        unrealizedPnL: 0,
+        unrealizedPnLPercent: 0
+      }]))
+      .mockReturnValue(of([{
+        symbol: 'AAPL',
+        quantity: 50,
+        averageCost: 100,
+        currentPrice: 110,
+        marketValue: 5500,
+        unrealizedPnL: 500,
+        unrealizedPnLPercent: 10
+      }]));
+
+    const refreshFixture = TestBed.createComponent(DashboardComponent);
+    const refreshComponent = refreshFixture.componentInstance;
+    refreshComponent.ngOnInit();
+
+    expect(refreshComponent.portfolioValue).toBe(5000);
+    jest.advanceTimersByTime(5000);
+
+    expect(refreshComponent.portfolioValue).toBe(5500);
+    expect(refreshComponent.todayReturn).toBe(500);
+    jest.useRealTimers();
+  });
+
+  it('marks a negative today return as negative', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-20T14:00:00Z'));
+    component.ngOnDestroy();
+    tradingApi.getPositions.mockReturnValue(of([{
+      symbol: 'AAPL',
+      quantity: 1,
+      averageCost: 100,
+      currentPrice: 90,
+      marketValue: 90,
+      unrealizedPnL: -10,
+      unrealizedPnLPercent: -10
+    }]));
+
+    const negativeFixture = TestBed.createComponent(DashboardComponent);
+    const negativeComponent = negativeFixture.componentInstance;
+    negativeComponent.ngOnInit();
+    negativeFixture.detectChanges();
+
+    const returnValues = negativeFixture.nativeElement.querySelectorAll('.overview-card strong');
+    expect(returnValues[2].className).toContain('negative');
+    expect(returnValues[2].className).not.toContain('positive');
+    negativeComponent.ngOnDestroy();
+    jest.useRealTimers();
+  });
+
+  it('shows unrealized P&L outside regular market hours', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-20T13:00:00Z'));
+    fixture.detectChanges();
+
+    expect(component.displayedUnrealizedPnL).toBe(5000);
+    jest.useRealTimers();
   });
 });

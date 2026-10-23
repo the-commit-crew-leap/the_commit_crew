@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 import plotly.graph_objects as go
 import pytest
 
@@ -7,13 +8,14 @@ from src import api_module
 
 
 def test_figure_response_serializes_plotly_json():
-    figure = go.Figure(data=[go.Scatter(x=[1, 2], y=[3, 4])])
+    figure = go.Figure(data=[go.Scatter(x=[1, 2], y=np.array([3.0, 4.0]))])
 
     response = api_module._figure_response(figure)
 
     assert response.status_code == 200
     payload = json.loads(response.body)
     assert payload["data"][0]["type"] == "scatter"
+    assert payload["data"][0]["y"] == [3.0, 4.0]
 
 
 def test_figure_response_returns_not_found_without_data():
@@ -38,3 +40,6 @@ def test_cors_allows_angular_development_server():
     )
 
     assert "http://localhost:8086" in cors_middleware.kwargs["allow_origins"]
+    assert cors_middleware.kwargs["allow_origin_regex"] == r"https?://10\.9\.\d{1,3}\.\d{1,3}:8086"
+
+

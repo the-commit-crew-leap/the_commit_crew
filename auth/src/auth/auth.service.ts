@@ -86,6 +86,7 @@ export class AuthService implements OnModuleInit {
 
     return {
       ...tokensResponse,
+      username: user.username,
       accountId: linkedAccount.accountId,
       role: linkedAccount.role,
     };
@@ -294,6 +295,7 @@ export class AuthService implements OnModuleInit {
     const tokens = this.tokenService.issue(username, linkedAccount.accountId, linkedAccount.role);
     return {
       ...tokens,
+      username,
       accountId: linkedAccount.accountId,
       role: linkedAccount.role,
     };

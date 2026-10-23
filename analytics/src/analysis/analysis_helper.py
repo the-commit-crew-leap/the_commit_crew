@@ -72,22 +72,23 @@ class AnalysisHelper:
     
     # DATE HANDLING
     @staticmethod
-    def get_date_range(period: str = "1y") -> tuple:
+    def get_date_range(period: str = "1y", end_date: str = None) -> tuple:
         """
         Convert a human-readable analysis period into start and end dates.
         Supported periods are:
 
+            "1w"  - approximately one week.
+            "1m"  - approximately one month.
+            "6m"  - approximately six months.
             "1y"  - approximately one year.
             "5y"  - approximately five years.
             "10y" - approximately ten years.
-            "all" - all available historical data.
 
         Calendar days are used when calculating the starting date. Trading-day
         filtering is handled naturally by the data available in the CSV files.
 
         Args:
-            period: Analysis period. Supported values are "1y", "5y", "10y",
-                and "all".
+            period: Analysis period. Supported values are "1y", "5y", and "10y".
 
         Returns:
             Tuple containing:
@@ -97,20 +98,24 @@ class AnalysisHelper:
         Raises:
             ValueError: If an unsupported period is supplied.
         """
-        end_date = datetime.now()
+        resolved_end_date = datetime.strptime(end_date, "%Y-%m-%d") if end_date else datetime.now()
 
-        if period == "1y":
-            start_date = end_date - timedelta(days=365)
+        if period == "1w":
+            start_date = resolved_end_date - timedelta(days=7)
+        elif period == "1m":
+            start_date = resolved_end_date - timedelta(days=30)
+        elif period == "6m":
+            start_date = resolved_end_date - timedelta(days=365 // 2)
+        elif period == "1y":
+            start_date = resolved_end_date - timedelta(days=365)
         elif period == "5y":
-            start_date = end_date - timedelta(days=365 * 5)
+            start_date = resolved_end_date - timedelta(days=365 * 5)
         elif period == "10y":
-            start_date = end_date - timedelta(days=365 * 10)
-        elif period == "all":
-            start_date = datetime(1900, 1, 1)
+            start_date = resolved_end_date - timedelta(days=365 * 10)
         else:
-            raise ValueError(f"Unknown period '{period}'. Use '1y', '5y', '10y', or 'all'.")
+            raise ValueError(f"Unknown period '{period}'. Use '1y', '5y', or '10y'.")
 
-        return start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+        return start_date.strftime("%Y-%m-%d"), resolved_end_date.strftime("%Y-%m-%d")
     
     
     # ASSET CLASS HELPERS

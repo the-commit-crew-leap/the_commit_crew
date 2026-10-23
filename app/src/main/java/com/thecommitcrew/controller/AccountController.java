@@ -6,9 +6,12 @@ import com.thecommitcrew.domain.dto.AccountResponseDTO;
 import com.thecommitcrew.domain.dto.BalanceResponseDTO;
 import com.thecommitcrew.domain.dto.OrderResponseDTO;
 import com.thecommitcrew.domain.dto.PositionResponseDTO;
+import com.thecommitcrew.domain.dto.LivePriceResponse;
+import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 import com.thecommitcrew.domain.dto.TransactionRequestDTO;
 import com.thecommitcrew.domain.dto.TransactionResponseDTO;
 import com.thecommitcrew.domain.exception.UnauthorizedAccountException;
+import com.thecommitcrew.domain.exception.LivePriceUnavailableException;
 import com.thecommitcrew.domain.model.Account;
 import com.thecommitcrew.domain.model.Money;
 import com.thecommitcrew.domain.model.Position;
@@ -16,13 +19,16 @@ import com.thecommitcrew.domain.model.Order;
 import com.thecommitcrew.service.AccountService;
 import com.thecommitcrew.service.PositionService;
 import com.thecommitcrew.service.PriceService;
+import com.thecommitcrew.service.InstrumentService;
 import com.thecommitcrew.auth.CheckAuth;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -38,13 +44,16 @@ public class AccountController {
     private final AccountService accountService;
     private final PriceService priceService;
     private final PositionService positionService;
+    private final InstrumentService instrumentService;
 
     private static final String ACCOUNT_ID_ATTRIBUTE = "accountId";
 
-    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService) {
+    public AccountController(AccountService accountService, PriceService priceService, PositionService positionService,
+            InstrumentService instrumentService) {
         this.accountService = accountService;
         this.priceService = priceService;
         this.positionService = positionService;
+        this.instrumentService = instrumentService;
     }
 
     @GetMapping
@@ -106,7 +115,17 @@ public class AccountController {
         List<Position> positions = accountService.getPositions(accountId);
         List<PositionResponseDTO> response = positions.stream()
             .map(pos -> {
-                BigDecimal currentPrice = priceService.getCurrentPrice(pos.getSymbol());
+                LivePriceResponse livePrice;
+                try {
+                    livePrice = priceService.getCurrentLivePrice(pos.getSymbol());
+                    if (!isCurrentRegularSession(livePrice.updatedAt())) {
+                        return lastAvailablePosition(pos);
+                    }
+                } catch (LivePriceUnavailableException exception) {
+                    return lastAvailablePosition(pos);
+                }
+
+                BigDecimal currentPrice = livePrice.price();
                 BigDecimal marketValue = positionService.marketValue(pos, currentPrice);
                 BigDecimal unrealizedPnL = positionService.unrealizedProfitLoss(pos, currentPrice);
                 BigDecimal unrealizedPnLPercent = positionService.unrealizedPnLPercent(pos, currentPrice);
@@ -118,11 +137,93 @@ public class AccountController {
                     currentPrice,
                     marketValue,
                     unrealizedPnL,
-                    unrealizedPnLPercent
+                    unrealizedPnLPercent,
+                    livePrice.source(),
+                    livePrice.updatedAt(),
+                    livePrice.live()
                 );
             })
             .toList();
         return ResponseEntity.ok(response);
+    }
+
+    private PositionResponseDTO unavailablePosition(Position position) {
+        return new PositionResponseDTO(
+            position.getSymbol(),
+            position.getQuantity(),
+            position.getAverageCost(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        );
+    }
+
+    private PositionResponseDTO lastAvailablePosition(Position position) {
+        try {
+            IntradayPriceResponse intraday = priceService.getIntradayPrices(position.getSymbol());
+            if (intraday.bars().isEmpty()) {
+                return databaseLastAvailablePosition(position);
+            }
+            IntradayPriceResponse.IntradayBar lastBar = intraday.bars().get(intraday.bars().size() - 1);
+            BigDecimal currentPrice = lastBar.close();
+            return new PositionResponseDTO(
+                position.getSymbol(),
+                position.getQuantity(),
+                position.getAverageCost(),
+                currentPrice,
+                positionService.marketValue(position, currentPrice),
+                positionService.unrealizedProfitLoss(position, currentPrice),
+                positionService.unrealizedPnLPercent(position, currentPrice),
+                intraday.source(),
+                intraday.updatedAt(),
+                false
+            );
+        } catch (RuntimeException fallbackException) {
+            return databaseLastAvailablePosition(position);
+        }
+    }
+
+    private PositionResponseDTO databaseLastAvailablePosition(Position position) {
+        try {
+            LivePriceResponse lastClose = priceService.getLastAvailableClose(position.getSymbol());
+            BigDecimal currentPrice = lastClose.price();
+            return new PositionResponseDTO(
+                position.getSymbol(),
+                position.getQuantity(),
+                position.getAverageCost(),
+                currentPrice,
+                positionService.marketValue(position, currentPrice),
+                positionService.unrealizedProfitLoss(position, currentPrice),
+                positionService.unrealizedPnLPercent(position, currentPrice),
+                lastClose.source(),
+                lastClose.updatedAt(),
+                false
+            );
+        } catch (RuntimeException unavailableException) {
+            return unavailablePosition(position);
+        }
+    }
+
+    private boolean isCurrentRegularSession(java.time.Instant tradeTimestamp) {
+        if (tradeTimestamp == null) {
+            return false;
+        }
+        ZoneId eastern = ZoneId.of("America/New_York");
+        ZonedDateTime now = ZonedDateTime.now(eastern);
+        ZonedDateTime tradeTime = tradeTimestamp.atZone(eastern);
+        LocalTime currentTime = now.toLocalTime();
+        LocalTime marketOpen = LocalTime.of(9, 30);
+        LocalTime marketClose = LocalTime.of(16, 0);
+        return now.getDayOfWeek().getValue() <= 5
+            && tradeTime.toLocalDate().equals(now.toLocalDate())
+            && !currentTime.isBefore(marketOpen)
+            && currentTime.isBefore(marketClose)
+            && !tradeTime.toLocalTime().isBefore(marketOpen)
+            && tradeTime.toLocalTime().isBefore(marketClose);
     }
 
     @GetMapping("/orders")
@@ -147,8 +248,10 @@ public class AccountController {
                 order.getSide(),
                 order.getQuantity(),
                 order.getPrice(),
+                order.getExecutionPrice(),
                 order.getStatus(),
-                order.getCreatedOn()
+                order.getCreatedOn(),
+                instrumentService.getInstrument(order.getSymbol()).assetClass()
             ))
             .toList();
         return ResponseEntity.ok(response);

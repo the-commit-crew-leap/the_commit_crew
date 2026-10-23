@@ -1,11 +1,17 @@
 <header class="tcc-header">
   <a class="tcc-brand" routerLink="/">
-    <span class="tcc-brand-mark" aria-hidden="true"></span>
-    <span>TCC Trading</span>
+    <img class="tcc-brand-mark" src="assets/logo1.jpg" alt="The Commit Crew">
+    <span>Trading</span>
   </a>
   <nav class="tcc-primary-nav" aria-label="Primary navigation">
     <a routerLink="/dashboard" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
       Dashboard
+    </a>
+    <a routerLink="/portfolio" routerLinkActive="is-active">
+      Portfolio
+    </a>
+    <a routerLink="/analytics" routerLinkActive="is-active">
+      Analytics
     </a>
     <a routerLink="/orders" routerLinkActive="is-active">
       Orders
@@ -14,9 +20,11 @@
   <div class="tcc-account-actions">
     <div class="tcc-account-menu">
       <button
+        #accountButton
         class="tcc-account-selector"
         type="button"
         aria-haspopup="menu"
+        aria-label="Account menu"
         [attr.aria-expanded]="accountMenuOpen"
         (click)="toggleAccountMenu()">
       Account
@@ -25,13 +33,21 @@
       <div *ngIf="accountMenuOpen" class="tcc-account-dropdown" role="menu">
         <span class="tcc-account-label">Account</span>
         <strong>{{ accountId() || 'Unknown account' }}</strong>
-        <button class="tcc-dropdown-logout" type="button" role="menuitem" (click)="logout()">
+        <button
+          class="tcc-beginner-button"
+          type="button"
+          role="menuitem"
+          [attr.aria-pressed]="portfolioCat.visible()"
+          (click)="togglePortfolioCat()">
+          {{ portfolioCat.visible() ? 'Hide portfolio cat' : 'Beginner? Click here!' }}
+        </button>
+        <button #logoutButton class="tcc-dropdown-logout" type="button" role="menuitem" aria-label="Log out" (click)="logout()">
           Log out
         </button>
       </div>
     </div>
 
-    <button class="tcc-action-button" type="button" (click)="openDeposit()">
+    <button #depositButton class="tcc-action-button" type="button" (click)="openDeposit()">
       <span aria-hidden="true">+</span>
       Deposit
     </button>
