@@ -30,7 +30,7 @@ python -m src.main run --symbols AAPL IEF SPY --period 1y
 
 # Different periods
 python -m src.main run --period 5y
-python -m src.main run --period all
+python -m src.main run --period 10y
 
 # Run the API locally
 uvicorn src.api_module:app --host 0.0.0.0 --port 8090

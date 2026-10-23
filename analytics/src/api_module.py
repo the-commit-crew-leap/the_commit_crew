@@ -47,7 +47,8 @@ loader = DataLoader()
 analysis_engine = AnalysisEngine(data_loader=loader, helper=helper)
 web_report = WebReport(helper=helper, analysis_engine=analysis_engine)
 
-SUPPORTED_PERIODS = {"1w", "1m", "6m", "1y", "5y", "10y", "all"}
+SUPPORTED_PERIODS = {"1w", "1m", "6m", "1y", "5y", "10y"}
+PORTFOLIO_PERIOD = "since_purchase"
 
 
 def _validate_period(period: str) -> str:
@@ -114,7 +115,8 @@ def _portfolio_inputs(
 
 
 def _portfolio_period(period: str, symbols: list[str]) -> None:
-    _validate_period(period)
+    if period != PORTFOLIO_PERIOD:
+        _validate_period(period)
     if not symbols:
         raise HTTPException(status_code=400, detail="Portfolio has no holdings")
 

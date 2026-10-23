@@ -166,6 +166,10 @@ class AnalysisEngine:
         symbols: list[str],
         period: str,
     ) -> AnalysisPeriod:
+        if period == "since_purchase":
+            latest_date = self.loader.get_latest_date(symbols)
+            end_date = latest_date.strftime("%Y-%m-%d") if latest_date is not None else self.helper.get_date_range("1y")[1]
+            return AnalysisPeriod(period.upper(), "1900-01-01", end_date)
         return self._resolve_period(period, symbols)
 
     @staticmethod
@@ -250,7 +254,7 @@ class AnalysisEngine:
         ))
         figure.update_layout(
             title=f"Portfolio rolling volatility — {period.upper()}",
-            xaxis_title="Date",
+            xaxis={"title": "Date", "hoverformat": "%Y-%m-%d"},
             yaxis_title="Annualized volatility (%)",
             template="plotly_white",
         )
@@ -587,7 +591,8 @@ class AnalysisEngine:
                     y=valid_volatility.values,
                     mode="lines",
                     name=symbol,
-                    line=dict(width=2)
+                    line=dict(width=2),
+                    hovertemplate="%{x|%Y-%m-%d}<br>Volatility: %{y:.2f}%<extra>%{fullData.name}</extra>",
                 ))
                 plotted += 1
 
@@ -597,7 +602,7 @@ class AnalysisEngine:
 
         fig.update_layout(
             title=f"{window}-Day Rolling Annualized Volatility — {ticker_title} — {period_label}",
-            xaxis_title="Date",
+            xaxis={"title": "Date", "hoverformat": "%Y-%m-%d"},
             yaxis_title="Annualized Volatility (%)",
             hovermode="x unified",
             width=1400,

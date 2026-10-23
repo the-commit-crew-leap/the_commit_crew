@@ -262,7 +262,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy, AfterViewChecked {
         customdata: usableStatistics.map((statistic) => [statistic.Ticker, statistic['Sharpe Ratio']]),
         hovertemplate: '<b>%{customdata[0]}</b><br>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Sharpe: %{customdata[1]:.2f}<extra></extra>',
         marker: {
-          size: 12,
+          size: 18,
           color: usableStatistics.map((statistic) => statistic['Sharpe Ratio'] ?? 0),
           colorscale: [[0, '#ed7181'], [0.5, '#f2bf69'], [1, '#53d5ad']],
           showscale: true,
