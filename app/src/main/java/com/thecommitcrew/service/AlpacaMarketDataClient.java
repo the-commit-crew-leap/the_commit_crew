@@ -6,8 +6,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.chrono.ChronoZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,9 +26,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.thecommitcrew.config.AlpacaProperties;
 import com.thecommitcrew.domain.dto.IntradayPriceResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class AlpacaMarketDataClient {
     private static final long LATEST_QUOTE_CACHE_MILLIS = 4_000;
+    private static final Logger log = LoggerFactory.getLogger(AlpacaMarketDataClient.class);
 
     private final AlpacaProperties properties;
     private final RestClient restClient;
@@ -84,7 +91,11 @@ public class AlpacaMarketDataClient {
     public IntradayPriceResponse getIntradayPrices(String symbol) {
         ZoneId eastern = ZoneId.of("America/New_York");
         ZonedDateTime now = ZonedDateTime.now(eastern);
-        ZonedDateTime requestStart = now.minusDays(7).toLocalDate().atTime(9, 30).atZone(eastern);
+
+        ZonedDateTime requestStart = now.minusDays(7)
+            .toLocalDate()
+            .atTime(9, 30)
+            .atZone(eastern);
 
         String responseBody = restClient.get()
             .uri(uriBuilder -> uriBuilder
@@ -99,35 +110,83 @@ public class AlpacaMarketDataClient {
             .retrieve()
             .body(String.class);
 
-        JsonNode response;
+        JsonNode response = parseIntradayResponse(responseBody, symbol);
+        JsonNode barsNode = findIntradayBars(response, symbol);
+
+        List<IntradayPriceResponse.IntradayBar> allBars =
+            parseIntradayBars(barsNode, symbol);
+
+        LocalDate sessionDate = findLatestSessionDate(allBars, now, eastern);
+
+        List<IntradayPriceResponse.IntradayBar> bars = allBars.stream()
+            .filter(bar -> isInSession(bar, sessionDate, eastern))
+            .toList();
+
+        Instant updatedAt = bars.isEmpty()
+            ? null
+            : bars.get(bars.size() - 1).timestamp();
+
+        return new IntradayPriceResponse(
+            symbol,
+            sessionDate,
+            "ALPACA_" + properties.feed().toUpperCase(Locale.ROOT),
+            true,
+            updatedAt,
+            bars
+        );
+    }
+
+    private JsonNode parseIntradayResponse(String responseBody, String symbol) {
         try {
-            response = objectMapper.readTree(responseBody);
+            return objectMapper.readTree(responseBody);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Alpaca returned invalid intraday JSON for symbol: " + symbol, exception);
+            throw new IllegalStateException(
+                "Alpaca returned invalid intraday JSON for symbol: " + symbol,
+                exception
+            );
         }
+    }
 
+    private JsonNode findIntradayBars(JsonNode response, String symbol) {
         JsonNode barsNode = response == null ? null : response.path("bars");
-        if (barsNode != null && barsNode.isObject()) {
-            JsonNode symbolBars = barsNode.path(symbol);
-            if (!symbolBars.isArray()) {
-                String normalizedSymbol = symbol.replace("/", "").toUpperCase();
-                for (var entry : barsNode.properties()) {
-                    if (entry.getKey().replace("/", "").toUpperCase().equals(normalizedSymbol)) {
-                        symbolBars = entry.getValue();
-                        break;
-                    }
-                }
-            }
-            barsNode = symbolBars;
-        }
-        if (barsNode == null || !barsNode.isArray()) {
-            throw new IllegalStateException("Alpaca returned no intraday bars for symbol: " + symbol);
+
+        if (barsNode == null || !barsNode.isObject()) {
+            return barsNode;
         }
 
-        List<IntradayPriceResponse.IntradayBar> allBars = new ArrayList<>();
+        JsonNode symbolBars = barsNode.path(symbol);
+        if (symbolBars.isArray()) {
+            return symbolBars;
+        }
+
+        String normalizedSymbol = normalizeSymbol(symbol);
+
+        for (var entry : barsNode.properties()) {
+            if (normalizeSymbol(entry.getKey()).equals(normalizedSymbol)) {
+                return entry.getValue();
+            }
+        }
+
+        return symbolBars;
+    }
+
+    private String normalizeSymbol(String symbol) {
+        return symbol.replace("/", "").toUpperCase(Locale.ROOT);
+    }
+
+    private List<IntradayPriceResponse.IntradayBar> parseIntradayBars(
+            JsonNode barsNode, String symbol) {
+        if (barsNode == null || !barsNode.isArray()) {
+            throw new IllegalStateException(
+                "Alpaca returned no intraday bars for symbol: " + symbol
+            );
+        }
+
+        List<IntradayPriceResponse.IntradayBar> bars = new ArrayList<>();
+
         for (JsonNode bar : barsNode) {
             try {
-                allBars.add(new IntradayPriceResponse.IntradayBar(
+                bars.add(new IntradayPriceResponse.IntradayBar(
                     Instant.parse(bar.path("t").asText()),
                     decimalField(bar, "o"),
                     decimalField(bar, "h"),
@@ -135,30 +194,42 @@ public class AlpacaMarketDataClient {
                     decimalField(bar, "c"),
                     bar.path("v").asLong()
                 ));
-            } catch (RuntimeException ignored) {
+            } catch (RuntimeException exception) {
+                // Skip malformed bars so one bad record doesn't invalidate the response.
+                log.warn("Skipping malformed intraday bar: {}", bar, exception);
             }
         }
 
-        if (allBars.isEmpty()) {
-            throw new IllegalStateException("Alpaca returned no valid intraday bars for symbol: " + symbol);
+        if (bars.isEmpty()) {
+            throw new IllegalStateException(
+                "Alpaca returned no valid intraday bars for symbol: " + symbol
+            );
         }
 
-        LocalDate sessionDate = allBars.stream()
+        return bars;
+    }
+
+    @SuppressWarnings("null")
+    private LocalDate findLatestSessionDate(
+            List<IntradayPriceResponse.IntradayBar> bars,
+            ZonedDateTime now,
+            ZoneId eastern) {
+        return bars.stream()
             .map(bar -> bar.timestamp().atZone(eastern))
             .filter(timestamp -> isRegularSessionTime(timestamp.toLocalTime()))
-            .map(timestamp -> timestamp.toLocalDate())
-            .max((left, right) -> left.compareTo(right))
+            .map(ChronoZonedDateTime::toLocalDate)
+            .max(Comparator.naturalOrder())
             .orElse(now.toLocalDate());
-        List<IntradayPriceResponse.IntradayBar> bars = allBars.stream()
-            .filter(bar -> {
-                ZonedDateTime timestamp = bar.timestamp().atZone(eastern);
-                return timestamp.toLocalDate().equals(sessionDate)
-                    && isRegularSessionTime(timestamp.toLocalTime());
-            })
-            .toList();
+    }
 
-        Instant updatedAt = bars.isEmpty() ? null : bars.get(bars.size() - 1).timestamp();
-        return new IntradayPriceResponse(symbol, sessionDate, "ALPACA_" + properties.feed().toUpperCase(), true, updatedAt, bars);
+    private boolean isInSession(
+            IntradayPriceResponse.IntradayBar bar,
+            LocalDate sessionDate,
+            ZoneId eastern) {
+        ZonedDateTime timestamp = bar.timestamp().atZone(eastern);
+
+        return timestamp.toLocalDate().equals(sessionDate)
+            && isRegularSessionTime(timestamp.toLocalTime());
     }
 
     private boolean isRegularSessionTime(java.time.LocalTime time) {
