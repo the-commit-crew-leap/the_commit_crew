@@ -13,10 +13,15 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
@@ -118,36 +123,15 @@ class AlpacaMarketDataClientTest {
         assertEquals(first, second);
     }
 
-    @Test
-    void getLatestTradeRejectsMissingTrade() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "{}",
+        "null",
+        "{\"trade\":{\"t\":\"2026-10-19T14:30:00Z\"}}"
+    })
+    void getLatestTradeRejectsInvalidTradeResponse(String responseBody) {
         server.expect(requestTo(BASE_URL + "/v2/stocks/AAPL/trades/latest?feed=iex"))
-            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestTrade("AAPL")
-        );
-
-        assertEquals("Alpaca returned no latest trade for symbol: AAPL", exception.getMessage());
-    }
-
-    @Test
-    void getLatestTradeRejectsNullResponse() {
-        server.expect(requestTo(BASE_URL + "/v2/stocks/AAPL/trades/latest?feed=iex"))
-            .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestTrade("AAPL")
-        );
-
-        assertEquals("Alpaca returned no latest trade for symbol: AAPL", exception.getMessage());
-    }
-
-    @Test
-    void getLatestTradeRejectsTradeWithoutPrice() {
-        server.expect(requestTo(BASE_URL + "/v2/stocks/AAPL/trades/latest?feed=iex"))
-            .andRespond(withSuccess("{\"trade\":{\"t\":\"2026-10-19T14:30:00Z\"}}", MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
         IllegalStateException exception = assertThrows(
             IllegalStateException.class,
@@ -316,32 +300,6 @@ class AlpacaMarketDataClientTest {
     }
 
     @Test
-    void getLatestCryptoSnapshotRejectsInvalidJson() {
-        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("not-json", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestCryptoSnapshot("BTC/USD")
-        );
-
-        assertEquals("Alpaca returned invalid JSON for symbol: BTC/USD", exception.getMessage());
-    }
-
-    @Test
-    void getLatestCryptoSnapshotRejectsNegativePrice() {
-        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("""
-                {"BTC/USD":{"latestTrade":{"p":-1}}}
-                """, MediaType.APPLICATION_JSON));
-
-        assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestCryptoSnapshot("BTC/USD")
-        );
-    }
-
-    @Test
     void getLatestCryptoSnapshotFindsNormalizedSymbolAndAllowsOptionalFieldsToBeMissing() {
         server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
             .andRespond(withSuccess("""
@@ -358,55 +316,43 @@ class AlpacaMarketDataClientTest {
         assertNull(snapshot.timestamp());
     }
 
-    @Test
-    void getLatestCryptoSnapshotRejectsSnapshotWithoutLatestTrade() {
+    @ParameterizedTest
+    @MethodSource("invalidCryptoSnapshotResponses")
+    void getLatestCryptoSnapshotRejectsInvalidResponses(String responseBody, String expectedMessage) {
         server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("{\"BTC/USD\":{}}", MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
 
         IllegalStateException exception = assertThrows(
             IllegalStateException.class,
             () -> client.getLatestCryptoSnapshot("BTC/USD")
         );
 
-        assertEquals("Alpaca returned no crypto snapshot for symbol: BTC/USD", exception.getMessage());
+        assertEquals(expectedMessage, exception.getMessage());
     }
 
-    @Test
-    void getLatestCryptoSnapshotRejectsMissingPrice() {
-        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("{\"BTC/USD\":{\"latestTrade\":{}}}", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestCryptoSnapshot("BTC/USD")
+    private static Stream<Arguments> invalidCryptoSnapshotResponses() {
+        return Stream.of(
+            Arguments.of("not-json", "Alpaca returned invalid JSON for symbol: BTC/USD"),
+            Arguments.of(
+                "{\"snapshots\":{}}",
+                "Alpaca returned no crypto snapshot for symbol: BTC/USD"
+            ),
+            Arguments.of(
+                "{\"BTC/USD\":{}}",
+                "Alpaca returned no crypto snapshot for symbol: BTC/USD"
+            ),
+            Arguments.of(
+                "{\"BTC/USD\":{\"latestTrade\":{}}}",
+                "Alpaca returned an invalid crypto price for symbol: BTC/USD"
+            ),
+            Arguments.of(
+                "{\"BTC/USD\":{\"latestTrade\":{\"p\":\"unknown\"}}}",
+                "Alpaca returned an invalid crypto price for symbol: BTC/USD"
+            ),
+            Arguments.of(
+                "{\"BTC/USD\":{\"latestTrade\":{\"p\":-1}}}",
+                "Alpaca returned an invalid crypto price for symbol: BTC/USD"
+            )
         );
-
-        assertEquals("Alpaca returned an invalid crypto price for symbol: BTC/USD", exception.getMessage());
-    }
-
-    @Test
-    void getLatestCryptoSnapshotRejectsNonNumericPrice() {
-        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("{\"BTC/USD\":{\"latestTrade\":{\"p\":\"unknown\"}}}", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestCryptoSnapshot("BTC/USD")
-        );
-
-        assertEquals("Alpaca returned an invalid crypto price for symbol: BTC/USD", exception.getMessage());
-    }
-
-    @Test
-    void getLatestCryptoSnapshotRejectsMissingSnapshot() {
-        server.expect(requestTo(BASE_URL + "/v1beta3/crypto/us/snapshots?symbols=BTC/USD"))
-            .andRespond(withSuccess("{\"snapshots\":{}}", MediaType.APPLICATION_JSON));
-
-        IllegalStateException exception = assertThrows(
-            IllegalStateException.class,
-            () -> client.getLatestCryptoSnapshot("BTC/USD")
-        );
-
-        assertEquals("Alpaca returned no crypto snapshot for symbol: BTC/USD", exception.getMessage());
     }
 }
