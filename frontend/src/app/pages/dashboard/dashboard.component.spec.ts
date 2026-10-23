@@ -20,7 +20,8 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     authSession = {
-      getAccountId: jest.fn().mockReturnValue('ACC-1001'),
+      accountId: signal('ACC-3F842FBE'),
+      getAccountId: jest.fn().mockReturnValue('ACC-3F842FBE'),
       username: signal('alice')
     } as unknown as jest.Mocked<AuthSessionService>;
     tradingApi = {
@@ -36,7 +37,7 @@ describe('DashboardComponent', () => {
       getAccountOrders: jest.fn().mockReturnValue(of([
         {
           orderId: 'order-1',
-          accountId: 'ACC-1001',
+          accountId: 'ACC-3F842FBE',
           symbol: 'BTC',
           side: 'BUY',
           quantity: 1,
@@ -46,7 +47,7 @@ describe('DashboardComponent', () => {
         },
         {
           orderId: 'order-2',
-          accountId: 'ACC-1001',
+          accountId: 'ACC-3F842FBE',
           symbol: 'ETH',
           side: 'BUY',
           quantity: 1,
@@ -67,11 +68,11 @@ describe('DashboardComponent', () => {
     } as unknown as jest.Mocked<TradingApiService>;
     depositService = {
       balance: signal({
-        accountId: 'ACC-1001',
+        accountId: 'ACC-3F842FBE',
         cashBalance: { amount: '10000.00', currency: 'USD' }
       }),
       getBalance: jest.fn().mockReturnValue(of({
-        accountId: 'ACC-1001',
+        accountId: 'ACC-3F842FBE',
         cashBalance: { amount: '10000.00', currency: 'USD' }
       }))
     };
@@ -174,12 +175,12 @@ describe('DashboardComponent', () => {
     jest.useRealTimers();
   });
 
-  it('shows zero unrealized P&L outside regular market hours', () => {
+  it('shows unrealized P&L outside regular market hours', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-10-20T13:00:00Z'));
     fixture.detectChanges();
 
-    expect(component.displayedUnrealizedPnL).toBe(0);
+    expect(component.displayedUnrealizedPnL).toBe(5000);
     jest.useRealTimers();
   });
 });
