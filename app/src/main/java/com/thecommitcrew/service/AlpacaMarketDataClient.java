@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.thecommitcrew.config.AlpacaProperties;
 import com.thecommitcrew.domain.dto.IntradayPriceResponse;
-import com.thecommitcrew.messaging.ExecutionListener;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ import org.slf4j.LoggerFactory;
 @Component
 public class AlpacaMarketDataClient {
     private static final long LATEST_QUOTE_CACHE_MILLIS = 4_000;
-    private static final Logger log = LoggerFactory.getLogger(ExecutionListener.class);
+    private static final Logger log = LoggerFactory.getLogger(AlpacaMarketDataClient.class);
 
     private final AlpacaProperties properties;
     private final RestClient restClient;
@@ -210,6 +209,7 @@ public class AlpacaMarketDataClient {
         return bars;
     }
 
+    @SuppressWarnings("null")
     private LocalDate findLatestSessionDate(
             List<IntradayPriceResponse.IntradayBar> bars,
             ZonedDateTime now,

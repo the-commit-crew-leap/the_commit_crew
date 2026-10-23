@@ -3,8 +3,11 @@ package com.thecommitcrew.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.HttpHeaders;
@@ -159,9 +162,11 @@ public class SecCompanyFactsClient {
             .orElse(null);
     }
 
+    @SuppressWarnings("null")
     private FactValue freshest(FactValue... values) {
-        return java.util.Arrays.stream(values).filter(value -> value != null)
-            .max((left, right) -> left.filedAt().compareTo(right.filedAt()))
+        return Arrays.stream(values)
+            .filter(Objects::nonNull)
+            .max(Comparator.comparing(FactValue::filedAt))
             .orElse(null);
     }
 
