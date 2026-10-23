@@ -75,6 +75,10 @@
                     <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     <failBuildOnCVSS>5.0</failBuildOnCVSS>
                     <nvdApiDelay>6000</nvdApiDelay>
+                    <!-- This project scans Java dependencies; these analyzers are not needed here. -->
+                    <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                    <!-- This CI job has no OSS Index credentials; NVD remains enabled. -->
+                    <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
                     <suppressionFiles>
                         <suppressionFile>${maven.multiModuleProjectDirectory}/dependency-check-suppressions.xml</suppressionFile>
                     </suppressionFiles>
