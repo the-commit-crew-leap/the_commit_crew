@@ -76,7 +76,7 @@ public class SecCompanyFactsClient {
         return fundamentals;
     }
 
-    private Map<String, String> loadTickerToCik() {
+    private synchronized Map<String, String> loadTickerToCik() {
         if (tickerToCik != null && System.currentTimeMillis() - tickerCacheTime < CACHE_MILLIS) {
             return tickerToCik;
         }
