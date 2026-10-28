@@ -6,8 +6,8 @@ set -Eeuo pipefail
 # ECS, ECR, EC2 networking, ELB, IAM, Cloud Map, CloudWatch Logs, and Secrets Manager.
 
 AWS_REGION="${AWS_REGION:-eu-west-1}"
-CLUSTER="${CLUSTER:-commitcrew-prod}"
-STACK="${STACK:-commitcrew-prod}"
+CLUSTER="${CLUSTER:-thecommitcrew-cluster}"
+STACK="${STACK:-thecommitcrew}"
 
 VPC_ID="${VPC_ID:-vpc-07c5d2a3f09dffc30}"
 PUBLIC_SUBNETS=(
@@ -26,8 +26,9 @@ RDS_SECRET_ARN="${RDS_SECRET_ARN:?Set RDS_SECRET_ARN to the RDS login secret ARN
 JWT_SECRET_ARN="${JWT_SECRET_ARN:?Set JWT_SECRET_ARN to a secret containing the JSON field jwtSecret}"
 
 SERVICE_COUNT="${SERVICE_COUNT:-1}"
-NAMESPACE_NAME="${NAMESPACE_NAME:-commitcrew.local}"
+NAMESPACE_NAME="${NAMESPACE_NAME:-thecommitcrew.internal}"
 LOG_PREFIX="/ecs/${STACK}"
+TASK_EXECUTION_ROLE_NAME="${TASK_EXECUTION_ROLE_NAME:-thecommitcrew-ecs-task-execution-role}"
 
 require() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -50,7 +51,8 @@ IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d
 
 echo "Deploying ${STACK} to AWS account ${ACCOUNT_ID}, region ${AWS_REGION}."
 echo "Database names: ${TRADING_DB_NAME}, ${AUTH_DB_NAME}"
-echo "WARNING: two NAT gateways, an ALB, Fargate tasks, and CloudWatch logs incur charges."
+echo "No NAT gateways or route-table associations will be created or changed."
+echo "Fargate private subnets require existing ECR, S3, CloudWatch Logs, and Secrets Manager VPC endpoints."
 
 # Read only the RDS endpoint from its secret; never print the secret value.
 RDS_HOST="$(
@@ -65,20 +67,72 @@ RDS_USER_REF="${RDS_SECRET_ARN}:username::"
 RDS_PASSWORD_REF="${RDS_SECRET_ARN}:password::"
 JWT_REF="${JWT_SECRET_ARN}:jwtSecret::"
 
+require_interface_endpoint() {
+  local service="$1" endpoint_json
+  endpoint_json="$(aws ec2 describe-vpc-endpoints --region "$AWS_REGION" \
+    --filters "Name=vpc-id,Values=${VPC_ID}" "Name=service-name,Values=com.amazonaws.${AWS_REGION}.${service}" \
+    --output json)"
+  if ! jq -e '.VpcEndpoints | any(.State == "available" and .VpcEndpointType == "Interface" and .PrivateDnsEnabled == true)' \
+    >/dev/null <<<"$endpoint_json"; then
+    echo "Missing available private-DNS interface endpoint: com.amazonaws.${AWS_REGION}.${service}" >&2
+    return 1
+  fi
+}
+
+for endpoint_service in ecr.api ecr.dkr logs secretsmanager; do
+  require_interface_endpoint "$endpoint_service"
+done
+
+S3_ENDPOINT_JSON="$(aws ec2 describe-vpc-endpoints --region "$AWS_REGION" \
+  --filters "Name=vpc-id,Values=${VPC_ID}" "Name=service-name,Values=com.amazonaws.${AWS_REGION}.s3" \
+  --output json)"
+if ! jq -e '.VpcEndpoints | any(.State == "available" and .VpcEndpointType == "Gateway")' \
+  >/dev/null <<<"$S3_ENDPOINT_JSON"; then
+  echo "Missing available S3 gateway VPC endpoint for ${VPC_ID}." >&2
+  exit 1
+fi
+
+for subnet in "${PRIVATE_SUBNETS[@]}"; do
+  route_table="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
+    --filters "Name=association.subnet-id,Values=${subnet}" \
+    --query 'RouteTables[0].RouteTableId' --output text)"
+  if [[ "$route_table" == "None" || -z "$route_table" ]]; then
+    route_table="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
+      --filters "Name=vpc-id,Values=${VPC_ID}" "Name=association.main,Values=true" \
+      --query 'RouteTables[0].RouteTableId' --output text)"
+  fi
+  if ! jq -e --arg route_table "$route_table" \
+    '.VpcEndpoints | any(.State == "available" and .VpcEndpointType == "Gateway" and (.RouteTableIds | index($route_table) != null))' \
+    >/dev/null <<<"$S3_ENDPOINT_JSON"; then
+    echo "S3 gateway endpoint is not associated with route table ${route_table} for subnet ${subnet}." >&2
+    exit 1
+  fi
+done
+
 ensure_repo() {
-  local repo="$1"
-  aws ecr describe-repositories --region "$AWS_REGION" \
-    --repository-names "$repo" >/dev/null 2>&1 ||
-    aws ecr create-repository --region "$AWS_REGION" \
-      --repository-name "$repo" \
-      --image-scanning-configuration scanOnPush=true >/dev/null
+  local repo="$1" error_file
+  error_file="$(mktemp)"
+  if aws ecr describe-repositories --region "$AWS_REGION" \
+    --repository-names "$repo" >/dev/null 2>"$error_file"; then
+    rm -f "$error_file"
+    return
+  fi
+  if ! grep -q 'RepositoryNotFoundException' "$error_file"; then
+    cat "$error_file" >&2
+    rm -f "$error_file"
+    return 1
+  fi
+  rm -f "$error_file"
+  aws ecr create-repository --region "$AWS_REGION" \
+    --repository-name "$repo" \
+    --image-scanning-configuration scanOnPush=true >/dev/null
 }
 
 push_image() {
   local repo="$1" dockerfile="$2" context="$3" image="${ECR_REGISTRY}/${repo}:${IMAGE_TAG}"
   ensure_repo "$repo"
-  docker build --platform linux/amd64 -f "$dockerfile" -t "$image" "$context"
-  docker push "$image"
+  docker build --platform linux/amd64 -f "$dockerfile" -t "$image" "$context" >&2
+  docker push "$image" >&2
   printf '%s' "$image"
 }
 
@@ -86,14 +140,14 @@ aws ecr get-login-password --region "$AWS_REGION" |
   docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 echo "Building and pushing images..."
-AUTH_IMAGE="$(push_image commitcrew-auth auth/Dockerfile .)"
-APP_IMAGE="$(push_image commitcrew-app Dockerfile .)"
-FRONTEND_IMAGE="$(push_image commitcrew-frontend frontend/Dockerfile .)"
-ANALYTICS_IMAGE="$(push_image commitcrew-analytics analytics/Dockerfile .)"
-ENGINE_IMAGE="$(push_image commitcrew-execution-engine execution-engine/Dockerfile .)"
+AUTH_IMAGE="$(push_image thecommitcrew-auth-service auth/Dockerfile .)"
+APP_IMAGE="$(push_image thecommitcrew-app-service Dockerfile .)"
+FRONTEND_IMAGE="$(push_image thecommitcrew-frontend-service frontend/Dockerfile .)"
+ANALYTICS_IMAGE="$(push_image thecommitcrew-analytics-service analytics/Dockerfile .)"
+ENGINE_IMAGE="$(push_image thecommitcrew-execution-engine-service execution-engine/Dockerfile .)"
 
 # Mirror Kafka into this account's ECR as well.
-KAFKA_REPO="commitcrew-kafka"
+KAFKA_REPO="thecommitcrew-kafka-service"
 ensure_repo "$KAFKA_REPO"
 KAFKA_IMAGE="${ECR_REGISTRY}/${KAFKA_REPO}:${IMAGE_TAG}"
 docker pull --platform linux/amd64 apache/kafka:4.3.1
@@ -101,7 +155,7 @@ docker tag apache/kafka:4.3.1 "$KAFKA_IMAGE"
 docker push "$KAFKA_IMAGE"
 
 # Build a one-off image containing the existing idempotent seed SQL.
-SEED_REPO="commitcrew-price-history-import"
+SEED_REPO="thecommitcrew-price-history-import"
 ensure_repo "$SEED_REPO"
 SEED_IMAGE="${ECR_REGISTRY}/${SEED_REPO}:${IMAGE_TAG}"
 docker build --platform linux/amd64 -f- -t "$SEED_IMAGE" . <<'DOCKERFILE'
@@ -127,76 +181,106 @@ find_or_create_sg() {
 ALB_SG="$(find_or_create_sg "${STACK}-alb-sg")"
 TASK_SG="$(find_or_create_sg "${STACK}-tasks-sg")"
 
-aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
-  --group-id "$ALB_SG" --protocol tcp --port 80 --cidr 0.0.0.0/0 \
-  >/dev/null 2>&1 || true
+ensure_sg_ingress() {
+  local group="$1" port="$2" source_type="$3" source="$4" permissions
+  permissions="$(aws ec2 describe-security-groups --region "$AWS_REGION" \
+    --group-ids "$group" --output json)"
+  if [[ "$source_type" == "cidr" ]] &&
+    jq -e --arg cidr "$source" --argjson port "$port" '
+      any(.SecurityGroups[].IpPermissions[]?;
+        (.IpProtocol == "-1" or (.IpProtocol == "tcp" and .FromPort <= $port and .ToPort >= $port))
+        and any(.IpRanges[]?; .CidrIp == $cidr))
+    ' >/dev/null <<<"$permissions"; then
+    return
+  elif [[ "$source_type" == "group" ]] &&
+    jq -e --arg source_group "$source" --argjson port "$port" '
+      any(.SecurityGroups[].IpPermissions[]?;
+        (.IpProtocol == "-1" or (.IpProtocol == "tcp" and .FromPort <= $port and .ToPort >= $port))
+        and any(.UserIdGroupPairs[]?; .GroupId == $source_group))
+    ' >/dev/null <<<"$permissions"; then
+    return
+  fi
+
+  if [[ "$source_type" == "cidr" ]]; then
+    aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
+      --group-id "$group" --protocol tcp --port "$port" --cidr "$source" >/dev/null
+  else
+    aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
+      --group-id "$group" --protocol tcp --port "$port" --source-group "$source" >/dev/null
+  fi
+}
+
+ensure_sg_ingress "$ALB_SG" 80 cidr 0.0.0.0/0
 
 # Service-to-service traffic only within the ECS task security group.
 aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
-  --group-id "$TASK_SG" --protocol -1 --source-group "$TASK_SG" \
-  >/dev/null 2>&1 || true
+  --group-id "$TASK_SG" --protocol -1 --source-group "$TASK_SG" >/dev/null 2>&1 || {
+    permissions="$(aws ec2 describe-security-groups --region "$AWS_REGION" \
+      --group-ids "$TASK_SG" --output json)"
+    jq -e --arg source_group "$TASK_SG" \
+      'any(.SecurityGroups[].IpPermissions[]?; .IpProtocol == "-1" and any(.UserIdGroupPairs[]?; .GroupId == $source_group))' \
+      >/dev/null <<<"$permissions" || exit 1
+  }
 
 # Allow the ALB to reach the frontend tasks.
-aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
-  --group-id "$TASK_SG" --protocol tcp --port 80 --source-group "$ALB_SG" \
-  >/dev/null 2>&1 || true
+ensure_sg_ingress "$TASK_SG" 80 group "$ALB_SG"
 
-# Check that the supplied public subnets already have an Internet Gateway route.
-for subnet in "${PUBLIC_SUBNETS[@]}"; do
+# Confirm the ALB and Fargate subnets are valid without changing their routes.
+for subnet in "${PUBLIC_SUBNETS[@]}" "${PRIVATE_SUBNETS[@]}"; do
   az="$(aws ec2 describe-subnets --region "$AWS_REGION" --subnet-ids "$subnet" \
     --query 'Subnets[0].AvailabilityZone' --output text)"
-  [[ -n "$az" && "$az" != "None" ]] || { echo "Invalid public subnet: $subnet" >&2; exit 1; }
+  [[ -n "$az" && "$az" != "None" ]] || { echo "Invalid subnet: $subnet" >&2; exit 1; }
 done
 
-# Create one NAT gateway and a dedicated private route table for each subnet pair.
-for i in 0 1; do
-  pub="${PUBLIC_SUBNETS[$i]}"
-  priv="${PRIVATE_SUBNETS[$i]}"
-  nat_name="${STACK}-nat-${i}"
-  rt_name="${STACK}-private-rt-${i}"
-
-  nat_id="$(aws ec2 describe-nat-gateways --region "$AWS_REGION" \
-    --filter "Name=vpc-id,Values=${VPC_ID}" "Name=tag:Name,Values=${nat_name}" \
-    --query 'NatGateways[?State==`available`][0].NatGatewayId' --output text)"
-
-  if [[ "$nat_id" == "None" || -z "$nat_id" ]]; then
-    eip_alloc="$(aws ec2 allocate-address --region "$AWS_REGION" \
-      --domain vpc --query AllocationId --output text)"
-    nat_id="$(aws ec2 create-nat-gateway --region "$AWS_REGION" \
-      --subnet-id "$pub" --allocation-id "$eip_alloc" \
-      --tag-specifications "ResourceType=natgateway,Tags=[{Key=Name,Value=${nat_name}}]" \
-      --query NatGateway.NatGatewayId --output text)"
-    aws ec2 wait nat-gateway-available --region "$AWS_REGION" \
-      --nat-gateway-ids "$nat_id"
+for subnet in "${PUBLIC_SUBNETS[@]}"; do
+  route_tables="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
+    --filters "Name=association.subnet-id,Values=${subnet}" --output json)"
+  if [[ "$(jq '.RouteTables | length' <<<"$route_tables")" == "0" ]]; then
+    route_tables="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
+      --filters "Name=vpc-id,Values=${VPC_ID}" "Name=association.main,Values=true" --output json)"
   fi
-
-  rt_id="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
-    --filters "Name=vpc-id,Values=${VPC_ID}" "Name=tag:Name,Values=${rt_name}" \
-    --query 'RouteTables[0].RouteTableId' --output text)"
-  if [[ "$rt_id" == "None" || -z "$rt_id" ]]; then
-    rt_id="$(aws ec2 create-route-table --region "$AWS_REGION" \
-      --vpc-id "$VPC_ID" --tag-specifications \
-      "ResourceType=route-table,Tags=[{Key=Name,Value=${rt_name}}]" \
-      --query RouteTable.RouteTableId --output text)"
+  if ! jq -e '.RouteTables | any(.Routes[]?; .DestinationCidrBlock == "0.0.0.0/0" and ((.GatewayId // "") | startswith("igw-")) and .State == "active")' \
+    >/dev/null <<<"$route_tables"; then
+    echo "Public subnet ${subnet} has no active Internet Gateway default route; no routes were changed." >&2
+    exit 1
   fi
+done
 
-  aws ec2 create-route --region "$AWS_REGION" --route-table-id "$rt_id" \
-    --destination-cidr-block 0.0.0.0/0 --nat-gateway-id "$nat_id" \
-    >/dev/null 2>&1 ||
-  aws ec2 replace-route --region "$AWS_REGION" --route-table-id "$rt_id" \
-    --destination-cidr-block 0.0.0.0/0 --nat-gateway-id "$nat_id" \
-    >/dev/null
-
-  association="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
-    --filters "Name=association.subnet-id,Values=${priv}" \
-    --query 'RouteTables[0].Associations[?SubnetId==`'"$priv"'`].RouteTableAssociationId | [0]' \
-    --output text 2>/dev/null || true)"
-  if [[ "$association" == "None" || -z "$association" ]]; then
-    aws ec2 associate-route-table --region "$AWS_REGION" \
-      --route-table-id "$rt_id" --subnet-id "$priv" >/dev/null
-  else
-    aws ec2 replace-route-table-association --region "$AWS_REGION" \
-      --association-id "$association" --route-table-id "$rt_id" >/dev/null
+TASK_SUBNET_CIDRS="$(aws ec2 describe-subnets --region "$AWS_REGION" \
+  --subnet-ids "${PRIVATE_SUBNETS[@]}" --query 'Subnets[].CidrBlock' --output json)"
+VPC_CIDR="$(aws ec2 describe-vpcs --region "$AWS_REGION" --vpc-ids "$VPC_ID" \
+  --query 'Vpcs[0].CidrBlock' --output text)"
+INTERFACE_ENDPOINTS="$(aws ec2 describe-vpc-endpoints --region "$AWS_REGION" \
+  --filters "Name=vpc-id,Values=${VPC_ID}" --output json)"
+for endpoint_service in ecr.api ecr.dkr logs secretsmanager; do
+  service_name="com.amazonaws.${AWS_REGION}.${endpoint_service}"
+  endpoint_groups="$(jq -r --arg service "$service_name" \
+    '.VpcEndpoints[] | select(.ServiceName == $service and .VpcEndpointType == "Interface" and .State == "available") | .Groups[].GroupId' \
+    <<<"$INTERFACE_ENDPOINTS" | sort -u)"
+  [[ -n "$endpoint_groups" ]] || {
+    echo "Could not identify security groups for interface endpoint ${service_name}." >&2
+    exit 1
+  }
+  endpoint_accessible=false
+  while IFS= read -r endpoint_sg; do
+    endpoint_sg_rules="$(aws ec2 describe-security-groups --region "$AWS_REGION" \
+      --group-ids "$endpoint_sg" --output json)"
+    if jq -e --arg task_sg "$TASK_SG" --arg vpc_cidr "$VPC_CIDR" --argjson subnets "$TASK_SUBNET_CIDRS" '
+      any(.SecurityGroups[].IpPermissions[]?;
+        (.IpProtocol == "-1" or (.IpProtocol == "tcp" and .FromPort <= 443 and .ToPort >= 443))
+        and (
+          any(.UserIdGroupPairs[]?; .GroupId == $task_sg)
+          or any(.IpRanges[]?; .CidrIp == $vpc_cidr or (.CidrIp as $cidr | ($subnets | index($cidr)) != null))
+        )
+      )
+    ' >/dev/null <<<"$endpoint_sg_rules"; then
+      endpoint_accessible=true
+      break
+    fi
+  done <<<"$endpoint_groups"
+  if [[ "$endpoint_accessible" != true ]]; then
+    echo "At least one security group on ${service_name} must allow TCP 443 from ${TASK_SG} or the configured private subnet CIDRs." >&2
+    exit 1
   fi
 done
 
@@ -230,7 +314,7 @@ if [[ "$NAMESPACE_ARN" == "None" || -z "$NAMESPACE_ARN" ]]; then
 fi
 
 # ECS task execution role, with permissions to pull images, write logs, and read secrets.
-ROLE_NAME="${STACK}-task-execution"
+ROLE_NAME="$TASK_EXECUTION_ROLE_NAME"
 TRUST_FILE="$(mktemp)"
 POLICY_FILE="$(mktemp)"
 trap 'rm -f "$TRUST_FILE" "$POLICY_FILE"' EXIT
@@ -269,11 +353,11 @@ ALB_DNS="$(aws elbv2 describe-load-balancers --region "$AWS_REGION" \
   --load-balancer-arns "$ALB_ARN" --query 'LoadBalancers[0].DNSName' --output text)"
 
 TG_ARN="$(aws elbv2 describe-target-groups --region "$AWS_REGION" \
-  --names "${STACK}-frontend" --query 'TargetGroups[0].TargetGroupArn' \
+  --names "${STACK}-frontend-tg" --query 'TargetGroups[0].TargetGroupArn' \
   --output text 2>/dev/null || true)"
 if [[ "$TG_ARN" == "None" || -z "$TG_ARN" ]]; then
   TG_ARN="$(aws elbv2 create-target-group --region "$AWS_REGION" \
-    --name "${STACK}-frontend" --protocol HTTP --port 80 \
+    --name "${STACK}-frontend-tg" --protocol HTTP --port 80 \
     --target-type ip --vpc-id "$VPC_ID" --health-check-path / \
     --matcher HttpCode=200-399 --query 'TargetGroups[0].TargetGroupArn' \
     --output text)"
@@ -283,15 +367,24 @@ LISTENER_ARN="$(aws elbv2 describe-listeners --region "$AWS_REGION" \
   --load-balancer-arn "$ALB_ARN" --query 'Listeners[?Port==`80`].ListenerArn | [0]' \
   --output text)"
 if [[ "$LISTENER_ARN" == "None" || -z "$LISTENER_ARN" ]]; then
-  aws elbv2 create-listener --region "$AWS_REGION" --load-balancer-arn "$ALB_ARN" \
-    --protocol HTTP --port 80 --default-actions "Type=forward,TargetGroupArn=${TG_ARN}" \
-    >/dev/null
+  LISTENER_ARN="$(aws elbv2 create-listener --region "$AWS_REGION" \
+    --load-balancer-arn "$ALB_ARN" --protocol HTTP --port 80 \
+    --default-actions "Type=forward,TargetGroupArn=${TG_ARN}" \
+    --query 'Listeners[0].ListenerArn' --output text)"
+else
+  aws elbv2 modify-listener --region "$AWS_REGION" --listener-arn "$LISTENER_ARN" \
+    --default-actions "Type=forward,TargetGroupArn=${TG_ARN}" >/dev/null
 fi
 
 # Logs.
 for service in kafka auth app analytics execution-engine frontend price-history-import; do
-  aws logs create-log-group --region "$AWS_REGION" \
-    --log-group-name "${LOG_PREFIX}/${service}" >/dev/null 2>&1 || true
+  if ! aws logs describe-log-groups --region "$AWS_REGION" \
+    --log-group-name-prefix "${LOG_PREFIX}/${service}" \
+    --query "logGroups[?logGroupName=='${LOG_PREFIX}/${service}'].logGroupName | [0]" \
+    --output text | grep -Fxq "${LOG_PREFIX}/${service}"; then
+    aws logs create-log-group --region "$AWS_REGION" \
+      --log-group-name "${LOG_PREFIX}/${service}" >/dev/null
+  fi
 done
 
 NETWORK_FILE="$(mktemp)"
@@ -302,8 +395,13 @@ jq -n --arg a "${PRIVATE_SUBNETS[0]}" --arg b "${PRIVATE_SUBNETS[1]}" --arg sg "
 # Helpers for task definitions and ECS services.
 register_task() {
   local name="$1" cpu="$2" memory="$3" container_json="$4" file
+  local family
+  case "$name" in
+    app) family="${STACK}-service" ;;
+    *) family="${STACK}-${name}-service" ;;
+  esac
   file="$(mktemp)"
-  jq -n --arg family "${STACK}-${name}" --arg role "$EXECUTION_ROLE_ARN" \
+  jq -n --arg family "$family" --arg role "$EXECUTION_ROLE_ARN" \
     --argjson cpu "$cpu" --argjson memory "$memory" --argjson container "$container_json" \
     '{family:$family,networkMode:"awsvpc",requiresCompatibilities:["FARGATE"],
       cpu:($cpu|tostring),memory:($memory|tostring),executionRoleArn:$role,
@@ -339,11 +437,11 @@ deploy_service() {
   fi
 
   service_arn="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}" --query 'services[0].serviceArn' --output text)"
+    --services "${STACK}-${name}-service" --query 'services[0].serviceArn' --output text)"
   if [[ "$service_arn" == "None" || -z "$service_arn" ]]; then
     if [[ "$frontend" == "true" ]]; then
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service-name "${STACK}-${name}" --task-definition "$task_arn" \
+        --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
         --network-configuration "file://${NETWORK_FILE}" \
         --service-connect-configuration "file://${sc_file}" \
@@ -351,20 +449,29 @@ deploy_service() {
         --health-check-grace-period-seconds 90 >/dev/null
     else
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service-name "${STACK}-${name}" --task-definition "$task_arn" \
+        --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
         --network-configuration "file://${NETWORK_FILE}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
     fi
   else
-    aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-      --service "${STACK}-${name}" --task-definition "$task_arn" \
-      --desired-count "$SERVICE_COUNT" \
-      --service-connect-configuration "file://${sc_file}" >/dev/null
+    if [[ "$frontend" == "true" ]]; then
+      aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
+        --service "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --desired-count "$SERVICE_COUNT" \
+        --service-connect-configuration "file://${sc_file}" \
+        --load-balancers "targetGroupArn=${TG_ARN},containerName=frontend,containerPort=80" \
+        --health-check-grace-period-seconds 90 >/dev/null
+    else
+      aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
+        --service "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --desired-count "$SERVICE_COUNT" \
+        --service-connect-configuration "file://${sc_file}" >/dev/null
+    fi
   fi
   rm -f "$sc_file"
   aws ecs wait services-stable --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}"
+    --services "${STACK}-${name}-service"
 }
 
 empty='[]'
@@ -410,16 +517,21 @@ t="$(register_task auth 256 512 "$c")"
 deploy_service auth "$t" 3000 auth
 
 # Java API.
-app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" '[
+app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" --arg auth_db "$AUTH_DB_NAME" '[
   {name:"SPRING_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$db+"?sslmode=require")},
-  {name:"SPRING_DATASOURCE_USERNAME",value:"postgres"},
+  {name:"SPRING_AUTH_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$auth_db+"?sslmode=require")},
   {name:"SPRING_KAFKA_BOOTSTRAP_SERVERS",value:"kafka:9092"},
   {name:"AUTH_SERVICE_URL",value:"http://auth:3000"}
 ]')"
-app_secrets="$(jq -n --arg pass "$RDS_PASSWORD_REF" --arg jwt "$JWT_REF" '[
-  {name:"SPRING_DATASOURCE_PASSWORD",valueFrom:$pass},{name:"JWT_SECRET",valueFrom:$jwt}
+app_secrets="$(jq -n --arg user "$RDS_USER_REF" --arg pass "$RDS_PASSWORD_REF" --arg jwt "$JWT_REF" '[
+  {name:"SPRING_DATASOURCE_USERNAME",valueFrom:$user},
+  {name:"SPRING_DATASOURCE_PASSWORD",valueFrom:$pass},
+  {name:"SPRING_AUTH_DATASOURCE_USERNAME",valueFrom:$user},
+  {name:"SPRING_AUTH_DATASOURCE_PASSWORD",valueFrom:$pass},
+  {name:"JWT_SECRET",valueFrom:$jwt}
 ]')"
-c="$(make_container app "$APP_IMAGE" 8081 "$app_env" "$app_secrets" "$no_health")"
+app_health='{"command":["CMD-SHELL","curl -fsS http://localhost:8081/actuator/health | grep -q UP || exit 1"],"interval":30,"timeout":5,"retries":5,"startPeriod":90}'
+c="$(make_container app "$APP_IMAGE" 8081 "$app_env" "$app_secrets" "$app_health")"
 t="$(register_task app 512 1024 "$c")"
 deploy_service app "$t" 8081 app
 
@@ -442,7 +554,8 @@ t="$(register_task execution-engine 512 1024 "$c")"
 deploy_service execution-engine "$t" 8082 execution-engine
 
 # Frontend is the only service exposed through the public ALB.
-c="$(make_container frontend "$FRONTEND_IMAGE" 80 "$empty" "$empty" "$no_health")"
+frontend_health='{"command":["CMD-SHELL","wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1"],"interval":30,"timeout":5,"retries":3,"startPeriod":10}'
+c="$(make_container frontend "$FRONTEND_IMAGE" 80 "$empty" "$empty" "$frontend_health")"
 t="$(register_task frontend 256 512 "$c")"
 deploy_service frontend "$t" 0 "" true
 
