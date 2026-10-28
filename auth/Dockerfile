@@ -23,6 +23,7 @@ RUN apk add --no-cache curl
 # Copy built application
 COPY --from=builder /build/dist ./dist
 COPY --from=builder /build/package*.json ./
+COPY auth/rds-ca-bundle.pem /etc/ssl/certs/rds-ca-bundle.pem
 
 # Install only production dependencies
 RUN npm ci --only=production
