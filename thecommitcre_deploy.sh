@@ -22,6 +22,7 @@ RDS_SECURITY_GROUP="${RDS_SECURITY_GROUP:-sg-003996f17e1bdb938}"
 
 TRADING_DB_NAME="${TRADING_DB_NAME:-the-commit-crew-prod}"
 AUTH_DB_NAME="${AUTH_DB_NAME:-auth_db-prod}"
+RDS_INSTANCE_ID="${RDS_INSTANCE_ID:-thecommitcrew-db}"
 RDS_SECRET_ARN="${RDS_SECRET_ARN:-arn:aws:secretsmanager:eu-west-1:081452990196:secret:rds!db-6ec8b015-b273-4a41-ac79-0a0624083627-xjHsMQ}"
 JWT_SECRET_ARN="${JWT_SECRET_ARN:-arn:aws:secretsmanager:eu-west-1:081452990196:secret:thecommitcrew/jwt-signing-secret-Zdai8Q}"
 SEC_ENABLED="${SEC_ENABLED:-true}"
@@ -61,14 +62,19 @@ echo "Database names: ${TRADING_DB_NAME}, ${AUTH_DB_NAME}"
 echo "No NAT gateways or route-table associations will be created or changed."
 echo "Fargate private subnets require existing ECR, S3, CloudWatch Logs, and Secrets Manager VPC endpoints."
 
-# Read only the RDS endpoint from its secret; never print the secret value.
-RDS_HOST="$(
-  aws secretsmanager get-secret-value \
-    --region "$AWS_REGION" \
-    --secret-id "$RDS_SECRET_ARN" \
-    --query SecretString --output text |
-    jq -er '.host'
-)"
+# RDS-managed secrets contain credentials but may not include the endpoint.
+if [[ -z "${RDS_HOST:-}" ]]; then
+  if ! RDS_HOST="$(aws rds describe-db-instances --region "$AWS_REGION" \
+    --db-instance-identifier "$RDS_INSTANCE_ID" \
+    --query 'DBInstances[0].Endpoint.Address' --output text)"; then
+    echo "Could not retrieve the RDS endpoint for ${RDS_INSTANCE_ID}." >&2
+    exit 1
+  fi
+fi
+if [[ -z "$RDS_HOST" || "$RDS_HOST" == "None" ]]; then
+  echo "No RDS endpoint found for ${RDS_INSTANCE_ID}." >&2
+  exit 1
+fi
 
 RDS_USER_REF="${RDS_SECRET_ARN}:username::"
 RDS_PASSWORD_REF="${RDS_SECRET_ARN}:password::"
