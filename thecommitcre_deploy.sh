@@ -24,6 +24,9 @@ TRADING_DB_NAME="${TRADING_DB_NAME:-the-commit-crew-prod}"
 AUTH_DB_NAME="${AUTH_DB_NAME:-auth_db-prod}"
 RDS_SECRET_ARN="${RDS_SECRET_ARN:?Set RDS_SECRET_ARN to the RDS login secret ARN}"
 JWT_SECRET_ARN="${JWT_SECRET_ARN:?Set JWT_SECRET_ARN to a secret containing the JSON field jwtSecret}"
+SEC_ENABLED="${SEC_ENABLED:-true}"
+SEC_DATA_URL="${SEC_DATA_URL:-https://data.sec.gov}"
+SEC_USER_AGENT="${SEC_USER_AGENT:-The Commit Crew giuly.fatti@gmail.com}"
 
 SERVICE_COUNT="${SERVICE_COUNT:-1}"
 NAMESPACE_NAME="${NAMESPACE_NAME:-thecommitcrew.internal}"
@@ -517,11 +520,16 @@ t="$(register_task auth 256 512 "$c")"
 deploy_service auth "$t" 3000 auth
 
 # Java API.
-app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" --arg auth_db "$AUTH_DB_NAME" '[
+app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" --arg auth_db "$AUTH_DB_NAME" \
+  --arg sec_enabled "$SEC_ENABLED" --arg sec_data_url "$SEC_DATA_URL" \
+  --arg sec_user_agent "$SEC_USER_AGENT" '[
   {name:"SPRING_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$db+"?sslmode=require")},
   {name:"SPRING_AUTH_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$auth_db+"?sslmode=require")},
   {name:"SPRING_KAFKA_BOOTSTRAP_SERVERS",value:"kafka:9092"},
-  {name:"AUTH_SERVICE_URL",value:"http://auth:3000"}
+  {name:"AUTH_SERVICE_URL",value:"http://auth:3000"},
+  {name:"SEC_ENABLED",value:$sec_enabled},
+  {name:"SEC_DATA_URL",value:$sec_data_url},
+  {name:"SEC_USER_AGENT",value:$sec_user_agent}
 ]')"
 app_secrets="$(jq -n --arg user "$RDS_USER_REF" --arg pass "$RDS_PASSWORD_REF" --arg jwt "$JWT_REF" '[
   {name:"SPRING_DATASOURCE_USERNAME",valueFrom:$user},
