@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { readFileSync } from 'node:fs';
 import * as pg from 'pg';
 
 @Injectable()
@@ -13,6 +14,12 @@ export class DatabaseService {
       user: process.env.TRADING_DB_USER ,
       password: process.env.TRADING_DB_PASSWORD,
       database: process.env.TRADING_DB_NAME,
+      ssl: process.env.NODE_ENV === 'prod'
+        ? {
+            ca: readFileSync('/etc/ssl/certs/rds-ca-bundle.pem', 'utf8'),
+            rejectUnauthorized: true,
+          }
+        : false,
     });
 
     this.tradingDbPool.on('error', (err: Error) => {
