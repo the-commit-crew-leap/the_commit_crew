@@ -430,28 +430,32 @@ jq -n --arg a "${PUBLIC_SUBNETS[0]}" --arg b "${PUBLIC_SUBNETS[1]}" --arg sg "$T
 # Helpers for task definitions and ECS services.
 register_task() {
   local name="$1" cpu="$2" memory="$3" container_json="$4" file
-  local family
   local task_arn
+  local family
   case "$name" in
     app) family="${STACK}-service" ;;
     *) family="${STACK}-${name}-service" ;;
   esac
   file="$(mktemp)"
-  if ! jq -n --arg family "$family" --arg role "$EXECUTION_ROLE_ARN" \
+  jq -n --arg family "$family" --arg role "$EXECUTION_ROLE_ARN" \
     --argjson cpu "$cpu" --argjson memory "$memory" --argjson container "$container_json" \
     '{family:$family,networkMode:"awsvpc",requiresCompatibilities:["FARGATE"],
       cpu:($cpu|tostring),memory:($memory|tostring),executionRoleArn:$role,
-      containerDefinitions:[$container]}' >"$file"; then
+      containerDefinitions:[$container]}' >"$file" || {
+      rm -f "$file"
+      return 1
+    }
+
+  if ! task_arn="$(
+    aws ecs register-task-definition --region "$AWS_REGION" \
+      --cli-input-json "file://${file}" --query 'taskDefinition.taskDefinitionArn' --output text
+  )"; then
     rm -f "$file"
     return 1
   fi
-  if ! task_arn="$(aws ecs register-task-definition --region "$AWS_REGION" \
-    --cli-input-json "file://${file}" --query 'taskDefinition.taskDefinitionArn' --output text)"; then
-    rm -f "$file"
-    return 1
-  fi
+
   rm -f "$file"
-  printf '%s' "$task_arn"
+  printf '%s\n' "$task_arn"
 }
 
 make_container() {
@@ -468,9 +472,9 @@ make_container() {
 }
 
 deploy_service() {
-  local name="$1" task_arn="$2" port="$3" discovery="$4" frontend="${5:-false}" desired_count="${6:-$SERVICE_COUNT}"
-  local sc_file service_arn network_file="$NETWORK_FILE"
-  local running_td rollout_state
+  local name="$1" task_arn="$2" port="$3" discovery="$4" frontend="${5:-false}" desired_count="${6:-$SERVICE_COUNT}"  
+  local sc_file service_arn network_file="$NETWORK_FILE" current_td rollout_state
+  local service_name="${STACK}-${name}-service"
   if [[ "$name" == "app" ]]; then
     network_file="$APP_NETWORK_FILE"
   fi
@@ -484,11 +488,11 @@ deploy_service() {
   fi
 
   service_arn="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}-service" --query 'services[0].serviceArn' --output text)"
+    --services "$service_name" --query 'services[0].serviceArn' --output text)"
   if [[ "$service_arn" == "None" || -z "$service_arn" ]]; then
     if [[ "$frontend" == "true" ]]; then
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --service-name "$service_name" --task-definition "$task_arn" \
         --desired-count "$desired_count" --launch-type FARGATE \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
@@ -496,7 +500,7 @@ deploy_service() {
         --health-check-grace-period-seconds 90 >/dev/null
     else
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --service-name "$service_name" --task-definition "$task_arn" \
         --desired-count "$desired_count" --launch-type FARGATE \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
@@ -504,7 +508,7 @@ deploy_service() {
   else
     if [[ "$frontend" == "true" ]]; then
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --service "$service_name" --task-definition "$task_arn" \
         --desired-count "$desired_count" \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
@@ -512,7 +516,7 @@ deploy_service() {
         --health-check-grace-period-seconds 90 >/dev/null
     else
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
-        --service "${STACK}-${name}-service" --task-definition "$task_arn" \
+        --service "$service_name" --task-definition "$task_arn" \
         --desired-count "$desired_count" \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
@@ -520,21 +524,26 @@ deploy_service() {
   fi
   rm -f "$sc_file"
   aws ecs wait services-stable --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}-service"
-  running_td="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}-service" \
-    --query 'services[0].taskDefinition' --output text)"
-  rollout_state="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
-    --services "${STACK}-${name}-service" \
-    --query "services[0].deployments[?taskDefinition=='${task_arn}'].rolloutState | [0]" \
-    --output text)"
-  if [[ "$running_td" != "$task_arn" || "$rollout_state" == "FAILED" || "$rollout_state" == "None" ]]; then
-    echo "Service ${STACK}-${name}-service did not finish on requested task definition ${task_arn}." >&2
-    echo "Running task definition: ${running_td}" >&2
-    echo "Requested rollout state: ${rollout_state}" >&2
+    --services "$service_name"
+
+  current_td="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+    --services "$service_name" --query 'services[0].taskDefinition' --output text)"
+  if [[ "$current_td" != "$task_arn" ]]; then
+    echo "Service ${service_name} stabilized on ${current_td##*/}, expected ${task_arn##*/}." >&2
     aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
-      --services "${STACK}-${name}-service" \
-      --query 'services[0].events[:10].[createdAt,message]' --output table >&2 || true
+      --services "$service_name" \
+      --query 'services[0].events[:5].[createdAt,message]' --output table >&2
+    return 1
+  fi
+
+  rollout_state="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+    --services "$service_name" \
+    --query "services[0].deployments[?taskDefinition=='${task_arn}'] | [0].rolloutState" --output text)"
+  if [[ "$rollout_state" == "FAILED" || "$rollout_state" == "None" || -z "$rollout_state" ]]; then
+    echo "Deployment ${task_arn##*/} on ${service_name} did not succeed (rolloutState=${rollout_state})." >&2
+    aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+      --services "$service_name" \
+      --query 'services[0].events[:5].[createdAt,message]' --output table >&2
     return 1
   fi
 }
