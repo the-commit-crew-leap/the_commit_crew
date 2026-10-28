@@ -27,6 +27,10 @@ JWT_SECRET_ARN="${JWT_SECRET_ARN:?Set JWT_SECRET_ARN to a secret containing the 
 SEC_ENABLED="${SEC_ENABLED:-true}"
 SEC_DATA_URL="${SEC_DATA_URL:-https://data.sec.gov}"
 SEC_USER_AGENT="${SEC_USER_AGENT:-The Commit Crew giuly.fatti@gmail.com}"
+ALPACA_ENABLED="${ALPACA_ENABLED:-true}"
+ALPACA_SECRET_ARN="${ALPACA_SECRET_ARN:?Set ALPACA_SECRET_ARN to a Secrets Manager secret containing apiKey and apiSecret}"
+ALPACA_DATA_URL="${ALPACA_DATA_URL:-https://data.alpaca.markets}"
+ALPACA_FEED="${ALPACA_FEED:-iex}"
 
 SERVICE_COUNT="${SERVICE_COUNT:-1}"
 NAMESPACE_NAME="${NAMESPACE_NAME:-thecommitcrew.internal}"
@@ -69,6 +73,14 @@ RDS_HOST="$(
 RDS_USER_REF="${RDS_SECRET_ARN}:username::"
 RDS_PASSWORD_REF="${RDS_SECRET_ARN}:password::"
 JWT_REF="${JWT_SECRET_ARN}:jwtSecret::"
+ALPACA_KEY_REF="${ALPACA_SECRET_ARN}:apiKey::"
+ALPACA_SECRET_REF="${ALPACA_SECRET_ARN}:apiSecret::"
+if [[ "$ALPACA_ENABLED" != "true" && "$ALPACA_ENABLED" != "false" ]]; then
+  echo "ALPACA_ENABLED must be true or false." >&2
+  exit 1
+fi
+aws secretsmanager describe-secret --region "$AWS_REGION" \
+  --secret-id "$ALPACA_SECRET_ARN" >/dev/null
 
 require_interface_endpoint() {
   local service="$1" endpoint_json
@@ -228,6 +240,18 @@ aws ec2 authorize-security-group-ingress --region "$AWS_REGION" \
 # Allow the ALB to reach the frontend tasks.
 ensure_sg_ingress "$TASK_SG" 80 group "$ALB_SG"
 
+task_sg_rules="$(aws ec2 describe-security-groups --region "$AWS_REGION" \
+  --group-ids "$TASK_SG" --output json)"
+if ! jq -e '
+  any(.SecurityGroups[].IpPermissionsEgress[]?;
+    (.IpProtocol == "-1" or (.IpProtocol == "tcp" and .FromPort <= 443 and .ToPort >= 443))
+    and any(.IpRanges[]?; .CidrIp == "0.0.0.0/0")
+  )
+' >/dev/null <<<"$task_sg_rules"; then
+  aws ec2 authorize-security-group-egress --region "$AWS_REGION" \
+    --group-id "$TASK_SG" --protocol tcp --port 443 --cidr 0.0.0.0/0 >/dev/null
+fi
+
 # Confirm the ALB and Fargate subnets are valid without changing their routes.
 for subnet in "${PUBLIC_SUBNETS[@]}" "${PRIVATE_SUBNETS[@]}"; do
   az="$(aws ec2 describe-subnets --region "$AWS_REGION" --subnet-ids "$subnet" \
@@ -332,8 +356,8 @@ if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
 fi
 aws iam attach-role-policy --role-name "$ROLE_NAME" \
   --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-jq -n --arg rds "$RDS_SECRET_ARN" --arg jwt "$JWT_SECRET_ARN" \
-  '{Version:"2012-10-17",Statement:[{Effect:"Allow",Action:["secretsmanager:GetSecretValue"],Resource:[$rds,$jwt]}]}' \
+jq -n --arg rds "$RDS_SECRET_ARN" --arg jwt "$JWT_SECRET_ARN" --arg alpaca "$ALPACA_SECRET_ARN" \
+  '{Version:"2012-10-17",Statement:[{Effect:"Allow",Action:["secretsmanager:GetSecretValue"],Resource:[$rds,$jwt,$alpaca]}]}' \
   >"$POLICY_FILE"
 aws iam put-role-policy --role-name "$ROLE_NAME" \
   --policy-name "${STACK}-read-secrets" --policy-document "file://${POLICY_FILE}" >/dev/null
@@ -395,6 +419,11 @@ jq -n --arg a "${PRIVATE_SUBNETS[0]}" --arg b "${PRIVATE_SUBNETS[1]}" --arg sg "
   '{awsvpcConfiguration:{subnets:[$a,$b],securityGroups:[$sg],assignPublicIp:"DISABLED"}}' \
   >"$NETWORK_FILE"
 
+APP_NETWORK_FILE="$(mktemp)"
+jq -n --arg a "${PUBLIC_SUBNETS[0]}" --arg b "${PUBLIC_SUBNETS[1]}" --arg sg "$TASK_SG" \
+  '{awsvpcConfiguration:{subnets:[$a,$b],securityGroups:[$sg],assignPublicIp:"ENABLED"}}' \
+  >"$APP_NETWORK_FILE"
+
 # Helpers for task definitions and ECS services.
 register_task() {
   local name="$1" cpu="$2" memory="$3" container_json="$4" file
@@ -429,7 +458,10 @@ make_container() {
 
 deploy_service() {
   local name="$1" task_arn="$2" port="$3" discovery="$4" frontend="${5:-false}"
-  local sc_file service_arn
+  local sc_file service_arn network_file="$NETWORK_FILE"
+  if [[ "$name" == "app" ]]; then
+    network_file="$APP_NETWORK_FILE"
+  fi
   sc_file="$(mktemp)"
   if [[ "$port" -eq 0 ]]; then
     jq -n --arg ns "$NAMESPACE_ARN" '{enabled:true,namespace:$ns}' >"$sc_file"
@@ -446,7 +478,7 @@ deploy_service() {
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
-        --network-configuration "file://${NETWORK_FILE}" \
+        --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
         --load-balancers "targetGroupArn=${TG_ARN},containerName=frontend,containerPort=80" \
         --health-check-grace-period-seconds 90 >/dev/null
@@ -454,7 +486,7 @@ deploy_service() {
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
-        --network-configuration "file://${NETWORK_FILE}" \
+        --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
     fi
   else
@@ -462,6 +494,7 @@ deploy_service() {
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" \
+        --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
         --load-balancers "targetGroupArn=${TG_ARN},containerName=frontend,containerPort=80" \
         --health-check-grace-period-seconds 90 >/dev/null
@@ -469,6 +502,7 @@ deploy_service() {
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service "${STACK}-${name}-service" --task-definition "$task_arn" \
         --desired-count "$SERVICE_COUNT" \
+        --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
     fi
   fi
@@ -523,6 +557,7 @@ deploy_service auth "$t" 3000 auth
 app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" --arg auth_db "$AUTH_DB_NAME" \
   --arg sec_enabled "$SEC_ENABLED" --arg sec_data_url "$SEC_DATA_URL" \
   --arg sec_user_agent "$SEC_USER_AGENT" '[
+  --arg alpaca_enabled "$ALPACA_ENABLED" --arg alpaca_url "$ALPACA_DATA_URL" --arg alpaca_feed "$ALPACA_FEED" '[
   {name:"SPRING_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$db+"?sslmode=require")},
   {name:"SPRING_AUTH_DATASOURCE_URL",value:("jdbc:postgresql://"+$host+":5432/"+$auth_db+"?sslmode=require")},
   {name:"SPRING_KAFKA_BOOTSTRAP_SERVERS",value:"kafka:9092"},
@@ -530,12 +565,18 @@ app_env="$(jq -n --arg host "$RDS_HOST" --arg db "$TRADING_DB_NAME" --arg auth_d
   {name:"SEC_ENABLED",value:$sec_enabled},
   {name:"SEC_DATA_URL",value:$sec_data_url},
   {name:"SEC_USER_AGENT",value:$sec_user_agent}
+  {name:"ALPACA_ENABLED",value:$alpaca_enabled},
+  {name:"ALPACA_DATA_URL",value:$alpaca_url},
+  {name:"ALPACA_FEED",value:$alpaca_feed}
 ]')"
-app_secrets="$(jq -n --arg user "$RDS_USER_REF" --arg pass "$RDS_PASSWORD_REF" --arg jwt "$JWT_REF" '[
+app_secrets="$(jq -n --arg user "$RDS_USER_REF" --arg pass "$RDS_PASSWORD_REF" --arg jwt "$JWT_REF" \
+  --arg alpaca_key "$ALPACA_KEY_REF" --arg alpaca_secret "$ALPACA_SECRET_REF" '[
   {name:"SPRING_DATASOURCE_USERNAME",valueFrom:$user},
   {name:"SPRING_DATASOURCE_PASSWORD",valueFrom:$pass},
   {name:"SPRING_AUTH_DATASOURCE_USERNAME",valueFrom:$user},
   {name:"SPRING_AUTH_DATASOURCE_PASSWORD",valueFrom:$pass},
+  {name:"ALPACA_API_KEY",valueFrom:$alpaca_key},
+  {name:"ALPACA_API_SECRET",valueFrom:$alpaca_secret},
   {name:"JWT_SECRET",valueFrom:$jwt}
 ]')"
 app_health='{"command":["CMD-SHELL","curl -fsS http://localhost:8081/actuator/health | grep -q UP || exit 1"],"interval":30,"timeout":5,"retries":5,"startPeriod":90}'
@@ -597,7 +638,7 @@ exit_code="$(aws ecs describe-tasks --region "$AWS_REGION" --cluster "$CLUSTER" 
   exit 1
 }
 
-rm -f "$NETWORK_FILE"
+rm -f "$NETWORK_FILE" "$APP_NETWORK_FILE"
 echo
 echo "Deployment complete: http://${ALB_DNS}"
 echo "Cluster: ${CLUSTER}"
