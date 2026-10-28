@@ -283,31 +283,6 @@ through the Spring backend. Unavailable symbols show a dash rather than a
 database fallback. The ticker stays fixed on desktop and can be horizontally
 scrolled on smaller screens; it does not automatically move.
 
-### Alpaca credentials for ECS
-
-The ECS deployment script enables Alpaca by default. Create a secret in AWS
-Secrets Manager in `eu-west-1`:
-
-1. Choose **Store a new secret** and select **Other type of secret**.
-2. Add two key/value pairs named `apiKey` and `apiSecret`, using your Alpaca
-   paper-trading key and secret as their values.
-3. Name the secret `thecommitcrew/alpaca` (or another team-approved name) and
-   save it. Do not put credential values in the repository or deployment
-   script.
-4. Set `ALPACA_SECRET_ARN` to the secret's ARN before running
-   `thecommitcre_deploy.sh`. The script grants the ECS task execution role
-   access to that secret and injects its fields as `ALPACA_API_KEY` and
-   `ALPACA_API_SECRET`. It sets `ALPACA_ENABLED=true`, `ALPACA_DATA_URL`, and
-   `ALPACA_FEED` on the app task.
-
-The app task is placed in the configured public subnets with a public IP so it
-can make outbound HTTPS requests to Alpaca without creating NAT gateways. Its
-security group only permits inbound traffic from the task security group and
-the ALB's frontend port rule; the public IP is not, by itself, an inbound
-firewall rule. Public IPv4 addresses have an AWS charge. If the instructor
-requires all tasks to remain private, use an approved NAT or egress proxy
-instead; AWS VPC endpoints alone cannot reach Alpaca's external API.
-
 ## Coding Conventions
 
 ### Naming 
