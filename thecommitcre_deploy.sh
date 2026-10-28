@@ -144,10 +144,13 @@ ensure_repo() {
 }
 
 push_image() {
-  local repo="$1" dockerfile="$2" context="$3" image="${ECR_REGISTRY}/${repo}:${IMAGE_TAG}"
-  ensure_repo "$repo"
-  docker build --platform linux/amd64 -f "$dockerfile" -t "$image" "$context" >&2
-  docker push "$image" >&2
+  local repo="$1" dockerfile="$2" context="$3" 
+  local image="${ECR_REGISTRY}/${repo}:${IMAGE_TAG}"
+
+  ensure_repo "$repo" || return 1
+  docker build --platform linux/amd64 -f "$dockerfile" -t "$image" "$context" >&2 || return 1
+  docker push "$image" >&2 || return 1
+  
   printf '%s' "$image"
 }
 
