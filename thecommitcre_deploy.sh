@@ -28,7 +28,7 @@ SEC_ENABLED="${SEC_ENABLED:-true}"
 SEC_DATA_URL="${SEC_DATA_URL:-https://data.sec.gov}"
 SEC_USER_AGENT="${SEC_USER_AGENT:-The Commit Crew giuly.fatti@gmail.com}"
 ALPACA_ENABLED="${ALPACA_ENABLED:-true}"
-ALPACA_SECRET_ARN="${ALPACA_SECRET_ARN:?Set ALPACA_SECRET_ARN to a Secrets Manager secret containing apiKey and apiSecret}"
+ALPACA_SECRET_ARN="${ALPACA_SECRET_ARN:-arn:aws:secretsmanager:eu-west-1:081452990196:secret:thecommitcrew/alpaca-tszxYw}"
 ALPACA_DATA_URL="${ALPACA_DATA_URL:-https://data.alpaca.markets}"
 ALPACA_FEED="${ALPACA_FEED:-iex}"
 
@@ -592,6 +592,7 @@ deploy_service analytics "$t" 8090 analytics
 
 # Execution engine.
 engine_env="$(jq -n '[
+  {name:"SERVER_PORT",value:"8082"},
   {name:"SPRING_KAFKA_BOOTSTRAP_SERVERS",value:"kafka:9092"},
   {name:"ENGINE_MIN_DELAY",value:"500ms"},
   {name:"ENGINE_MAX_DELAY",value:"2000ms"},
