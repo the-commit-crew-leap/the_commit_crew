@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { readFileSync } from 'node:fs';
 
 @Module({
   imports: [
@@ -16,6 +17,12 @@ import { AuthModule } from './auth/auth.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: false,
       logging: process.env.ENVIRONMENT === 'dev',
+      ssl: process.env.NODE_ENV === 'prod'
+        ? {
+            ca: readFileSync('/etc/ssl/certs/rds-ca-bundle.pem', 'utf8'),
+            rejectUnauthorized: true,
+          }
+        : false,
     }),
     AuthModule,
   ],
