@@ -269,7 +269,7 @@ for subnet in "${PUBLIC_SUBNETS[@]}"; do
     route_tables="$(aws ec2 describe-route-tables --region "$AWS_REGION" \
       --filters "Name=vpc-id,Values=${VPC_ID}" "Name=association.main,Values=true" --output json)"
   fi
-  if ! jq -e '.RouteTables | any(.Routes[]?; .DestinationCidrBlock == "0.0.0.0/0" and ((.GatewayId // "") | startswith("igw-")) and .State == "active")' \
+  if ! jq -e 'any(.RouteTables[].Routes[]?; .DestinationCidrBlock == "0.0.0.0/0" and ((.GatewayId // "") | startswith("igw-")) and .State == "active")' \
     >/dev/null <<<"$route_tables"; then
     echo "Public subnet ${subnet} has no active Internet Gateway default route; no routes were changed." >&2
     exit 1
