@@ -26,7 +26,7 @@ RDS_SECRET_ARN="${RDS_SECRET_ARN:?Set RDS_SECRET_ARN to the RDS login secret ARN
 JWT_SECRET_ARN="${JWT_SECRET_ARN:?Set JWT_SECRET_ARN to a secret containing the JSON field jwtSecret}"
 SEC_ENABLED="${SEC_ENABLED:-true}"
 SEC_DATA_URL="${SEC_DATA_URL:-https://data.sec.gov}"
-SEC_USER_AGENT="${SEC_USER_AGENT:-The Commit Crew example@gmail.com}"
+SEC_USER_AGENT="${SEC_USER_AGENT:-The Commit Crew giuly.fatti@gmail.com}"
 ALPACA_ENABLED="${ALPACA_ENABLED:-true}"
 ALPACA_SECRET_ARN="${ALPACA_SECRET_ARN:-arn:aws:secretsmanager:eu-west-1:081452990196:secret:thecommitcrew/alpaca-tszxYw}"
 ALPACA_DATA_URL="${ALPACA_DATA_URL:-https://data.alpaca.markets}"
@@ -431,19 +431,27 @@ jq -n --arg a "${PUBLIC_SUBNETS[0]}" --arg b "${PUBLIC_SUBNETS[1]}" --arg sg "$T
 register_task() {
   local name="$1" cpu="$2" memory="$3" container_json="$4" file
   local family
+  local task_arn
   case "$name" in
     app) family="${STACK}-service" ;;
     *) family="${STACK}-${name}-service" ;;
   esac
   file="$(mktemp)"
-  jq -n --arg family "$family" --arg role "$EXECUTION_ROLE_ARN" \
+  if ! jq -n --arg family "$family" --arg role "$EXECUTION_ROLE_ARN" \
     --argjson cpu "$cpu" --argjson memory "$memory" --argjson container "$container_json" \
     '{family:$family,networkMode:"awsvpc",requiresCompatibilities:["FARGATE"],
       cpu:($cpu|tostring),memory:($memory|tostring),executionRoleArn:$role,
-      containerDefinitions:[$container]}' >"$file"
-  aws ecs register-task-definition --region "$AWS_REGION" \
-    --cli-input-json "file://${file}" --query 'taskDefinition.taskDefinitionArn' --output text
+      containerDefinitions:[$container]}' >"$file"; then
+    rm -f "$file"
+    return 1
+  fi
+  if ! task_arn="$(aws ecs register-task-definition --region "$AWS_REGION" \
+    --cli-input-json "file://${file}" --query 'taskDefinition.taskDefinitionArn' --output text)"; then
+    rm -f "$file"
+    return 1
+  fi
   rm -f "$file"
+  printf '%s' "$task_arn"
 }
 
 make_container() {
@@ -460,8 +468,9 @@ make_container() {
 }
 
 deploy_service() {
-  local name="$1" task_arn="$2" port="$3" discovery="$4" frontend="${5:-false}"
+  local name="$1" task_arn="$2" port="$3" discovery="$4" frontend="${5:-false}" desired_count="${6:-$SERVICE_COUNT}"
   local sc_file service_arn network_file="$NETWORK_FILE"
+  local running_td rollout_state
   if [[ "$name" == "app" ]]; then
     network_file="$APP_NETWORK_FILE"
   fi
@@ -480,7 +489,7 @@ deploy_service() {
     if [[ "$frontend" == "true" ]]; then
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
-        --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
+        --desired-count "$desired_count" --launch-type FARGATE \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
         --load-balancers "targetGroupArn=${TG_ARN},containerName=frontend,containerPort=80" \
@@ -488,7 +497,7 @@ deploy_service() {
     else
       aws ecs create-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service-name "${STACK}-${name}-service" --task-definition "$task_arn" \
-        --desired-count "$SERVICE_COUNT" --launch-type FARGATE \
+        --desired-count "$desired_count" --launch-type FARGATE \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
     fi
@@ -496,7 +505,7 @@ deploy_service() {
     if [[ "$frontend" == "true" ]]; then
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service "${STACK}-${name}-service" --task-definition "$task_arn" \
-        --desired-count "$SERVICE_COUNT" \
+        --desired-count "$desired_count" \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" \
         --load-balancers "targetGroupArn=${TG_ARN},containerName=frontend,containerPort=80" \
@@ -504,7 +513,7 @@ deploy_service() {
     else
       aws ecs update-service --region "$AWS_REGION" --cluster "$CLUSTER" \
         --service "${STACK}-${name}-service" --task-definition "$task_arn" \
-        --desired-count "$SERVICE_COUNT" \
+        --desired-count "$desired_count" \
         --network-configuration "file://${network_file}" \
         --service-connect-configuration "file://${sc_file}" >/dev/null
     fi
@@ -512,6 +521,22 @@ deploy_service() {
   rm -f "$sc_file"
   aws ecs wait services-stable --region "$AWS_REGION" --cluster "$CLUSTER" \
     --services "${STACK}-${name}-service"
+  running_td="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+    --services "${STACK}-${name}-service" \
+    --query 'services[0].taskDefinition' --output text)"
+  rollout_state="$(aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+    --services "${STACK}-${name}-service" \
+    --query "services[0].deployments[?taskDefinition=='${task_arn}'].rolloutState | [0]" \
+    --output text)"
+  if [[ "$running_td" != "$task_arn" || "$rollout_state" == "FAILED" || "$rollout_state" == "None" ]]; then
+    echo "Service ${STACK}-${name}-service did not finish on requested task definition ${task_arn}." >&2
+    echo "Running task definition: ${running_td}" >&2
+    echo "Requested rollout state: ${rollout_state}" >&2
+    aws ecs describe-services --region "$AWS_REGION" --cluster "$CLUSTER" \
+      --services "${STACK}-${name}-service" \
+      --query 'services[0].events[:10].[createdAt,message]' --output table >&2 || true
+    return 1
+  fi
 }
 
 empty='[]'
@@ -535,7 +560,7 @@ kafka_env="$(jq -n '[
 kafka_health='{"command":["CMD-SHELL","/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"],"interval":30,"timeout":10,"retries":5,"startPeriod":60}'
 c="$(make_container kafka "$KAFKA_IMAGE" 9092 "$kafka_env" "$empty" "$kafka_health")"
 t="$(register_task kafka 1024 2048 "$c")"
-deploy_service kafka "$t" 9092 kafka
+deploy_service kafka "$t" 9092 kafka false 1
 
 # Auth service.
 auth_env="$(jq -n --arg host "$RDS_HOST" --arg db "$AUTH_DB_NAME" --arg trading "$TRADING_DB_NAME" \
