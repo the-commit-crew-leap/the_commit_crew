@@ -78,7 +78,7 @@ fi
 
 RDS_USER_REF="${RDS_SECRET_ARN}:username::"
 RDS_PASSWORD_REF="${RDS_SECRET_ARN}:password::"
-JWT_REF="${JWT_SECRET_ARN}:jwtSecret::"
+JWT_REF="$JWT_SECRET_ARN"
 ALPACA_KEY_REF="${ALPACA_SECRET_ARN}:apiKey::"
 ALPACA_SECRET_REF="${ALPACA_SECRET_ARN}:apiSecret::"
 if [[ "$ALPACA_ENABLED" != "true" && "$ALPACA_ENABLED" != "false" ]]; then
